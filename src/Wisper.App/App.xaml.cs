@@ -25,11 +25,29 @@ public partial class App : Application
     private WisperSettings _settings = new();
     private bool _modelReady;
     private FileSystemWatcher? _dictWatcher;
+    private SingleInstance? _instance;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         CrashLog.Install(this);
+
+        // Before anything else: two instances would install two hooks on the same key and
+        // type every utterance twice.
+        _instance = new SingleInstance();
+        if (!_instance.IsFirst)
+        {
+            MessageBox.Show(
+                """
+                Wisper is already running.
+
+                Look for the microphone icon in the system tray — click the ^ arrow
+                next to the clock if you cannot see it.
+                """,
+                "Wisper", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
 
         _settings = WisperSettings.Load();
         _dictionary = new DictionaryStore(DictionaryStore.DefaultPath);
@@ -189,6 +207,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _dictWatcher?.Dispose();
+        _instance?.Dispose();
         _controller?.Dispose();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
         TrayIcons.Dispose();

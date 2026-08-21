@@ -19,21 +19,25 @@ namespace Teezy.App;
 public partial class MainWindow : Window
 {
     private readonly HistoryStore _history;
+    private readonly DictionaryStore _dictionary;
     private readonly Func<TeezySettings> _settings;
     private readonly Action<TeezySettings> _saveSettings;
     private readonly ParakeetTranscriber? _transcriber;
 
     private HomeView? _home;
     private InsightsView? _insights;
+    private DictionaryView? _dictionaryView;
 
     public MainWindow(
         HistoryStore history,
+        DictionaryStore dictionary,
         Func<TeezySettings> settings,
         Action<TeezySettings> saveSettings,
         ParakeetTranscriber? transcriber)
     {
         InitializeComponent();
         _history = history;
+        _dictionary = dictionary;
         _settings = settings;
         _saveSettings = saveSettings;
         _transcriber = transcriber;
@@ -42,8 +46,24 @@ public partial class MainWindow : Window
         ShowHome();
     }
 
-    /// <summary>Re-reads history so a dictation made while the window was open shows up.</summary>
+    /// <summary>Re-reads everything the current page shows. Used when the window is opened.</summary>
     public void RefreshCurrentPage()
+    {
+        switch (PageHost.Content)
+        {
+            case HomeView home: home.Refresh(); break;
+            case InsightsView insights: insights.Refresh(); break;
+            case DictionaryView dictionary: dictionary.Refresh(); break;
+        }
+    }
+
+    /// <summary>Shows an utterance that landed while the window was open.</summary>
+    /// <remarks>
+    /// Deliberately does not touch the dictionary page. Dictating changes history and stats,
+    /// not the dictionary, and reloading it under someone who is part-way through editing an
+    /// entry would be a small betrayal for no benefit.
+    /// </remarks>
+    public void RefreshAfterDictation()
     {
         switch (PageHost.Content)
         {
@@ -59,7 +79,7 @@ public partial class MainWindow : Window
 
         if (sender == NavHome) ShowHome();
         else if (sender == NavInsights) ShowInsights();
-        else if (sender == NavDictionary) OpenDictionary();
+        else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) OpenSettings();
     }
 
@@ -77,22 +97,21 @@ public partial class MainWindow : Window
         PageHost.Content = _insights;
     }
 
-    private void OpenDictionary()
+    private void ShowDictionary()
     {
-        // The dictionary is a hand-maintained text file, and a text editor is a better
-        // editor for it than anything worth building here yet.
-        try
+        _dictionaryView ??= new DictionaryView(_dictionary);
+        _dictionaryView.Refresh();
+        PageHost.Content = _dictionaryView;
+    }
+
+    /// <summary>Opens the window directly on a page, for the tray menu.</summary>
+    public void ShowPage(Page page)
+    {
+        switch (page)
         {
-            Process.Start(new ProcessStartInfo(DictionaryStore.DefaultPath) { UseShellExecute = true });
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            MessageBox.Show("No app is associated with .txt files.", "Teezy",
-                MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        finally
-        {
-            NavHome.IsChecked = true;
+            case Page.Insights: NavInsights.IsChecked = true; break;
+            case Page.Dictionary: NavDictionary.IsChecked = true; break;
+            default: NavHome.IsChecked = true; break;
         }
     }
 
@@ -115,4 +134,12 @@ public partial class MainWindow : Window
         Hide();
         base.OnClosing(e);
     }
+}
+
+/// <summary>Pages reachable from outside the window.</summary>
+public enum Page
+{
+    Home,
+    Insights,
+    Dictionary,
 }

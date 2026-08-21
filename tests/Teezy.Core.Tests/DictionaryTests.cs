@@ -102,3 +102,48 @@ public class DictionaryTests
         entries[2].IsEnabled.ShouldBeFalse();
     }
 }
+
+public class DictionaryWarningTests
+{
+    [Fact]
+    public void WarnsWhenTheTriggerIsAnOrdinaryWord()
+    {
+        // "code -> Claude Code" would rewrite every spoken "code" in every sentence.
+        var warnings = DictionaryWarning.Check(DictionaryEntry.Correction("code", "Claude Code"));
+        warnings.ShouldContain(w => w.Severity == WarningSeverity.Caution);
+    }
+
+    [Fact]
+    public void DoesNotWarnAboutAMultiWordTrigger() =>
+        DictionaryWarning.Check(DictionaryEntry.Correction("cloud code", "Claude Code")).ShouldBeEmpty();
+
+    [Fact]
+    public void WarnsAboutVeryShortTriggers() =>
+        DictionaryWarning.Check(DictionaryEntry.Correction("qa", "QA"))
+            .ShouldContain(w => w.Severity == WarningSeverity.Caution);
+
+    [Fact]
+    public void FlagsARuleThatRewritesToItself() =>
+        DictionaryWarning.Check(DictionaryEntry.Correction("Anthropic", "Anthropic"))
+            .ShouldContain(w => w.Severity == WarningSeverity.Useless);
+
+    [Fact]
+    public void TermsAreNeverWarnedAbout() =>
+        // A Term only biases the engine; it is never matched against text, so it cannot
+        // misfire no matter how ordinary the word is.
+        DictionaryWarning.Check(DictionaryEntry.Term("code")).ShouldBeEmpty();
+
+    [Fact]
+    public void CapitalisationFixesAreNotFlaggedAsUseless() =>
+        // The most common reason to add an entry at all: the model hears the word correctly
+        // but writes it lower-case.
+        DictionaryWarning.Check(DictionaryEntry.Correction("kubernetes", "Kubernetes")).ShouldBeEmpty();
+
+    [Fact]
+    public void UncommonSingleWordsAreFine() =>
+        DictionaryWarning.Check(DictionaryEntry.Correction("terraform", "Terraform")).ShouldBeEmpty();
+
+    [Fact]
+    public void EmptyTriggerProducesNothingRatherThanThrowing() =>
+        DictionaryWarning.Check(DictionaryEntry.Correction("  ", "x")).ShouldBeEmpty();
+}

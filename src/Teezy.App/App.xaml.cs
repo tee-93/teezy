@@ -162,7 +162,7 @@ public partial class App : Application
         });
 
         // A window that is open should show the utterance that just landed.
-        Dispatch(() => { if (_main?.IsVisible == true) _main.RefreshCurrentPage(); });
+        Dispatch(() => { if (_main?.IsVisible == true) _main.RefreshAfterDictation(); });
 
         if (result.Injection == InjectionResult.Failed)
         {
@@ -201,7 +201,7 @@ public partial class App : Application
         menu.Items.Add(open);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Settings…", null, (_, _) => ShowSettings());
-        menu.Items.Add("Edit dictionary…", null, (_, _) => OpenDictionaryFile());
+        menu.Items.Add("Dictionary…", null, (_, _) => ShowMainWindow(Page.Dictionary));
 
         // Only meaningful when setup was cancelled or failed, so it hides itself once the
         // model is loaded rather than sitting in the menu as a permanent puzzle.
@@ -220,10 +220,11 @@ public partial class App : Application
     /// Built once and hidden on close rather than recreated: the window holds page state and
     /// a scroll position, and rebuilding it every time would lose both.
     /// </remarks>
-    private void ShowMainWindow()
+    private void ShowMainWindow(Page page = Page.Home)
     {
         _main ??= new MainWindow(
             _history!,
+            _dictionary!,
             () => _settings,
             updated => ApplySettings(updated),
             _transcriber);
@@ -231,6 +232,7 @@ public partial class App : Application
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
         _main.Activate();
+        _main.ShowPage(page);
         _main.RefreshCurrentPage();
     }
 
@@ -281,11 +283,6 @@ public partial class App : Application
         File.WriteAllLines(path, DictionaryStore.SampleFile);
     }
 
-    private void OpenDictionaryFile()
-    {
-        EnsureDictionaryFileExists();
-        Process.Start(new ProcessStartInfo(DictionaryStore.DefaultPath) { UseShellExecute = true });
-    }
 
     internal static string KeyName(PushToTalkKey key) => key switch
     {

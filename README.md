@@ -161,16 +161,37 @@ user. At 30x realtime none of it is worth it.
 
 ## Personal dictionary
 
-Plain text at `%LOCALAPPDATA%\Teezy\dictionary.txt`, reloaded automatically when saved.
+Edited in the app, on its own page. Two kinds of entry:
 
-```
-Anthropic                    # bias the engine toward this spelling
-cloud code -> Claude Code    # rewrite the left side to the right
-# off: teezy -> Teezy      # disabled, kept for later
-```
+- **A correction** — "when you hear X, write Y". Applied *after* transcription, so the
+  spelling is guaranteed.
+- **A hint** — a word the engine should know exists. Biasing only, so it improves the odds
+  and promises nothing.
+
+That distinction is the whole reason corrections exist, and it is why they run even when
+cleanup is switched off.
+
+**Entries are checked as you type them**, before they are added. A correction rewrites text
+silently and after the fact, which makes a bad rule genuinely hard to notice — the
+transcript is simply wrong in a plausible way. So a single-word trigger that is an ordinary
+English word (`code`, `like`, `state`) is flagged, as is one that rewrites a word to itself.
+
+The self-rewrite check is **case-sensitive on purpose**: `kubernetes → Kubernetes` changes
+the output and is one of the most common reasons to add an entry at all. Comparing
+case-insensitively would have called it useless, which a test now prevents.
 
 Corrections apply longest-trigger-first and match whole words only, so `cloud code` never
 touches `Cloudflare`. Glued and hyphenated forms (`CloudCode`, `cloud-code`) still match.
+
+The file stays plain text at `%LOCALAPPDATA%\Teezy\dictionary.txt`, hand-editable, and is
+reloaded automatically when changed on disk. "Open as text file" is still in the corner for
+bulk edits, which a row-at-a-time UI is genuinely worse at.
+
+```
+Anthropic                    # a hint: bias the engine toward this spelling
+cloud code -> Claude Code    # a correction: rewrite the left side to the right
+# off: teezy -> Teezy        # disabled, kept for later
+```
 
 ---
 
@@ -181,7 +202,8 @@ dotnet build Teezy.slnx -c Release
 dotnet test  tests\Teezy.Core.Tests
 ```
 
-63 tests cover the formatter, the dictionary, the state machine, the level mapping and the
+71 tests cover the formatter, the dictionary and its warnings, the state machine, the level
+mapping and the
 history and stats — including the
 re-entrancy guard that stops a second key press during transcription from typing the
 utterance twice.
@@ -199,9 +221,8 @@ synthesised key events).
    tone, list formatting and spoken corrections. Costs an API key and a network round trip,
    so the app would stop being fully offline.
 2. **Command mode.** Select text, hold a second key, "make this more formal."
-3. **A settings UI for the dictionary.** It opens in Notepad today.
-4. **Installer and autostart.**
-5. **Elevated-window injection.** A non-elevated process cannot type into an elevated
+3. **Installer and autostart.**
+4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.
 
 ---

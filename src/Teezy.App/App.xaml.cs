@@ -212,7 +212,7 @@ public partial class App : Application
         };
         menu.Items.Add(open);
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Settings…", null, (_, _) => ShowSettings());
+        menu.Items.Add("Settings…", null, (_, _) => ShowMainWindow(Page.Settings));
         menu.Items.Add("Dictionary…", null, (_, _) => ShowMainWindow(Page.Dictionary));
 
         // Only meaningful when setup was cancelled or failed, so it hides itself once the
@@ -272,22 +272,6 @@ public partial class App : Application
     private void Notify(string message, Forms.ToolTipIcon icon) =>
         _tray?.ShowBalloonTip(4000, "Teezy", message, icon);
 
-    private void ShowSettings()
-    {
-        var existing = Windows.OfType<SettingsWindow>().FirstOrDefault();
-        if (existing is not null) { existing.Activate(); return; }
-
-        var window = new SettingsWindow(_settings, _transcriber, _modelReady, _autostart, _hotkeySource);
-        window.SettingsChanged += updated =>
-        {
-            var keyChanged = updated.Hotkey != _settings.Hotkey;
-            _settings = updated;
-            _settings.Save();
-            if (keyChanged) _controller?.ReloadHotkey();
-            SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
-        };
-        window.Show();
-    }
 
     private void EnsureDictionaryFileExists()
     {

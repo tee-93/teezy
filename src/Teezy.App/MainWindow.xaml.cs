@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private HomeView? _home;
     private InsightsView? _insights;
     private DictionaryView? _dictionaryView;
+    private SettingsView? _settingsView;
 
     public MainWindow(
         HistoryStore history,
@@ -62,6 +63,7 @@ public partial class MainWindow : Window
             case HomeView home: home.Refresh(); break;
             case InsightsView insights: insights.Refresh(); break;
             case DictionaryView dictionary: dictionary.Refresh(); break;
+            case SettingsView settings: settings.Refresh(); break;
         }
     }
 
@@ -85,10 +87,14 @@ public partial class MainWindow : Window
         // Checked fires during InitializeComponent, before the fields exist.
         if (PageHost is null) return;
 
+        // Leaving settings must cancel any running hotkey capture, or it would swallow the
+        // next real press.
+        if (PageHost.Content is SettingsView leaving && sender != NavSettings) leaving.Leaving();
+
         if (sender == NavHome) ShowHome();
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
-        else if (sender == NavSettings) OpenSettings();
+        else if (sender == NavSettings) ShowSettings();
     }
 
     private void ShowHome()
@@ -119,19 +125,16 @@ public partial class MainWindow : Window
         {
             case Page.Insights: NavInsights.IsChecked = true; break;
             case Page.Dictionary: NavDictionary.IsChecked = true; break;
+            case Page.Settings: NavSettings.IsChecked = true; break;
             default: NavHome.IsChecked = true; break;
         }
     }
 
-    private void OpenSettings()
+    private void ShowSettings()
     {
-        var window = new SettingsWindow(_settings(), _transcriber, _transcriber?.IsLoaded ?? false, _autostart, _capture)
-        {
-            Owner = this,
-        };
-        window.SettingsChanged += _saveSettings;
-        window.ShowDialog();
-        NavHome.IsChecked = true;
+        _settingsView ??= new SettingsView(_settings, _saveSettings, _transcriber, _autostart, _capture);
+        _settingsView.Refresh();
+        PageHost.Content = _settingsView;
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -150,4 +153,5 @@ public enum Page
     Home,
     Insights,
     Dictionary,
+    Settings,
 }

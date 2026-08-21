@@ -16,8 +16,8 @@
             CornerRadius="22"
             Padding="18,11"
             MinWidth="180"
-            Background="#F21C1C1E"
-            BorderBrush="#33FFFFFF"
+            Background="{StaticResource HudPill}"
+            BorderBrush="{StaticResource HudEdge}"
             BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
@@ -26,7 +26,7 @@
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
             <!-- Red means recording. Nothing else in this app is red. -->
-            <Ellipse x:Name="RecordDot" Width="10" Height="10" Fill="#FF3B30"
+            <Ellipse x:Name="RecordDot" Width="10" Height="10" Fill="{StaticResource Record}"
                      VerticalAlignment="Center" Margin="0,0,12,0"/>
 
             <!-- Level meter. Bars are sized in code-behind from the RMS level. -->
@@ -35,7 +35,7 @@
 
             <TextBlock x:Name="StatusText"
                        Text="Listening"
-                       Foreground="#E8E8ED"
+                       Foreground="{StaticResource HudText}"
                        FontFamily="Segoe UI Variable Display, Segoe UI"
                        FontSize="13"
                        FontWeight="SemiBold"

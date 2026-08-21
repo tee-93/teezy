@@ -90,7 +90,7 @@
                                                          as text rather than as rows of buttons. -->
                                                     <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="Actions" Property="Opacity" Value="1"/>
-                                                        <Setter TargetName="Row" Property="Background" Value="#FAFAFC"/>
+                                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
                                                     </Trigger>
                                                 </DataTemplate.Triggers>
                                             </DataTemplate>
@@ -107,13 +107,12 @@
                         Background="{StaticResource Card}" CornerRadius="12"
                         BorderBrush="{StaticResource Hairline}" BorderThickness="1">
                     <StackPanel HorizontalAlignment="Center">
-                        <Border Width="46" Height="46" CornerRadius="14" Background="{StaticResource BrandSoft}">
-                            <Path Data="{StaticResource MarkGeometry}" Fill="{StaticResource Brand}"
+                        <Border Width="46" Height="46" CornerRadius="14" Background="{StaticResource AccentSoft}">
+                            <Path Data="{StaticResource MarkGeometry}" Fill="{StaticResource Accent}"
                                   Stretch="Uniform" Width="24" Height="24" Margin="0,2,0,0"/>
                         </Border>
-                        <TextBlock x:Name="EmptyTitle" Text="Nothing dictated yet"
-                                   FontSize="15" FontWeight="SemiBold" Margin="0,14,0,0"
-                                   HorizontalAlignment="Center" Foreground="{StaticResource Ink}"/>
+                        <TextBlock x:Name="EmptyTitle" Text="Nothing dictated yet" Style="{StaticResource H2}"
+                                   Margin="0,16,0,0" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="EmptyHint" Margin="0,5,0,0" HorizontalAlignment="Center"
                                    Foreground="{StaticResource Muted}" TextAlignment="Center"/>
                     </StackPanel>
@@ -145,14 +144,14 @@
             </Border>
 
             <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0"
-                    Background="{StaticResource BrandSoft}" BorderBrush="{StaticResource BrandSoft}">
+                    Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentSoft}">
                 <StackPanel>
                     <TextBlock Text="TIME SAVED" Style="{StaticResource SectionLabel}"
-                               Foreground="{StaticResource BrandDeep}"/>
+                               Foreground="{StaticResource AccentInk}"/>
                     <TextBlock x:Name="TimeSaved" Style="{StaticResource StatNumber}"
-                               Foreground="{StaticResource BrandDeep}"/>
+                               Foreground="{StaticResource AccentInk}"/>
                     <TextBlock x:Name="TimeSavedHint" FontSize="11.5" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrandDeep}" Opacity="0.75" Margin="0,6,0,0"/>
+                               Foreground="{StaticResource AccentInk}" Opacity="0.75" Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
         </StackPanel>

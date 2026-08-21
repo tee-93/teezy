@@ -6,7 +6,7 @@ namespace Teezy.App;
 
 /// <summary>Tray icons, drawn at runtime.</summary>
 /// <remarks>
-/// Drawn rather than shipped as .ico files so there is no binary asset to keep in sync with
+/// Drawn rather than shipped as .ico files so there is no binary asset to keep in step with
 /// the palette, and so state can change the icon without a second file. The mark is two
 /// rounded bars, not lettering: a real glyph at 16 px turns to mush.
 /// </remarks>
@@ -16,14 +16,14 @@ internal static class TrayIcons
     private static Icon? _busy;
     private static Icon? _recording;
 
-    private static readonly Color Primary = Color.FromArgb(0x5B, 0x4C, 0xE0);
-    private static readonly Color Muted = Color.FromArgb(0x9A, 0x9A, 0xA6);
-    private static readonly Color Record = Color.FromArgb(0xFF, 0x3B, 0x30);
+    private static readonly Color Accent = Color.FromArgb(0x1E, 0x5F, 0x8E);
+    private static readonly Color Muted = Color.FromArgb(0xA8, 0xA2, 0x9A);
+    private static readonly Color Record = Color.FromArgb(0xE5, 0x48, 0x4D);
 
     /// <summary>Armed and ready.</summary>
-    public static Icon Ready => _ready ??= Draw(Primary);
+    public static Icon Ready => _ready ??= Draw(Accent);
 
-    /// <summary>Model still loading, or not installed — a hold would do nothing yet.</summary>
+    /// <summary>Model loading or not installed — a hold would do nothing yet.</summary>
     public static Icon Busy => _busy ??= Draw(Muted);
 
     /// <summary>Microphone open.</summary>
@@ -40,18 +40,18 @@ internal static class TrayIcons
             using var back = new SolidBrush(background);
             using var mark = new SolidBrush(Color.White);
 
-            using (var squircle = Rounded(new RectangleF(1, 1, 30, 30), 9))
+            using (var squircle = Rounded(new RectangleF(1, 1, 30, 30), 9.5f))
             {
                 g.FillPath(back, squircle);
             }
 
-            // The T, on the same 100x100 grid as Brand.MarkGeometry, scaled to 32 px.
+            // Same 100x100 grid as Brand.MarkGeometry, scaled to 32 px.
             const float s = 32f / 100f;
-            using (var bar = Rounded(new RectangleF(24 * s, 27 * s, 52 * s, 13 * s), 6 * s))
+            using (var bar = Rounded(new RectangleF(22 * s, 25 * s, 56 * s, 14 * s), 7 * s))
             {
                 g.FillPath(mark, bar);
             }
-            using (var stem = Rounded(new RectangleF(42 * s, 27 * s, 16 * s, 46 * s), 7 * s))
+            using (var stem = Rounded(new RectangleF(43 * s, 25 * s, 14 * s, 45 * s), 7 * s))
             {
                 g.FillPath(mark, stem);
             }

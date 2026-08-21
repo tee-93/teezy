@@ -40,7 +40,7 @@ public partial class ModelDownloadWindow : Window
         // synchronization context at construction, so the callback lands back on the UI thread.
         var progress = new Progress<ModelDownloadProgress>(p =>
         {
-            Bar.Value = p.OverallFraction;
+            SetProgress(p.OverallFraction);
             PercentText.Text = $"{p.OverallFraction * 100:F0}%";
             StatusText.Text = $"{p.Describe()}   ({p.FileIndex} of {p.FileCount})";
         });
@@ -50,7 +50,7 @@ public partial class ModelDownloadWindow : Window
             await new ModelDownloader().DownloadAsync(_directory, progress, _cts.Token);
             Succeeded = true;
             StatusText.Text = "Done.";
-            Bar.Value = 1;
+            SetProgress(1);
             PercentText.Text = "100%";
             await Task.Delay(400);
             Close();
@@ -65,6 +65,14 @@ public partial class ModelDownloadWindow : Window
                 ? $"Could not reach the download server.\n\n{e.Message}"
                 : e.Message);
         }
+    }
+
+    /// <summary>Sizes the fill against the track, which is only known after layout.</summary>
+    private void SetProgress(double fraction)
+    {
+        var track = BarTrack.ActualWidth;
+        if (track <= 0) return;
+        BarFill.Width = Math.Clamp(fraction, 0, 1) * track;
     }
 
     private void Fail(string message)

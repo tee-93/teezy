@@ -23,7 +23,7 @@ internal static class LogoImage
                 new Rect(3 * scale, 3 * scale, 94 * scale, 94 * scale),
                 28 * scale, 28 * scale);
 
-            dc.DrawGeometry(new SolidColorBrush(Brand.Primary), null, squircle);
+            dc.DrawGeometry(new SolidColorBrush(Brand.Accent), null, squircle);
 
             var mark = Geometry.Parse(Brand.MarkGeometry).Clone();
             mark.Transform = new ScaleTransform(scale, scale);

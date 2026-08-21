@@ -76,7 +76,7 @@ public partial class HudWindow : Window
                 Height = BarMinHeight,
                 RadiusX = 1.5,
                 RadiusY = 1.5,
-                Fill = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xED)),
+                Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0xEB, 0xE4)),
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(1.5, 0, 1.5, 0),
             };

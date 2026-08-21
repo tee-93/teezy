@@ -1,34 +1,47 @@
 <Window x:Class="Teezy.App.ModelDownloadWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Setting up Teezy" Width="470" SizeToContent="Height"
+        Title="Setting up Teezy" Width="500" SizeToContent="Height"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
-        Background="#FFFBFBFD"
-        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
-    <StackPanel Margin="26,22,26,20">
-        <TextBlock Text="One-time setup" FontSize="20" FontWeight="SemiBold" Foreground="#FF1C1C1E"/>
-        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#FF3A3A3C"
-                   Text="Teezy is downloading its speech model — about 661 MB. This happens once. Afterwards dictation runs entirely on this machine, with no network access."/>
+        Background="{StaticResource Paper}"
+        FontFamily="{StaticResource UiFont}" FontSize="13">
+    <StackPanel Margin="30,26,30,24">
 
-        <ProgressBar x:Name="Bar" Height="6" Margin="0,20,0,0" Minimum="0" Maximum="1"
-                     Background="#FFE8E8ED" Foreground="#FF0A84FF" BorderThickness="0"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+            <Border Width="44" Height="44" CornerRadius="14" Background="{StaticResource Accent}">
+                <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
+                      Width="24" Height="24" Margin="0,1,0,0"/>
+            </Border>
+            <TextBlock Text="Almost there" Style="{StaticResource Display}" FontSize="24"
+                       VerticalAlignment="Center" Margin="15,0,0,0"/>
+        </StackPanel>
 
-        <Grid Margin="0,10,0,0">
-            <TextBlock x:Name="StatusText" Foreground="#FF6E6E73" FontSize="12"
+        <TextBlock Style="{StaticResource Lede}"
+                   Text="Teezy is downloading its speech model — about 661 MB. This happens once. Afterwards dictation runs entirely on this machine, with no network access at all."/>
+
+        <Border x:Name="BarTrack" Height="7" CornerRadius="4" Background="{StaticResource Hairline}" Margin="0,22,0,0">
+            <Border x:Name="BarFill" HorizontalAlignment="Left" CornerRadius="4" Width="0"
+                    Background="{StaticResource Accent}"/>
+        </Border>
+
+        <Grid Margin="0,11,0,0">
+            <TextBlock x:Name="StatusText" Foreground="{StaticResource Muted}" FontSize="12"
                        Text="Starting…" HorizontalAlignment="Left"/>
-            <TextBlock x:Name="PercentText" Foreground="#FF6E6E73" FontSize="12"
+            <TextBlock x:Name="PercentText" Foreground="{StaticResource Muted}" FontSize="12"
                        Text="0%" HorizontalAlignment="Right"/>
         </Grid>
 
-        <Border x:Name="ErrorBox" Visibility="Collapsed" Margin="0,14,0,0" Padding="12"
-                Background="#FFFFF0F0" BorderBrush="#FFFFD0D0" BorderThickness="1" CornerRadius="6">
-            <TextBlock x:Name="ErrorText" TextWrapping="Wrap" Foreground="#FF8A1C1C" FontSize="12"/>
+        <Border x:Name="ErrorBox" Style="{StaticResource CautionPanel}"
+                Visibility="Collapsed" Margin="0,16,0,0">
+            <TextBlock x:Name="ErrorText" TextWrapping="Wrap"
+                       Foreground="{StaticResource CautionInk}" FontSize="12"/>
         </Border>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button x:Name="RetryButton" Content="Try again" Padding="16,7" Margin="0,0,8,0"
-                    Visibility="Collapsed" Click="OnRetry"/>
-            <Button x:Name="CancelButton" Content="Cancel" Padding="16,7" Click="OnCancel"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+            <Button x:Name="RetryButton" Content="Try again" Style="{StaticResource Primary}"
+                    Margin="0,0,8,0" Visibility="Collapsed" Click="OnRetry"/>
+            <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource Secondary}"
+                    Click="OnCancel"/>
         </StackPanel>
     </StackPanel>
 </Window>

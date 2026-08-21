@@ -1,4 +1,4 @@
-# Teezy
+| `Teezy.App` | `net10.0-windows` | WPF tray app, HUD, and the four-page window |# Teezy
 
 Push-to-talk dictation for Windows. Hold a key, talk, release — cleaned-up text is typed
 into whatever had focus. Fully on-device: after the one-time model download, nothing leaves
@@ -136,6 +136,32 @@ Snapdragon X Plus (8 cores, ARM64), 16 GB, everything CPU-only.
 
 Four inference threads measured fastest; **eight measured slower**. That is why
 `NumThreads` defaults to 4 rather than to core count.
+
+---
+
+## Look and feel
+
+Warm paper and ink with one calm accent: a serif for display type, a humanist sans for
+everything else. Quiet enough to live in the tray all day without competing with whatever
+the user is actually working on.
+
+`Theme.xaml` is the whole design system — palette, type scale, and templates for every
+control the app uses. **Views must not contain literal colours**; there are none left. That
+is not tidiness for its own sake: it is what lets the tray icon, the floating meter and four
+pages be recoloured together and stay one product.
+
+**Red is reserved.** It means recording and appears nowhere else, which is why the accent is
+a blue — a warm accent would compete with the one signal the user must read instantly.
+
+WPF ships dated chrome, so the controls are re-templated: switches instead of tick boxes for
+preferences, a segmented control where two options are two shapes of one thing, a slim
+overlay scrollbar, and a custom combo box. Stock WPF controls were the single biggest thing
+making this look like a tool rather than a product.
+
+The mark is a "T" whose stem is a rounded microphone capsule, authored once on a 100x100
+grid and rendered three ways — GDI+ for the tray, WPF geometry in the window,
+`RenderTargetBitmap` for the window icon — so it cannot drift between them. Two rounded bars
+rather than lettering, because a real glyph at 16 px in the system tray turns to mush.
 
 ---
 

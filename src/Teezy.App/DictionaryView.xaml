@@ -24,12 +24,17 @@
         <!-- Add -->
         <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,20,0,16">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                    <RadioButton x:Name="KindCorrection" Content="Fix a mishearing" IsChecked="True"
-                                 GroupName="Kind" Checked="OnKindChanged" Margin="0,0,20,0"/>
-                    <RadioButton x:Name="KindTerm" Content="Just teach a word"
-                                 GroupName="Kind" Checked="OnKindChanged"/>
-                </StackPanel>
+                <!-- Segmented, because these are two shapes of the same thing rather than
+                     two unrelated options. -->
+                <Border Background="{StaticResource Sunken}" CornerRadius="10" Padding="3"
+                        HorizontalAlignment="Left" Margin="0,0,0,18">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="KindCorrection" Content="Fix a mishearing" IsChecked="True"
+                                     Style="{StaticResource Segment}" GroupName="Kind" Checked="OnKindChanged"/>
+                        <RadioButton x:Name="KindTerm" Content="Teach a word"
+                                     Style="{StaticResource Segment}" GroupName="Kind" Checked="OnKindChanged"/>
+                    </StackPanel>
+                </Border>
 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -41,56 +46,30 @@
 
                     <StackPanel x:Name="HearPanel" Grid.Column="0">
                         <TextBlock Text="WHEN YOU HEAR" Style="{StaticResource SectionLabel}"/>
-                        <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}"
-                                BorderThickness="1" CornerRadius="8" Height="36">
-                            <TextBox x:Name="HearBox" BorderThickness="0" Background="Transparent"
-                                     VerticalContentAlignment="Center" Margin="11,0"
-                                     TextChanged="OnDraftChanged" KeyDown="OnDraftKeyDown"/>
-                        </Border>
+                        <TextBox x:Name="HearBox" Style="{StaticResource Field}"
+                                 TextChanged="OnDraftChanged" KeyDown="OnDraftKeyDown"/>
                     </StackPanel>
 
-                    <TextBlock x:Name="Arrow" Grid.Column="1" Text="→" FontSize="17" Margin="14,22,14,0"
-                               Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="Arrow" Grid.Column="1" Text="→" FontSize="16" Margin="13,25,13,0"
+                               Foreground="{StaticResource Faint}" VerticalAlignment="Top"
+                               Height="38" TextAlignment="Center" LineHeight="38"/>
 
                     <StackPanel Grid.Column="2">
                         <TextBlock x:Name="WriteLabel" Text="WRITE" Style="{StaticResource SectionLabel}"/>
-                        <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}"
-                                BorderThickness="1" CornerRadius="8" Height="36">
-                            <TextBox x:Name="WriteBox" BorderThickness="0" Background="Transparent"
-                                     VerticalContentAlignment="Center" Margin="11,0"
-                                     TextChanged="OnDraftChanged" KeyDown="OnDraftKeyDown"/>
-                        </Border>
+                        <TextBox x:Name="WriteBox" Style="{StaticResource Field}"
+                                 TextChanged="OnDraftChanged" KeyDown="OnDraftKeyDown"/>
                     </StackPanel>
 
                     <Button x:Name="AddButton" Grid.Column="3" Content="Add" Click="OnAdd"
-                            Margin="14,22,0,0" Padding="22,0" Height="36" IsDefault="True"
-                            Foreground="White" BorderThickness="0" Cursor="Hand"
-                            Background="{StaticResource Brand}">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bg" Background="{TemplateBinding Background}"
-                                        CornerRadius="8" Padding="{TemplateBinding Padding}">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrandDeep}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter TargetName="Bg" Property="Background" Value="{StaticResource Hairline}"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Faint}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+                            Style="{StaticResource Primary}" Margin="12,25,0,0" Height="38"
+                            VerticalAlignment="Top" IsDefault="True"/>
                 </Grid>
 
                 <!-- Live warning about the entry being typed, before it is added. -->
                 <Border x:Name="DraftWarning" Visibility="Collapsed" Margin="0,14,0,0" Padding="12,10"
-                        Background="#FFF9EC" BorderBrush="#F3E3B8" BorderThickness="1" CornerRadius="8">
+                        Style="{StaticResource CautionPanel}">
                     <TextBlock x:Name="DraftWarningText" TextWrapping="Wrap"
-                               Foreground="#8A6100" FontSize="12"/>
+                               Foreground="{StaticResource CautionInk}" FontSize="12"/>
                 </Border>
             </StackPanel>
         </Border>
@@ -114,8 +93,9 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled, Mode=OneWay}"
-                                                  Click="OnToggle" Tag="{Binding}" Margin="0,2,12,0"
+                                        <CheckBox Grid.Column="0" Style="{StaticResource Tick}"
+                                                  IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                                  Click="OnToggle" Tag="{Binding}" Margin="0,2,13,0"
                                                   VerticalAlignment="Top"
                                                   ToolTip="Disabled entries stay in the file but stop firing"/>
 
@@ -127,15 +107,15 @@
                                                            Visibility="{Binding HearVisibility}"/>
                                                 <TextBlock Text="{Binding Write}" Foreground="{StaticResource Ink}"
                                                            FontWeight="SemiBold"/>
-                                                <Border Background="{StaticResource BrandSoft}" CornerRadius="4"
+                                                <Border Background="{StaticResource AccentSoft}" CornerRadius="4"
                                                         Padding="6,1" Margin="10,0,0,0"
                                                         Visibility="{Binding TermTagVisibility}">
                                                     <TextBlock Text="hint only" FontSize="10.5"
-                                                               Foreground="{StaticResource BrandDeep}"/>
+                                                               Foreground="{StaticResource AccentInk}"/>
                                                 </Border>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="11.5"
-                                                       Foreground="#8A6100" Margin="0,5,0,0"
+                                                       Foreground="{StaticResource CautionInk}" Margin="0,5,0,0"
                                                        Visibility="{Binding WarningVisibility}"/>
                                         </StackPanel>
 
@@ -147,7 +127,7 @@
                                 <DataTemplate.Triggers>
                                     <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
                                         <Setter TargetName="DeleteButton" Property="Opacity" Value="1"/>
-                                        <Setter TargetName="Row" Property="Background" Value="#FAFAFC"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
                                     </Trigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

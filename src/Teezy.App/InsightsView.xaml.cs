@@ -181,10 +181,10 @@ public partial class InsightsView : UserControl
 
     private static Color Shade(int level) => level switch
     {
-        0 => Color.FromRgb(0xEE, 0xEE, 0xF2),
-        1 => Color.FromRgb(0xD5, 0xD0, 0xF8),
-        2 => Color.FromRgb(0xB0, 0xA6, 0xF0),
-        3 => Color.FromRgb(0x81, 0x72, 0xE8),
-        _ => Color.FromRgb(0x5B, 0x4C, 0xE0),
+        0 => Color.FromRgb(0xEE, 0xEA, 0xE3),
+        1 => Color.FromRgb(0xC9, 0xDD, 0xEC),
+        2 => Color.FromRgb(0x92, 0xBB, 0xD8),
+        3 => Color.FromRgb(0x4E, 0x8C, 0xB5),
+        _ => Color.FromRgb(0x1E, 0x5F, 0x8E),
     };
 }

@@ -1,4 +1,4 @@
-| `Teezy.App` | `net10.0-windows` | WPF tray app, HUD, and the four-page window |# Teezy
+# Teezy
 
 Push-to-talk dictation for Windows. Hold a key, talk, release — cleaned-up text is typed
 into whatever had focus. Fully on-device: after the one-time model download, nothing leaves
@@ -115,7 +115,7 @@ accumulated, so deleting an entry corrects them instead of leaving them drifted.
 | `Teezy.Speech` | `net10.0` | Parakeet via sherpa-onnx |
 | `Teezy.Cleanup` | `net10.0` | Optional Claude cleanup tier |
 | `Teezy.Platform.Windows` | `net10.0-windows` | The only Win32 code in the repo |
-| `Teezy.App` | `net10.0-windows` | WPF tray app, HUD, main window, settings |
+| `Teezy.App` | `net10.0-windows` | WPF tray app, HUD, and the four-page window |
 
 `Teezy.Core` targets plain `net10.0` deliberately: `CA1416` is escalated to a build error,
 so any Win32 call that drifts into the testable layer fails the build rather than quietly

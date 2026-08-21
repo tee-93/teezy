@@ -26,6 +26,7 @@ public partial class App : Application
     private bool _modelReady;
     private FileSystemWatcher? _dictWatcher;
     private SingleInstance? _instance;
+    private Forms.ToolStripMenuItem? _downloadItem;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -86,6 +87,11 @@ public partial class App : Application
 
     private async Task LoadModelAsync()
     {
+        // First run on a new machine: fetch the model before trying to load it. Checking for
+        // the files here rather than catching the load failure keeps the two concerns apart —
+        // "not installed yet" is setup, "installed but broken" is an error.
+        if (!EnsureModelPresent()) return;
+
         SetTrayState("Loading the speech model…", ready: false);
         try
         {
@@ -101,12 +107,31 @@ public partial class App : Application
             Dispatch(() =>
             {
                 SetTrayState("Speech model not found", ready: false);
-                MessageBox.Show(
-                    ex.Message + "\n\nRun tools/download-model.ps1 to fetch it.",
-                    "Wisper — model missing",
+                MessageBox.Show(ex.Message, "Wisper — model problem",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             });
         }
+    }
+
+    /// <summary>Downloads the model if it is not already on disk.</summary>
+    /// <returns><c>false</c> if the user cancelled, or the download failed.</returns>
+    /// <remarks>
+    /// Declining is not fatal. The app keeps running with the tray icon showing that it is
+    /// not ready, and "Download speech model…" stays in the menu — better than quitting on
+    /// someone who just wanted to postpone a 661 MB transfer.
+    /// </remarks>
+    private bool EnsureModelPresent()
+    {
+        if (ModelPaths.Resolve(_settings.ModelPath) is not null) return true;
+
+        var directory = _settings.ModelPath ?? ModelPaths.DefaultDirectory;
+        var window = new ModelDownloadWindow(directory);
+        window.ShowDialog();
+
+        if (window.Succeeded) return true;
+
+        Dispatch(() => SetTrayState("Speech model not installed", ready: false));
+        return false;
     }
 
     private void OnCompleted(DictationCompleted result)
@@ -146,6 +171,13 @@ public partial class App : Application
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Settings…", null, (_, _) => ShowSettings());
         menu.Items.Add("Edit dictionary…", null, (_, _) => OpenDictionaryFile());
+
+        // Only meaningful when setup was cancelled or failed, so it hides itself once the
+        // model is loaded rather than sitting in the menu as a permanent puzzle.
+        _downloadItem = new Forms.ToolStripMenuItem("Download speech model…", null,
+            async (_, _) => await LoadModelAsync());
+        menu.Items.Add(_downloadItem);
+
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit Wisper", null, (_, _) => Shutdown());
         _tray.ContextMenuStrip = menu;
@@ -157,6 +189,7 @@ public partial class App : Application
         if (_tray is null) return;
         // NotifyIcon.Text is capped at 63 characters and throws above it.
         _tray.Text = text.Length > 63 ? text[..63] : text;
+        if (_downloadItem is not null) _downloadItem.Visible = !ready;
         _tray.Icon = ready ? TrayIcons.Idle : TrayIcons.Loading;
     }
 

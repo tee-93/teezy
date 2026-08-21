@@ -8,19 +8,29 @@ the machine.
 
 ---
 
-## Quick start
+## Install
+
+Build a single self-contained executable — no .NET runtime, no SDK, no loose files:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\download-model.ps1
+powershell -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
-That fetches the speech model (~661 MB, once). Then:
+That writes `dist\win-x64\Wisper.exe` (80 MB) and `dist\win-arm64\Wisper.exe` (75 MB), then
+verifies the architecture actually written rather than trusting the flag — an ARM64 native
+library inside an x64 exe fails at load, on someone else's machine, with no useful message.
 
-```powershell
-dotnet run --project src\Wisper.App -c Release
-```
+Copy the one matching the target CPU: **ARM64** for Snapdragon and Surface Pro X, **x64** for
+Intel and AMD. The x64 build runs on ARM64 through emulation, but transcribes far slower.
 
-Wisper lives in the system tray. **Hold Right Ctrl, speak, release.**
+**The model is not bundled.** On first launch the app downloads it (~661 MB, once) behind a
+progress window, verifies every file, and only then starts. Nothing touches the network
+afterwards. `tools\download-model.ps1` does the same from a shell if you prefer.
+
+Wisper lives in the system tray — click the `^` arrow next to the clock if you cannot see it.
+**Hold Right Ctrl, speak, release.**
+
+For development, `dotnet run --project src\Wisper.App -c Release` still works.
 
 ---
 

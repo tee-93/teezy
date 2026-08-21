@@ -17,8 +17,10 @@
 #define AppPublisher "Zack Tarczynski"
 #define AppUrl "https://github.com/tee-93/teezy"
 
+; The version of record. build-installer.ps1 reads it back out of this file rather than
+; carrying a default of its own, so there is nowhere for the two to disagree.
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.1.0"
 #endif
 
 [Setup]

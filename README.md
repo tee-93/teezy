@@ -160,9 +160,19 @@ overlay scrollbar, and a custom combo box. Stock WPF controls were the single bi
 making this look like a tool rather than a product.
 
 The mark is a "T" whose stem is a rounded microphone capsule, authored once on a 100x100
-grid and rendered three ways — GDI+ for the tray, WPF geometry in the window,
-`RenderTargetBitmap` for the window icon — so it cannot drift between them. Two rounded bars
-rather than lettering, because a real glyph at 16 px in the system tray turns to mush.
+grid and drawn from that one definition everywhere: GDI+ for the tray icon, WPF geometry
+in the window, and `tools/make-icon.ps1` for the file icon. Two rounded bars rather than
+lettering, because a real glyph at 16 px in the system tray turns to mush.
+
+**`Teezy.ico` is the one binary asset, and it is generated rather than drawn.** Windows reads
+the icon from the PE file, not from the running process — so Explorer, the Start Menu,
+Alt-Tab and taskbar pinning all show the generic executable icon unless `ApplicationIcon` is
+set, no matter what the app renders at runtime. Nine sizes from 16 to 256; regenerate with
+`tools/make-icon.ps1` after changing the mark or the accent colour.
+
+Window icons are deliberately **not** assigned in code. WPF falls back to the executable icon
+resource, which carries every size, so Windows picks the right one per context; assigning a
+single rendered bitmap would leave the taskbar one size to scale from.
 
 ---
 

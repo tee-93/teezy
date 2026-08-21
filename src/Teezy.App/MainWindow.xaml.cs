@@ -58,7 +58,9 @@ public partial class MainWindow : Window
         _secrets = secrets;
         _claude = claude;
 
-        Icon = LogoImage.Create(48);
+        // Icon deliberately not set: WPF falls back to the executable icon resource, which
+        // carries every size, so Windows can pick the right one per context. Assigning a
+        // single rendered bitmap here would give the taskbar one size to scale from.
         ShowHome();
     }
 

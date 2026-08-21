@@ -15,6 +15,11 @@
     <!-- For the tray icon only: WPF still has no NotifyIcon of its own. -->
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Windows reads the icon from the PE file, not from the running process. Without this,
+         Explorer, the Start Menu, Alt-Tab and taskbar pinning all show the generic exe icon
+         no matter what the app draws at runtime. Regenerate with tools/make-icon.ps1. -->
+    <ApplicationIcon>Teezy.ico</ApplicationIcon>
     <AssemblyName>Teezy</AssemblyName>
     <RootNamespace>Teezy.App</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

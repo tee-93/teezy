@@ -110,7 +110,15 @@ Three details that are easy to get wrong, and are not:
   should outlive us.
 - **The registered path self-heals.** Republishing to a different folder would otherwise
   leave a `Run` value aimed at a file that no longer exists, and nothing reports a startup
-  entry that failed to resolve. Teezy re-points it at launch.
+  entry that failed to resolve. Teezy re-points it at launch — comparing the whole command
+  line, not just the path, so an entry written by an older version is brought up to date
+  rather than left half-right.
+- **The sign-in launch is told apart from every other one.** The `Run` value ends in
+  `--startup`, and that flag is the only thing that distinguishes "Windows started me" from
+  "someone double-clicked me". Without it, the two would have to behave the same, and both
+  answers are wrong: a window at every sign-in is a nuisance, and no window at all when you
+  have just installed the thing looks broken. So Teezy opens its window on launch **unless**
+  the flag is present.
 
 Starting at sign-in loads the model — about 1.6 s and ~900 MB resident, once.
 

@@ -119,7 +119,26 @@ public partial class App : Application
             Notify("Teezy could not install its keyboard hook.", Forms.ToolTipIcon.Error);
         }
 
+        // Open the window unless Windows started us at sign-in.
+        //
+        // Starting silently in the tray is right for the sign-in launch and wrong for every
+        // other one: someone who has just installed Teezy, or just double-clicked it, gets no
+        // acknowledgement that anything happened and no way to find out short of knowing to
+        // look behind the ^ in the notification area.
+        //
+        // Deferred past a model download when there is one. On a fresh machine the download
+        // window is the whole story at that moment, and two windows at once is not an
+        // introduction.
+        var greet = !e.Args.Contains(WindowsAutostart.StartupFlag, StringComparer.OrdinalIgnoreCase);
+        var modelPresent = ModelPaths.Resolve(_settings.ModelPath) is not null;
+
+        if (greet && modelPresent) ShowMainWindow();
+
         await LoadModelAsync().ConfigureAwait(false);
+
+        // Back off the UI thread after the await, so this hops the dispatcher like everything
+        // else that touches a window.
+        if (greet && !modelPresent) Dispatch(() => ShowMainWindow());
     }
 
     private async Task LoadModelAsync()

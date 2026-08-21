@@ -179,10 +179,14 @@ $approvedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Startup
 
 $existing = (Get-ItemProperty -Path $runKey -Name 'Teezy' -ErrorAction SilentlyContinue).Teezy
 
+# Quoted: the path contains spaces on any machine whose user name does, and an unquoted value
+# is parsed as a command plus arguments. The --startup flag is how Teezy tells a sign-in
+# launch from someone double-clicking it, and stays in the tray rather than opening its
+# window. It must match WindowsAutostart.StartupFlag.
+$runCommand = '"' + $exePath + '" --startup'
+
 if ($Autostart) {
-    # Quoted: the path contains spaces on any machine whose user name does, and an unquoted
-    # value is parsed as a command plus arguments.
-    Set-ItemProperty -Path $runKey -Name 'Teezy' -Value ('"' + $exePath + '"')
+    Set-ItemProperty -Path $runKey -Name 'Teezy' -Value $runCommand
 
     # Writing the Run value alone is not enough. If Teezy was ever switched off in Task
     # Manager, Windows records that veto separately and it wins - the entry would look
@@ -193,13 +197,13 @@ if ($Autostart) {
     Write-Step 'Registered to start at sign-in'
 }
 elseif ($existing) {
-    # An entry from a previous install points at the old executable. Teezy re-points it
-    # itself at launch - but only if it launches, and it will not launch from a path that no
-    # longer exists. So fix it here, where we still know both halves.
-    $current = $existing.Trim().Trim('"')
-    if ($current -ne $exePath) {
-        Set-ItemProperty -Path $runKey -Name 'Teezy' -Value ('"' + $exePath + '"')
-        Write-Step 'Existing sign-in entry re-pointed at the new location'
+    # An entry from a previous install points at the old executable, or predates the
+    # --startup flag. Teezy repairs it itself at launch - but only if it launches, and it
+    # will not launch from a path that no longer exists. So fix it here, where both halves
+    # are still known. Compared as a whole command line, so a flagless entry is upgraded too.
+    if ($existing.Trim() -ne $runCommand) {
+        Set-ItemProperty -Path $runKey -Name 'Teezy' -Value $runCommand
+        Write-Step 'Existing sign-in entry brought up to date'
     }
 }
 

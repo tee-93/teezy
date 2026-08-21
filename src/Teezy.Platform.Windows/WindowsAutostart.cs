@@ -29,6 +29,23 @@ public sealed class WindowsAutostart : IAutostart
     private const string ValueName = "Teezy";
 
     /// <summary>
+    /// Passed on the sign-in launch, and only then.
+    /// </summary>
+    /// <remarks>
+    /// It is how the app tells "Windows started me" from "the user started me". A tray app
+    /// that opens its window at sign-in is a nuisance; one that opens nothing when you
+    /// double-click it looks broken. The two cases need different behaviour, and the command
+    /// line is the only thing that distinguishes them.
+    /// </remarks>
+    public const string StartupFlag = "--startup";
+
+    /// <summary>
+    /// The full command line to register. Quoted: the path contains spaces on any machine
+    /// whose user name does, and an unquoted one is parsed as a command plus arguments.
+    /// </summary>
+    private static string Command(string exe) => $"\"{exe}\" {StartupFlag}";
+
+    /// <summary>
     /// The executable to launch.
     /// </summary>
     /// <remarks>
@@ -63,9 +80,7 @@ public sealed class WindowsAutostart : IAutostart
 
         using (var run = Registry.CurrentUser.CreateSubKey(RunKey))
         {
-            // Quoted: the path routinely contains spaces, and an unquoted one is parsed as a
-            // command plus arguments.
-            run?.SetValue(ValueName, $"\"{exe}\"", RegistryValueKind.String);
+            run?.SetValue(ValueName, Command(exe), RegistryValueKind.String);
         }
 
         ClearUserVeto();
@@ -81,32 +96,56 @@ public sealed class WindowsAutostart : IAutostart
     }
 
     /// <summary>
-    /// Re-points the startup entry at the current executable if it has moved.
+    /// Brings the startup entry back into line with this executable, if one is registered.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Called at launch. Without it, moving or republishing the exe leaves a Run value
     /// pointing at a file that no longer exists — and the failure is invisible, because
     /// nothing reports a startup entry that did not resolve.
+    /// </para>
+    /// <para>
+    /// It compares the <b>whole command line</b>, not just the path, so an entry written
+    /// before <see cref="StartupFlag"/> existed is upgraded in place rather than left to open
+    /// the window at every sign-in forever.
+    /// </para>
     /// </remarks>
     public void RefreshPathIfRegistered()
     {
         if (ExecutablePath is not { Length: > 0 } exe) return;
-        if (RegisteredPath() is not { } registered) return;
+        if (RegisteredValue() is not { } current) return;
 
-        if (string.Equals(registered, exe, StringComparison.OrdinalIgnoreCase)) return;
+        var wanted = Command(exe);
+        if (string.Equals(current.Trim(), wanted, StringComparison.OrdinalIgnoreCase)) return;
 
         using var run = Registry.CurrentUser.CreateSubKey(RunKey);
-        run?.SetValue(ValueName, $"\"{exe}\"", RegistryValueKind.String);
-        Debug.WriteLine($"autostart path updated: {registered} -> {exe}");
+        run?.SetValue(ValueName, wanted, RegistryValueKind.String);
+        Debug.WriteLine($"autostart entry updated: {current} -> {wanted}");
     }
 
-    /// <summary>The registered executable path with any quoting removed, or null.</summary>
-    private static string? RegisteredPath()
+    /// <summary>The raw Run value, or null if there is none.</summary>
+    private static string? RegisteredValue()
     {
         using var key = Registry.CurrentUser.OpenSubKey(RunKey);
-        if (key?.GetValue(ValueName) is not string value) return null;
+        return key?.GetValue(ValueName) is string { Length: > 0 } value ? value : null;
+    }
 
-        var trimmed = value.Trim().Trim('"');
+    /// <summary>The executable out of the registered command line, or null.</summary>
+    private static string? RegisteredPath()
+    {
+        if (RegisteredValue() is not { } value) return null;
+
+        var trimmed = value.Trim();
+
+        // A command line, not a path: "C:\...\Teezy.exe" --startup. Take what is between the
+        // quotes; fall back to the whole string for entries written before the flag existed.
+        if (trimmed.StartsWith('"'))
+        {
+            var close = trimmed.IndexOf('"', 1);
+            if (close > 1) return trimmed[1..close];
+        }
+
+        trimmed = trimmed.Trim('"');
         return trimmed.Length == 0 ? null : trimmed;
     }
 

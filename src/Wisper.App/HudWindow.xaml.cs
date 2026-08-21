@@ -43,12 +43,17 @@ public partial class HudWindow : Window
         [0.35, 0.5, 0.68, 0.82, 0.93, 1.0, 1.0, 1.0, 0.93, 0.82, 0.68, 0.5, 0.35];
 
     private double _smoothedLevel;
+    private double _phase;
 
     public HudWindow()
     {
         InitializeComponent();
         BuildMeter();
-        PositionAtBottomCenter();
+
+        // SizeToContent means the size arrives after layout, and it changes again whenever
+        // the status text does ("Listening" vs "Transcribing"). Repositioning on every size
+        // change keeps the pill centred through all of it.
+        SizeChanged += (_, _) => PositionAtBottomCenter();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -80,13 +85,21 @@ public partial class HudWindow : Window
         }
     }
 
+    /// <summary>Centres the pill above the taskbar.</summary>
+    /// <remarks>
+    /// Driven by <c>SizeChanged</c> rather than computed once up front. With
+    /// <c>SizeToContent</c> the real size is not known until WPF has laid the window out, and
+    /// an early <c>Measure</c> reports <c>DesiredSize</c> of zero — which placed the very
+    /// first pill of each session about 100 px right of centre and 50 px too low, then
+    /// silently corrected itself on the second showing.
+    /// </remarks>
     private void PositionAtBottomCenter()
     {
+        if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
         var area = SystemParameters.WorkArea;
-        // Measure first: SizeToContent means ActualWidth is still 0 before layout runs.
-        Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        Left = area.Left + (area.Width - DesiredSize.Width) / 2;
-        Top = area.Bottom - DesiredSize.Height - 72;
+        Left = area.Left + (area.Width - ActualWidth) / 2;
+        Top = area.Bottom - ActualHeight - 72;
     }
 
     public void ShowState(DictationState state, string? message = null)
@@ -134,13 +147,24 @@ public partial class HudWindow : Window
 
     public void SetLevel(float level)
     {
-        // Light smoothing so the meter glides instead of strobing at buffer rate.
-        _smoothedLevel += (level - _smoothedLevel) * 0.4;
+        // Asymmetric smoothing, the way a real level meter behaves: snap up so a syllable
+        // registers immediately, fall back slowly so the meter settles instead of flickering
+        // between words. A single symmetric factor makes it feel either laggy or twitchy.
+        var rate = level > _smoothedLevel ? 0.6 : 0.15;
+        _smoothedLevel += (level - _smoothedLevel) * rate;
+
+        // Advance a travelling phase so the bars ripple rather than rising as one block.
+        // Without this the meter reads as a bar chart; with it, it reads as a voice.
+        _phase = (_phase + 0.45) % (Math.PI * 2);
 
         for (var i = 0; i < BarCount; i++)
         {
-            var target = BarMinHeight + (BarMaxHeight - BarMinHeight) * _smoothedLevel * BarWeights[i];
-            _bars[i].Height = Math.Max(BarMinHeight, target);
+            // Ripple only modulates an already-present level, so silence stays flat rather
+            // than animating a waveform for audio that is not there.
+            var ripple = 1.0 + 0.35 * Math.Sin(_phase + i * 0.7);
+            var scale = _smoothedLevel * BarWeights[i] * ripple;
+            var target = BarMinHeight + (BarMaxHeight - BarMinHeight) * scale;
+            _bars[i].Height = Math.Clamp(target, BarMinHeight, BarMaxHeight);
         }
     }
 

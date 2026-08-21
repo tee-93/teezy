@@ -86,10 +86,7 @@ public sealed class WindowsAudioCapture : IAudioCapture
 
         ChunkAvailable?.Invoke(new AudioChunk(samples));
 
-        // Speech sits far below full scale, so a linear meter barely moves. Scaling by ~4
-        // puts normal talking in the upper half of the meter, where it reads as feedback
-        // that the app is hearing you.
-        LevelChanged?.Invoke((float)Math.Clamp(rms * 4.0, 0, 1));
+        LevelChanged?.Invoke(AudioLevel.ToMeter(rms));
     }
 
     public void Stop()

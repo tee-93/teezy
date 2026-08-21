@@ -1,0 +1,135 @@
+Teezy - push-to-talk dictation for Windows
+==========================================
+
+Hold Ctrl + Win together, speak, release. Cleaned-up text is typed into whatever had
+focus. Everything runs on this machine: the speech model is in this package, and Teezy
+does not contact the network at all unless you switch on the optional Claude cleanup
+tier, which is off by default.
+
+
+Install
+-------
+
+Open PowerShell in this folder and run:
+
+    powershell -ExecutionPolicy Bypass -File install.ps1
+
+Add -Autostart to also start Teezy when you sign in:
+
+    powershell -ExecutionPolicy Bypass -File install.ps1 -Autostart
+
+The installer picks the x64 or ARM64 build to match the CPU, copies the program to
+%LOCALAPPDATA%\Programs\Teezy and the model to %LOCALAPPDATA%\Teezy\models, and adds a
+Start Menu entry. It needs no administrator rights and touches nothing machine-wide.
+
+Teezy then lives in the system tray. Click the ^ arrow next to the clock if you cannot
+see it; double-click the icon to open the window.
+
+
+If you downloaded this as a zip
+-------------------------------
+
+Right-click the zip, Properties, tick Unblock, OK - and only then extract it. Windows marks
+everything inside a downloaded archive as untrusted, and unblocking the zip once saves
+doing it file by file afterwards.
+
+Extract the whole folder to disk before running anything. install.ps1 needs the bin\ and
+model\ folders sitting next to it, so running it straight out of Explorer's zip viewer
+fails.
+
+Allow about 2.5 GB of free space while you work: the zip, the extracted copy, and the
+installed copy all exist at once. You can delete the first two afterwards.
+
+
+If PowerShell scripts are blocked
+---------------------------------
+
+Some machines block scripts through Group Policy, which -ExecutionPolicy Bypass cannot
+override. Teezy still works - it just does not get a Start Menu entry or a sign-in
+entry. Build the folder by hand:
+
+  1. Make a folder somewhere you can write, for example
+     C:\Users\<you>\Teezy
+
+  2. From this package, copy bin\x64\Teezy.exe into it and rename it to Teezy.exe.
+     Use bin\arm64\Teezy.exe instead if the machine is a Snapdragon or Surface Pro X.
+
+  3. Inside that folder create models\parakeet-v2 and copy the four files from
+     model\parakeet-v2 into it. The result must look exactly like this:
+
+        Teezy\
+          Teezy.exe
+          models\
+            parakeet-v2\
+              encoder.int8.onnx     (622 MB)
+              decoder.int8.onnx     (6.9 MB)
+              joiner.int8.onnx      (1.7 MB)
+              tokens.txt            (9 KB)
+
+  4. Double-click Teezy.exe.
+
+Teezy looks for the model next to its own executable, so this layout works with no
+install step at all. It is also the layout to use on a USB stick.
+
+
+"Windows protected your PC"
+---------------------------
+
+Teezy is not code-signed, so SmartScreen shows a blue warning the first time. Click
+"More info", then "Run anyway". If the warning returns on every launch, the file is
+still marked as downloaded - right-click Teezy.exe, Properties, tick Unblock, OK. The
+installer does this for you.
+
+
+If the executable will not run at all
+-------------------------------------
+
+Some managed machines block executables from running out of %LOCALAPPDATA% (AppLocker,
+WDAC, or a Defender attack-surface-reduction rule). The symptom is that nothing happens
+at all, or a message about an administrator blocking the app - not a SmartScreen prompt.
+
+Try installing somewhere else first:
+
+    powershell -ExecutionPolicy Bypass -File install.ps1 -Destination C:\Users\<you>\Teezy
+
+If that is blocked too, the policy is machine-wide and only IT can change it.
+
+
+What to tell IT, if you need to ask
+-----------------------------------
+
+  What it is       A local dictation tool. Speech recognition runs on the CPU, on this
+                   machine, with the model stored on disk. No cloud speech service.
+
+  Network          None. The model ships with the installer and nothing is uploaded.
+                   The optional Claude cleanup tier is the only feature that would send
+                   text off the machine, it is off by default, and it needs an API key
+                   that has not been entered.
+
+  Rights           Per-user only. Everything is under %LOCALAPPDATA% and HKCU. No
+                   administrator rights, no services, no drivers, no Program Files,
+                   no machine-wide registry keys.
+
+  Microphone       Used only while the hotkey is physically held down.
+
+  Keyboard         A low-level keyboard hook watches for the Ctrl+Win chord. It only
+                   observes - every keystroke is passed straight on, nothing is
+                   swallowed, and nothing is logged. Only the hotkey is acted on.
+
+  Text output      Typed into the focused window with SendInput, the same API any
+                   on-screen keyboard uses. The clipboard is never touched.
+
+  Data on disk     Dictation history, personal dictionary and settings, all under
+                   %LOCALAPPDATA%\Teezy, all plain text and readable by you.
+
+  Licences         Speech model NVIDIA Parakeet TDT 0.6B (CC-BY-4.0), sherpa-onnx
+                   (Apache-2.0), ONNX Runtime (MIT), NAudio (MIT).
+
+
+Uninstall
+---------
+
+    powershell -ExecutionPolicy Bypass -File uninstall.ps1
+
+History, dictionary and settings are kept. Add -RemoveModel to reclaim the 661 MB
+model, or -RemoveData to delete everything Teezy has stored.

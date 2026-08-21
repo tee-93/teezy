@@ -36,6 +36,44 @@ Teezy lives in the system tray — click the `^` arrow next to the clock if you 
 
 For development, `dotnet run --project src\Teezy.App -c Release` still works.
 
+### Installing on another machine
+
+`publish.ps1` produces the executable; `tools\package.ps1` produces the thing you actually
+carry:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\package.ps1
+```
+
+That stages `dist\Teezy-Setup\` (~740 MB) — both architectures, the model, an installer and
+`READ-ME-FIRST.txt`. Copy the folder to the other machine and run, inside it:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1 -Autostart
+```
+
+`install.ps1` reads the CPU from the OS rather than asking, puts the program in
+`%LOCALAPPDATA%\Programs\Teezy` and the model in `%LOCALAPPDATA%\Teezy\models`, adds a Start
+Menu entry, and clears the mark-of-the-web that would otherwise raise a publisher warning on
+every single launch. Per-user throughout: no administrator rights, no services, nothing under
+Program Files or `HKLM`.
+
+**The model is bundled, and that is the whole point.** Teezy can fetch it on first launch,
+but that is the one step a managed network breaks — proxies and TLS inspection routinely kill
+a 660 MB Hugging Face transfer, and the failure lands on the far machine at the worst moment.
+Both `package.ps1` and `install.ps1` verify every file by size, because a truncated model does
+not announce itself.
+
+**It also works with no installer at all.** `ModelLocator` searches next to the executable as
+well as in `%LOCALAPPDATA%`, so `Teezy.exe` beside `models\parakeet-v2\` runs from any
+folder — a USB stick, or a machine where Group Policy blocks scripts outright and
+`-ExecutionPolicy Bypass` cannot help. `READ-ME-FIRST.txt` spells that layout out, along with
+SmartScreen, AppLocker and a plain-language summary for IT.
+
+**Installing over an older copy re-points the sign-in entry.** Teezy heals its own `Run` value
+at launch — but only if it launches, and a value aimed at a path that no longer exists never
+does. The installer fixes it from outside, where both halves are still known.
+
 ### Starting at sign-in
 
 Settings ▸ **Start Teezy when I sign in**. It registers under `HKCU\…\CurrentVersion\Run` —
@@ -328,8 +366,10 @@ synthesised key events).
 ## Not built yet
 
 1. **Command mode.** Select text, hold a second key, "make this more formal."
-3. **Installer.** Autostart is done; a real installer is not.
-4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
+2. **Code signing.** `install.ps1` needs no elevation and clears the mark-of-the-web, but the
+   executable itself is unsigned — so SmartScreen warns on first launch, and a machine running
+   WDAC or a publisher-allowlist policy can refuse it outright with nothing we can do locally.
+3. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.
 
 ---

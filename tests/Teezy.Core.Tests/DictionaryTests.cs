@@ -83,6 +83,78 @@ public class DictionaryTests
     }
 
     [Fact]
+    public void TheFileHeaderParsesToNothing() =>
+        // The header is rewritten on every save and includes a line containing "# off:",
+        // which is the marker for a disabled entry. If that parsed, every save would add a
+        // phantom rule and the dictionary would grow junk forever.
+        DictionaryStore.Parse(DictionaryStore.SampleFile).ShouldBeEmpty();
+
+    [Fact]
+    public void SavingThenLoadingKeepsExactlyTheEntriesGiven()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"teezy-dict-{Guid.NewGuid():N}.txt");
+        var store = new DictionaryStore(path);
+
+        store.Save(
+        [
+            DictionaryEntry.Correction("cloud code", "Claude Code"),
+            DictionaryEntry.Term("Parakeet"),
+            DictionaryEntry.Correction("teezy", "Teezy") with { IsEnabled = false },
+        ]);
+
+        store.Reload();
+        store.Entries.Count.ShouldBe(3);
+        store.Entries.Count(e => e.Kind == EntryKind.Correction).ShouldBe(2);
+        store.Entries.ShouldContain(e => !e.IsEnabled);
+
+        File.Delete(path);
+    }
+
+    [Fact]
+    public void AccentedEntriesSurviveTheFile()
+    {
+        // Written without a BOM, Windows editors and shells fall back to the ANSI code page
+        // and mangle these - then round-trip the mangled bytes back in on the next load.
+        var path = Path.Combine(Path.GetTempPath(), $"teezy-dict-{Guid.NewGuid():N}.txt");
+        var store = new DictionaryStore(path);
+
+        store.Save(
+        [
+            DictionaryEntry.Correction("cafe con leche", "café con leche"),
+            DictionaryEntry.Term("Björn Rundgren"),
+            DictionaryEntry.Correction("zoe", "Zoë"),
+        ]);
+
+        store.Reload();
+        store.Entries.Count.ShouldBe(3);
+
+        // And the corrector built from the reloaded file still fires on them.
+        store.Corrector.Apply("one cafe con leche").Text.ShouldBe("one café con leche");
+
+        File.ReadAllBytes(path).Take(3).ShouldBe(new byte[] { 0xEF, 0xBB, 0xBF });
+
+        File.Delete(path);
+    }
+
+    [Fact]
+    public void RepeatedSavesDoNotAccumulateHeaderJunk()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"teezy-dict-{Guid.NewGuid():N}.txt");
+        var store = new DictionaryStore(path);
+
+        for (var i = 0; i < 5; i++)
+        {
+            store.Reload();
+            store.Save([.. store.Entries, DictionaryEntry.Term($"word{i}")]);
+        }
+
+        store.Reload();
+        store.Entries.Count.ShouldBe(5);
+
+        File.Delete(path);
+    }
+
+    [Fact]
     public void ParsesTheFileFormat()
     {
         var entries = DictionaryStore.Parse(

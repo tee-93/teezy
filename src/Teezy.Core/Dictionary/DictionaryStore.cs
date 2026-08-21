@@ -15,6 +15,8 @@ public sealed class DictionaryStore
 {
     private const string ArrowSeparator = "->";
 
+    private static readonly System.Text.UTF8Encoding Utf8WithBom = new(encoderShouldEmitUTF8Identifier: true);
+
     public string Path { get; }
     public IReadOnlyList<DictionaryEntry> Entries { get; private set; } = [];
     public DictionaryCorrector Corrector { get; private set; } = new([]);
@@ -39,10 +41,34 @@ public sealed class DictionaryStore
     {
         var list = entries.ToList();
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
-        File.WriteAllLines(Path, list.Select(e => e.ToFileLine()));
+
+        // The header is rewritten every time rather than preserved. Saving only entries
+        // would silently strip the file's explanation the first time anyone edited the
+        // dictionary in the app, leaving a bare list that says nothing about the format
+        // to whoever opens it in a text editor later.
+        //
+        // Written UTF-8 *with* a BOM. Entries legitimately contain accented names, and
+        // without the BOM Windows text editors and shells fall back to the ANSI code page
+        // and mangle them — which then round-trips the mangled bytes back in on the next
+        // load. The BOM is what makes the encoding unambiguous to every tool.
+        File.WriteAllLines(Path, [.. Header, .. list.Select(e => e.ToFileLine())], Utf8WithBom);
+
         Entries = list;
         Corrector = new DictionaryCorrector(list);
     }
+
+    private static IReadOnlyList<string> Header =>
+    [
+        "# Teezy personal dictionary - edited in the app, or here.",
+        "#",
+        "#   Anthropic                  a hint: bias the engine toward this spelling",
+        "#   cloud code -> Claude Code  a correction: rewrite the left side to the right",
+        "#   # off: teezy -> Teezy      disabled, kept for later",
+        "#",
+        "# Corrections apply longest-trigger-first and match whole words only, so",
+        "# 'cloud code' never touches 'Cloudflare'.",
+        "",
+    ];
 
     internal static List<DictionaryEntry> Parse(IEnumerable<string> lines)
     {
@@ -82,17 +108,6 @@ public sealed class DictionaryStore
         return entries;
     }
 
-    /// <summary>A starter dictionary, written on first run so the file explains itself.</summary>
-    public static IReadOnlyList<string> SampleFile =>
-    [
-        "# Teezy personal dictionary.",
-        "#",
-        "#   Anthropic                  a word to bias the engine toward",
-        "#   cloud code -> Claude Code  rewrite the left side to the right",
-        "#   # off: rule -> Rule        disabled, kept for later",
-        "#",
-        "# Corrections are applied longest-trigger-first and match whole words only,",
-        "# so 'cloud code' will never touch 'Cloudflare'.",
-        "",
-    ];
+    /// <summary>Written on first run, so a brand-new file still explains itself.</summary>
+    public static IReadOnlyList<string> SampleFile => Header;
 }

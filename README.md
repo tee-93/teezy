@@ -36,6 +36,30 @@ Teezy lives in the system tray — click the `^` arrow next to the clock if you 
 
 For development, `dotnet run --project src\Teezy.App -c Release` still works.
 
+### Starting at sign-in
+
+Settings ▸ **Start Teezy when I sign in**. It registers under `HKCU\…\CurrentVersion\Run` —
+per-user, no administrator rights, and visible in **Task Manager ▸ Startup** where people
+already expect to manage startup apps. A scheduled task would have hidden it from the place
+users actually look.
+
+Three details that are easy to get wrong, and are not:
+
+- **The OS is the source of truth, not a saved setting.** There is deliberately no
+  `Autostart` field in `settings.json`. Windows lets you switch a startup entry off in Task
+  Manager, and a mirrored setting would keep showing a tick next to something that no longer
+  happens.
+- **Writing the `Run` value alone is not enough.** If the entry was ever disabled in Task
+  Manager, Windows records that veto in a separate `StartupApproved` key which wins — so
+  enabling would appear to succeed and nothing would happen at sign-in. Ticking the box
+  clears the veto; unticking it leaves the veto alone, because that was your choice and
+  should outlive us.
+- **The registered path self-heals.** Republishing to a different folder would otherwise
+  leave a `Run` value aimed at a file that no longer exists, and nothing reports a startup
+  entry that failed to resolve. Teezy re-points it at launch.
+
+Starting at sign-in loads the model — about 1.6 s and ~900 MB resident, once.
+
 ---
 
 ## The window
@@ -221,7 +245,7 @@ synthesised key events).
    tone, list formatting and spoken corrections. Costs an API key and a network round trip,
    so the app would stop being fully offline.
 2. **Command mode.** Select text, hold a second key, "make this more formal."
-3. **Installer and autostart.**
+3. **Installer.** Autostart is done; a real installer is not.
 4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.
 

@@ -1,3 +1,4 @@
+using Teezy.Core.Abstractions;
 using System;
 using System.Diagnostics;
 using System.Windows;
@@ -23,6 +24,7 @@ public partial class MainWindow : Window
     private readonly Func<TeezySettings> _settings;
     private readonly Action<TeezySettings> _saveSettings;
     private readonly ParakeetTranscriber? _transcriber;
+    private readonly IAutostart? _autostart;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -33,7 +35,8 @@ public partial class MainWindow : Window
         DictionaryStore dictionary,
         Func<TeezySettings> settings,
         Action<TeezySettings> saveSettings,
-        ParakeetTranscriber? transcriber)
+        ParakeetTranscriber? transcriber,
+        IAutostart? autostart = null)
     {
         InitializeComponent();
         _history = history;
@@ -41,6 +44,7 @@ public partial class MainWindow : Window
         _settings = settings;
         _saveSettings = saveSettings;
         _transcriber = transcriber;
+        _autostart = autostart;
 
         Icon = LogoImage.Create(48);
         ShowHome();
@@ -117,7 +121,7 @@ public partial class MainWindow : Window
 
     private void OpenSettings()
     {
-        var window = new SettingsWindow(_settings(), _transcriber, _transcriber?.IsLoaded ?? false)
+        var window = new SettingsWindow(_settings(), _transcriber, _transcriber?.IsLoaded ?? false, _autostart)
         {
             Owner = this,
         };

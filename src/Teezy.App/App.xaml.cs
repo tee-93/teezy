@@ -20,6 +20,7 @@ public partial class App : Application
 {
     private DictationController? _controller;
     private ParakeetTranscriber? _transcriber;
+    private WindowsAutostart? _autostart;
     private HudWindow? _hud;
     private Forms.NotifyIcon? _tray;
     private DictionaryStore? _dictionary;
@@ -65,6 +66,12 @@ public partial class App : Application
 
         _history = new HistoryStore();
         _history.Compact();
+
+        // Re-point the startup entry if the exe has moved since it was registered. Without
+        // this, republishing to a new folder leaves a Run value aimed at a file that no
+        // longer exists, and nothing reports a startup entry that failed to resolve.
+        _autostart = new WindowsAutostart();
+        _autostart.RefreshPathIfRegistered();
 
         _controller = new DictationController(
             new WindowsHotkeySource(),
@@ -227,7 +234,8 @@ public partial class App : Application
             _dictionary!,
             () => _settings,
             updated => ApplySettings(updated),
-            _transcriber);
+            _transcriber,
+            _autostart);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -263,7 +271,7 @@ public partial class App : Application
         var existing = Windows.OfType<SettingsWindow>().FirstOrDefault();
         if (existing is not null) { existing.Activate(); return; }
 
-        var window = new SettingsWindow(_settings, _transcriber, _modelReady);
+        var window = new SettingsWindow(_settings, _transcriber, _modelReady, _autostart);
         window.SettingsChanged += updated =>
         {
             var keyChanged = updated.PushToTalkKey != _settings.PushToTalkKey;

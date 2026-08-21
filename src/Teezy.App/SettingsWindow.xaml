@@ -50,6 +50,9 @@
         <Border Style="{StaticResource Card}">
             <StackPanel>
                 <TextBlock Text="BEHAVIOUR" Style="{StaticResource Heading}"/>
+                <CheckBox x:Name="AutostartBox" Content="Start Teezy when I sign in" Click="OnAutostartChanged"/>
+                <TextBlock x:Name="AutostartNote" Style="{StaticResource Hint}" Visibility="Collapsed"
+                           Margin="24,-6,0,9"/>
                 <CheckBox x:Name="CleanupBox" Content="Clean up filler words and spacing" Click="OnChanged"/>
                 <CheckBox x:Name="HudBox"     Content="Show the level meter while recording" Click="OnChanged"/>
                 <CheckBox x:Name="SoundBox"   Content="Play a tone when recording starts and stops" Click="OnChanged"/>

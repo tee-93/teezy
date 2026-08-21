@@ -19,10 +19,17 @@ public partial class SettingsWindow : Window
 
     public event Action<TeezySettings>? SettingsChanged;
 
-    public SettingsWindow(TeezySettings settings, ParakeetTranscriber? transcriber, bool modelReady)
+    private readonly IAutostart _autostart;
+
+    public SettingsWindow(
+        TeezySettings settings,
+        ParakeetTranscriber? transcriber,
+        bool modelReady,
+        IAutostart? autostart = null)
     {
         InitializeComponent();
         _settings = settings;
+        _autostart = autostart ?? new UnsupportedAutostart();
 
         Subtitle.Text = "On-device dictation. Nothing leaves this machine.";
 
@@ -51,7 +58,43 @@ public partial class SettingsWindow : Window
             ModelPath.Text = ModelPaths.DefaultDirectory;
         }
 
+        ShowAutostartState();
+
         _loading = false;
+    }
+
+    /// <summary>Reads autostart from the OS rather than from saved settings.</summary>
+    /// <remarks>
+    /// Always read live. Windows lets the user disable a startup entry in Task Manager, and a
+    /// checkbox mirrored from <c>settings.json</c> would keep showing a tick next to something
+    /// that no longer happens.
+    /// </remarks>
+    private void ShowAutostartState()
+    {
+        AutostartBox.IsChecked = _autostart.IsEnabled;
+
+        if (_autostart.IsBlockedByUser)
+        {
+            AutostartNote.Text =
+                "Turned off in Task Manager’s Startup tab. Ticking this will switch it back on.";
+            AutostartNote.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            AutostartNote.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void OnAutostartChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        if (AutostartBox.IsChecked == true) _autostart.Enable();
+        else _autostart.Disable();
+
+        // Read back rather than trusting the write: the registry call can fail silently under
+        // a restrictive policy, and the checkbox should show what is actually true.
+        ShowAutostartState();
     }
 
     private void OnChanged(object sender, RoutedEventArgs e)

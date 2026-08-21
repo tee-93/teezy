@@ -175,6 +175,36 @@ synthesised key events).
 
 ---
 
+## Other platforms
+
+`Wisper.Core` and `Wisper.Speech` (~800 lines — state machine, cleanup, dictionary,
+Parakeet) are plain `net10.0` and port unchanged. The remaining ~1,950 lines are the hotkey,
+injection, tray and overlay, and those are Windows-specific by nature. sherpa-onnx ships
+native runtimes for macOS, Linux, Android and Windows alike, so **the engine is never the
+obstacle — the platform integration is.**
+
+| Target | Engine | The app around it |
+|---|---|---|
+| Windows x64 / ARM64 | ✅ | ✅ shipping |
+| macOS | ✅ | Rewrite: `CGEventTap`, AX insert, menu bar. Needs Accessibility permission. |
+| Linux | ✅ | X11 workable; **Wayland blocks global hotkeys and synthetic input by design.** |
+| Android | ✅ | Only as a custom keyboard (IME) — see below. |
+| iOS / iPadOS | ❌ | Not possible. No third-party app gets system-wide text injection. |
+
+**Android, deliberately postponed.** Three findings, worth keeping so the question does not
+get re-litigated from scratch:
+
+1. **It cannot be push-to-talk anywhere.** Android grants no app system-wide text injection.
+   The only route is an IME the user switches to — a different product, not a port.
+2. **The model likely does not fit.** Parakeet 0.6B int8 needs ~2 GB resident, and Android
+   reclaims IME processes aggressively. The lighter 110M Parakeet variants are published
+   **only as fp32 ONNX** — no int8 export exists — so there is no drop-in smaller model.
+   Hosting the model in a bound `Service` would mitigate this without eliminating it.
+3. A PC-backed design (phone records, this app transcribes over the LAN) sidesteps both, at
+   the cost of the offline guarantee and requiring the desktop to be awake.
+
+---
+
 ## Third-party notices
 
 Speech model: **NVIDIA Parakeet TDT 0.6B**, exported to ONNX and quantized to int8 by

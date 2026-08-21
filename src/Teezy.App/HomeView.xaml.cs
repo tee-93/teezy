@@ -66,7 +66,8 @@ public partial class HomeView : UserControl
         var name = Environment.UserName;
         if (string.IsNullOrWhiteSpace(name)) return "there";
 
-        // "zack_" and "zack.tarczynski" both want to render as "Zack".
+        // Windows account names are rarely a bare first name: "ada_", "ada.lovelace" and
+        // "ada-l" should all greet the same person.
         var cut = name.Split('.', '_', ' ', '-')[0];
         return cut.Length switch
         {

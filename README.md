@@ -38,41 +38,57 @@ For development, `dotnet run --project src\Teezy.App -c Release` still works.
 
 ### Installing on another machine
 
-`publish.ps1` produces the executable; `tools\package.ps1` produces the thing you actually
-carry:
+Three routes, in the order you should reach for them. All three are per-user: no
+administrator rights, no services, nothing under Program Files or `HKLM`. That is what makes
+Teezy installable on a managed work machine at all.
+
+**1 · The installer.** `tools\build-installer.ps1` compiles `dist\Teezy-Setup.exe` (~147 MB):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\package.ps1
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 ```
 
-That stages `dist\Teezy-Setup\` (~740 MB) — both architectures, the model, an installer and
-`READ-ME-FIRST.txt`. Copy the folder to the other machine and run, inside it:
+Download it, double-click, done — no wizard pages and no command line. It installs to
+`%LOCALAPPDATA%\Programs\Teezy`, adds a Start Menu entry, registers a real uninstaller in
+**Apps & features** and launches the app. **One download carries both architectures** and
+picks by CPU at install time, so there is no wrong file to choose.
+
+Building it needs Inno Setup 6, which `winget install -e --id JRSoftware.InnoSetup` puts
+under `%LOCALAPPDATA%` without elevation. Its compiler now prints *"Non-commercial use
+only"* — check the current licence before shipping this commercially.
+
+**The installer does not carry the model**; the app downloads it on first launch. That is
+what keeps the download at 147 MB rather than 800 MB, and it is the one step a managed
+network can break.
+
+**2 · The offline package, for when it does.** `tools\package.ps1` stages `dist\Teezy-Setup\`
+(~790 MB) — both architectures, the model, `install.ps1`, `uninstall.ps1` and
+`READ-ME-FIRST.txt`. Add `-Zip` for a single 613 MB file.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1 -Autostart
+powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Zip
 ```
 
-`install.ps1` reads the CPU from the OS rather than asking, puts the program in
-`%LOCALAPPDATA%\Programs\Teezy` and the model in `%LOCALAPPDATA%\Teezy\models`, adds a Start
-Menu entry, and clears the mark-of-the-web that would otherwise raise a publisher warning on
-every single launch. Per-user throughout: no administrator rights, no services, nothing under
-Program Files or `HKLM`.
+Copy the folder over and run `install.ps1 -Autostart` inside it. Proxies and TLS inspection
+routinely kill a 660 MB Hugging Face transfer, and the failure lands on the far machine at
+the worst moment — so `package.ps1` and `install.ps1` both verify every model file by size,
+because a truncated model does not announce itself.
 
-**The model is bundled, and that is the whole point.** Teezy can fetch it on first launch,
-but that is the one step a managed network breaks — proxies and TLS inspection routinely kill
-a 660 MB Hugging Face transfer, and the failure lands on the far machine at the worst moment.
-Both `package.ps1` and `install.ps1` verify every file by size, because a truncated model does
-not announce itself.
+**3 · No installer at all.** `ModelLocator` searches next to the executable as well as in
+`%LOCALAPPDATA%`, so `Teezy.exe` beside `models\parakeet-v2\` runs from any folder — a USB
+stick, or a machine where Group Policy blocks scripts outright and `-ExecutionPolicy Bypass`
+cannot help. `READ-ME-FIRST.txt` spells that layout out, along with SmartScreen, AppLocker
+and a plain-language summary for IT.
 
-**It also works with no installer at all.** `ModelLocator` searches next to the executable as
-well as in `%LOCALAPPDATA%`, so `Teezy.exe` beside `models\parakeet-v2\` runs from any
-folder — a USB stick, or a machine where Group Policy blocks scripts outright and
-`-ExecutionPolicy Bypass` cannot help. `READ-ME-FIRST.txt` spells that layout out, along with
-SmartScreen, AppLocker and a plain-language summary for IT.
+**None of it is code-signed**, so the first launch raises SmartScreen's *"Windows protected
+your PC"* — *More info*, then *Run anyway*. `install.ps1` clears the mark-of-the-web so the
+prompt does not return on every launch; the installer route is unaffected, since Setup writes
+the file itself. A machine running WDAC or a publisher allowlist can still refuse outright,
+and nothing local fixes that.
 
 **Installing over an older copy re-points the sign-in entry.** Teezy heals its own `Run` value
 at launch — but only if it launches, and a value aimed at a path that no longer exists never
-does. The installer fixes it from outside, where both halves are still known.
+does. `install.ps1` fixes it from outside, where both halves are still known.
 
 ### Starting at sign-in
 

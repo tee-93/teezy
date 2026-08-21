@@ -17,17 +17,28 @@ internal static partial class Native
     internal const uint KEYEVENTF_KEYUP = 0x0002;
     internal const uint KEYEVENTF_UNICODE = 0x0004;
 
-    internal const ushort VK_CONTROL = 0x11;
-    internal const ushort VK_LCONTROL = 0xA2;
-    internal const ushort VK_RCONTROL = 0xA3;
-    internal const ushort VK_SHIFT = 0x10;
-    internal const ushort VK_RSHIFT = 0xA1;
-    internal const ushort VK_MENU = 0x12;
-    internal const ushort VK_LWIN = 0x5B;
-    internal const ushort VK_RWIN = 0x5C;
-    internal const ushort VK_SCROLL = 0x91;
-    internal const ushort VK_PAUSE = 0x13;
-    internal const ushort VK_F13 = 0x7C;
+    // uint to match KBDLLHOOKSTRUCT.vkCode, which is what these are compared against.
+    internal const uint VK_SHIFT = 0x10;
+    internal const uint VK_CONTROL = 0x11;
+    internal const uint VK_MENU = 0x12;
+    internal const uint VK_PAUSE = 0x13;
+    internal const uint VK_CAPITAL = 0x14;
+    internal const uint VK_LWIN = 0x5B;
+    internal const uint VK_RWIN = 0x5C;
+    internal const uint VK_F13 = 0x7C;
+    internal const uint VK_F20 = 0x83;
+    internal const uint VK_LSHIFT = 0xA0;
+    internal const uint VK_RSHIFT = 0xA1;
+    internal const uint VK_LCONTROL = 0xA2;
+    internal const uint VK_RCONTROL = 0xA3;
+    internal const uint VK_LMENU = 0xA4;
+    internal const uint VK_RMENU = 0xA5;
+    internal const uint VK_SCROLL = 0x91;
+
+    /// <summary>Right Shift is not an extended key; its scan code is what identifies it.</summary>
+    internal const uint RightShiftScanCode = 0x36;
+
+    /// <summary>For the Ctrl+V paste fallback in the injector.</summary>
     internal const ushort VK_V = 0x56;
 
     /// <summary>Set on the extended-key half of a pair — the flag that separates Right Ctrl

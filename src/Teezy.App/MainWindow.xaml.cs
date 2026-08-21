@@ -1,3 +1,4 @@
+using Teezy.Core.Hotkeys;
 using Teezy.Core.Abstractions;
 using System;
 using System.Diagnostics;
@@ -25,6 +26,7 @@ public partial class MainWindow : Window
     private readonly Action<TeezySettings> _saveSettings;
     private readonly ParakeetTranscriber? _transcriber;
     private readonly IAutostart? _autostart;
+    private readonly IHotkeyCapture? _capture;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -36,7 +38,8 @@ public partial class MainWindow : Window
         Func<TeezySettings> settings,
         Action<TeezySettings> saveSettings,
         ParakeetTranscriber? transcriber,
-        IAutostart? autostart = null)
+        IAutostart? autostart = null,
+        IHotkeyCapture? capture = null)
     {
         InitializeComponent();
         _history = history;
@@ -45,6 +48,7 @@ public partial class MainWindow : Window
         _saveSettings = saveSettings;
         _transcriber = transcriber;
         _autostart = autostart;
+        _capture = capture;
 
         Icon = LogoImage.Create(48);
         ShowHome();
@@ -121,7 +125,7 @@ public partial class MainWindow : Window
 
     private void OpenSettings()
     {
-        var window = new SettingsWindow(_settings(), _transcriber, _transcriber?.IsLoaded ?? false, _autostart)
+        var window = new SettingsWindow(_settings(), _transcriber, _transcriber?.IsLoaded ?? false, _autostart, _capture)
         {
             Owner = this,
         };

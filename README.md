@@ -32,7 +32,7 @@ progress window, verifies every file, and only then starts. Nothing touches the 
 afterwards. `tools\download-model.ps1` does the same from a shell if you prefer.
 
 Teezy lives in the system tray — click the `^` arrow next to the clock if you cannot see it.
-**Hold Right Ctrl, speak, release.** Double-click the tray icon to open the window.
+**Hold Ctrl + Win together, speak, release.** Double-click the tray icon to open the window.
 
 For development, `dotnet run --project src\Teezy.App -c Release` still works.
 
@@ -91,7 +91,7 @@ accumulated, so deleting an entry corrects them instead of leaving them drifted.
 ## How it fits together
 
 ```
- hold Right Ctrl ──► WindowsHotkeySource ──► DictationController ◄── TeezySettings
+    hold Ctrl+Win ──► WindowsHotkeySource ──► DictationController ◄── TeezySettings
                                                     │
                                   ┌─────────────────┼─────────────────┐
                                   ▼                 ▼                 ▼
@@ -141,18 +141,36 @@ Four inference threads measured fastest; **eight measured slower**. That is why
 
 ## Decisions worth knowing
 
-**Right Ctrl is the default hotkey, and Right Alt is not offered at all.** Right Alt is
-AltGr on German, Polish, UK, Nordic and most Latin-American layouts — it is how those users
-type `@`, `€`, `\` and `|`. Right Ctrl produces no character on any layout.
+**Ctrl + Win is the default, and it is a chord for a reason.** The Windows key alone opens
+the Start menu when released; held together with Ctrl, Windows treats the pair as a chord
+and does not. Verified against the real hook — the foreground window is unchanged across a
+full press and release. Neither key produces a character, and neither alone fires dictation.
+
+**No Shift-only combination is offered.** Holding either Shift for eight seconds raises the
+Windows Filter Keys prompt, and a push-to-talk hold routinely runs longer than that. Shift
+can still be recorded as part of a custom combination, with a warning — it is the user's
+keyboard, and someone who has already turned Filter Keys off should not be blocked.
+
+**Right Alt is warned about, not banned.** It is AltGr on German, Polish, UK, Nordic and most
+Latin-American layouts — how those keyboards type `@`, `€`, `\` and `|`.
+
+**All the combination logic lives in `Teezy.Core`.** The keyboard hook is untestable, but
+press order, auto-repeat, partial release and a key held on both sides of the keyboard at
+once are exactly where the bugs are — so `HotkeyMatcher` is platform-neutral and covered by
+tests, and the Win32 layer only translates key events into `HotkeyKey` values.
+
+**Each slot tracks *which* physical keys satisfy it, not merely whether one does.** Hold both
+Ctrl keys, release one, and a Ctrl is still physically down — the hold must not end
+mid-sentence.
 
 **The hotkey is observed, never swallowed.** Every hook callback ends in `CallNextHookEx`.
 Suppression would buy nothing and risks a much worse failure: if a key-down is consumed but
 the key-up escapes, the foreground app believes Ctrl is held down forever.
 
-**Left Ctrl must not match.** A low-level hook may report either `VK_CONTROL` or
-`VK_RCONTROL` depending on the driver, so both are accepted and the *extended-key flag* is
-what actually decides. Treating a bare `VK_CONTROL` as a match would arm dictation on every
-copy and paste on the machine. There is a test for this.
+**Left and right are separated by the extended-key flag, not the virtual key code.** A
+low-level hook may report either `VK_CONTROL` or `VK_RCONTROL` depending on the keyboard
+driver, so both are accepted and the flag decides. Right Shift is the exception — it is not
+an extended key and is identified by its scan code instead.
 
 **The HUD must never take focus.** Text is injected into whatever had keyboard focus, so if
 the overlay ever became active there would be nothing left to type into. Three independent
@@ -226,7 +244,8 @@ dotnet build Teezy.slnx -c Release
 dotnet test  tests\Teezy.Core.Tests
 ```
 
-71 tests cover the formatter, the dictionary and its warnings, the state machine, the level
+105 tests cover the formatter, the dictionary and its warnings, hotkey combinations and
+settings migration, the state machine, the level
 mapping and the
 history and stats — including the
 re-entrancy guard that stops a second key press during transcription from typing the

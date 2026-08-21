@@ -85,7 +85,7 @@ public sealed class DictationController : IDisposable
 
     public bool Start()
     {
-        _hotkey.Key = _settings().PushToTalkKey;
+        _hotkey.Hotkey = _settings().Hotkey;
         return _hotkey.Start();
     }
 

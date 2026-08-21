@@ -41,9 +41,28 @@
         <Border Style="{StaticResource Card}">
             <StackPanel>
                 <TextBlock Text="PUSH TO TALK" Style="{StaticResource Heading}"/>
-                <ComboBox x:Name="KeyPicker" SelectionChanged="OnChanged"/>
-                <TextBlock Style="{StaticResource Hint}"
-                           Text="Hold the key, speak, release. Right Alt is deliberately not offered — it is AltGr on many layouts, where binding it would break typing @, € and \."/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="KeyPicker" Grid.Column="0" SelectionChanged="OnHotkeyPreset"/>
+                    <Button x:Name="RecordButton" Grid.Column="1" Content="Record…" Margin="8,0,0,0"
+                            Padding="14,5" Click="OnRecordHotkey"/>
+                </Grid>
+
+                <TextBlock x:Name="HotkeyHint" Style="{StaticResource Hint}"
+                           Text="Hold every key together, speak, release."/>
+
+                <!-- Real, reproducible nuisances rather than restrictions: it is the user's
+                     keyboard, and someone who has already turned Filter Keys off should not
+                     be stopped from using Shift. -->
+                <Border x:Name="HotkeyWarning" Visibility="Collapsed" Margin="0,10,0,0" Padding="12,10"
+                        Background="#FFF9EC" BorderBrush="#F3E3B8" BorderThickness="1" CornerRadius="8">
+                    <TextBlock x:Name="HotkeyWarningText" TextWrapping="Wrap"
+                               Foreground="#8A6100" FontSize="12"/>
+                </Border>
             </StackPanel>
         </Border>
 

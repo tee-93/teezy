@@ -21,6 +21,7 @@ public partial class App : Application
     private DictationController? _controller;
     private ParakeetTranscriber? _transcriber;
     private WindowsAutostart? _autostart;
+    private WindowsHotkeySource? _hotkeySource;
     private HudWindow? _hud;
     private Forms.NotifyIcon? _tray;
     private DictionaryStore? _dictionary;
@@ -73,8 +74,12 @@ public partial class App : Application
         _autostart = new WindowsAutostart();
         _autostart.RefreshPathIfRegistered();
 
+        // Held as a field as well as handed to the controller: the settings picker needs it
+        // to record a combination.
+        _hotkeySource = new WindowsHotkeySource();
+
         _controller = new DictationController(
-            new WindowsHotkeySource(),
+            _hotkeySource,
             new WindowsAudioCapture(),
             _transcriber,
             new WindowsTextInjector(),
@@ -113,7 +118,7 @@ public partial class App : Application
             await _transcriber!.LoadAsync().ConfigureAwait(false);
             _modelReady = true;
             Dispatch(() => SetTrayState(
-                $"Ready — hold {KeyName(_settings.PushToTalkKey)} to dictate", ready: true));
+                $"Ready — hold {_settings.Hotkey.Display} to dictate", ready: true));
             Debug.WriteLine($"model loaded in {sw.ElapsedMilliseconds} ms");
         }
         catch (TranscriberException ex)
@@ -235,7 +240,8 @@ public partial class App : Application
             () => _settings,
             updated => ApplySettings(updated),
             _transcriber,
-            _autostart);
+            _autostart,
+            _hotkeySource);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -247,11 +253,11 @@ public partial class App : Application
     /// <summary>Applies and persists a settings change from any window.</summary>
     private void ApplySettings(TeezySettings updated)
     {
-        var keyChanged = updated.PushToTalkKey != _settings.PushToTalkKey;
+        var keyChanged = updated.Hotkey != _settings.Hotkey;
         _settings = updated;
         _settings.Save();
         if (keyChanged) _controller?.ReloadHotkey();
-        SetTrayState($"Ready — hold {KeyName(_settings.PushToTalkKey)} to dictate", _modelReady);
+        SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
     }
 
     private void SetTrayState(string text, bool ready)
@@ -271,14 +277,14 @@ public partial class App : Application
         var existing = Windows.OfType<SettingsWindow>().FirstOrDefault();
         if (existing is not null) { existing.Activate(); return; }
 
-        var window = new SettingsWindow(_settings, _transcriber, _modelReady, _autostart);
+        var window = new SettingsWindow(_settings, _transcriber, _modelReady, _autostart, _hotkeySource);
         window.SettingsChanged += updated =>
         {
-            var keyChanged = updated.PushToTalkKey != _settings.PushToTalkKey;
+            var keyChanged = updated.Hotkey != _settings.Hotkey;
             _settings = updated;
             _settings.Save();
             if (keyChanged) _controller?.ReloadHotkey();
-            SetTrayState($"Ready — hold {KeyName(_settings.PushToTalkKey)} to dictate", _modelReady);
+            SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
         };
         window.Show();
     }
@@ -292,15 +298,6 @@ public partial class App : Application
     }
 
 
-    internal static string KeyName(PushToTalkKey key) => key switch
-    {
-        PushToTalkKey.RightControl => "Right Ctrl",
-        PushToTalkKey.RightShift => "Right Shift",
-        PushToTalkKey.ScrollLock => "Scroll Lock",
-        PushToTalkKey.Pause => "Pause",
-        PushToTalkKey.F13 => "F13",
-        _ => key.ToString(),
-    };
 
     protected override void OnExit(ExitEventArgs e)
     {

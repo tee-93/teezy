@@ -102,5 +102,5 @@ public sealed class WindowsTextInjector : ITextInjector
 
     /// <summary>The high bit of <c>GetAsyncKeyState</c> is the physical down state; the low
     /// bit is "pressed since last call" and must not be tested here.</summary>
-    private static bool IsDown(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
+    private static bool IsDown(uint vk) => (GetAsyncKeyState((int)vk) & 0x8000) != 0;
 }

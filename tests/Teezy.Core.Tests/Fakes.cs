@@ -1,3 +1,4 @@
+using Teezy.Core.Hotkeys;
 using Teezy.Core.Abstractions;
 
 namespace Teezy.Core.Tests;
@@ -6,7 +7,7 @@ internal sealed class FakeHotkey : IHotkeySource
 {
     public event Action? Pressed;
     public event Action? Released;
-    public PushToTalkKey Key { get; set; }
+    public Hotkey Hotkey { get; set; } = Hotkey.Default;
     public bool IsStarted { get; private set; }
 
     public bool Start() { IsStarted = true; return true; }

@@ -1,3 +1,4 @@
+using Teezy.Core.Hotkeys;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Teezy.Core.Abstractions;
@@ -7,7 +8,21 @@ namespace Teezy.Core;
 /// <summary>User settings, persisted as JSON next to the model and dictionary.</summary>
 public sealed record TeezySettings
 {
-    public PushToTalkKey PushToTalkKey { get; init; } = PushToTalkKey.RightControl;
+    /// <summary>The push-to-talk combination. Every key must be held together.</summary>
+    public Hotkey Hotkey { get; init; } = Hotkey.Default;
+
+    /// <summary>
+    /// The single key this used to be, read only so old settings files still work.
+    /// </summary>
+    /// <remarks>
+    /// Migrated in <see cref="Load"/> and then dropped: it is never written back, so the
+    /// file converts itself the first time settings are saved. Kept rather than ignored
+    /// because silently resetting someone's hotkey to the default would be worse than any
+    /// amount of migration code.
+    /// </remarks>
+    [JsonPropertyName("PushToTalkKey")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyPushToTalkKey { get; init; }
 
     /// <summary>Run the deterministic cleanup pass. The dictionary runs either way.</summary>
     public bool CleanupEnabled { get; init; } = true;
@@ -51,9 +66,12 @@ public sealed record TeezySettings
         path ??= DefaultPath;
         try
         {
-            return File.Exists(path)
-                ? JsonSerializer.Deserialize<TeezySettings>(File.ReadAllText(path), Json) ?? new()
-                : new TeezySettings();
+            if (!File.Exists(path)) return new TeezySettings();
+
+            var loaded = JsonSerializer.Deserialize<TeezySettings>(File.ReadAllText(path), Json)
+                ?? new TeezySettings();
+
+            return Migrate(loaded);
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -61,6 +79,30 @@ public sealed record TeezySettings
             // Defaults are always a usable configuration.
             return new TeezySettings();
         }
+    }
+
+    /// <summary>Converts a settings file written before hotkeys became combinations.</summary>
+    internal static TeezySettings Migrate(TeezySettings loaded)
+    {
+        if (loaded.LegacyPushToTalkKey is not { Length: > 0 } legacy)
+        {
+            // A file with neither form - hand-edited, or truncated - still needs a usable key.
+            return loaded.Hotkey.IsEmpty ? loaded with { Hotkey = Hotkey.Default } : loaded;
+        }
+
+        var migrated = legacy switch
+        {
+            "RightControl" => new Hotkey(HotkeyKey.RightControl),
+            "RightShift" => new Hotkey(HotkeyKey.RightShift),
+            "ScrollLock" => new Hotkey(HotkeyKey.ScrollLock),
+            "Pause" => new Hotkey(HotkeyKey.Pause),
+            "F13" => new Hotkey(HotkeyKey.F13),
+            _ => Hotkey.Default,
+        };
+
+        // Dropping the legacy field is what makes the migration stick: it is not written back,
+        // so the next save leaves a file in the new shape only.
+        return loaded with { Hotkey = migrated, LegacyPushToTalkKey = null };
     }
 
     public void Save(string? path = null)

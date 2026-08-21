@@ -1,35 +1,24 @@
+using Teezy.Core.Hotkeys;
+
 namespace Teezy.Core.Abstractions;
 
-/// <summary>Keys offered for push-to-talk.</summary>
+/// <summary>A global, always-on watcher for the push-to-talk combination.</summary>
 /// <remarks>
-/// <b>Right Alt is deliberately absent.</b> It is AltGr on German, Polish, UK, Nordic and
-/// most Latin-American layouts — it is how those users type <c>@</c>, <c>€</c>, <c>\</c> and
-/// <c>|</c>. Binding push-to-talk there would break ordinary typing. Right Ctrl produces no
-/// character on any layout, which is why it is the default.
-/// </remarks>
-public enum PushToTalkKey
-{
-    RightControl,
-    RightShift,
-    ScrollLock,
-    Pause,
-    F13,
-}
-
-/// <summary>A global, always-on watcher for the push-to-talk key.</summary>
-/// <remarks>
-/// The key is <b>observed, never swallowed</b>. Suppression buys nothing here and risks a
-/// far worse failure: if the key-down is consumed but the key-up escapes — a hook that timed
+/// The keys are <b>observed, never swallowed</b>. Suppression buys nothing here and risks a
+/// far worse failure: if a key-down is consumed but the key-up escapes — a hook that timed
 /// out mid-gesture, or focus crossing into an elevated window — the foreground app believes
-/// Ctrl is held down forever.
+/// the modifier is held down forever.
 /// </remarks>
 public interface IHotkeySource : IDisposable
 {
+    /// <summary>Fires once when every key in the combination is held.</summary>
     event Action? Pressed;
+
+    /// <summary>Fires when the combination stops being fully held.</summary>
     event Action? Released;
 
-    /// <summary>Which key to watch. Takes effect on the next <see cref="Start"/>.</summary>
-    PushToTalkKey Key { get; set; }
+    /// <summary>The combination to watch. Changing it takes effect immediately.</summary>
+    Hotkey Hotkey { get; set; }
 
     /// <summary>Installs the hook.</summary>
     /// <returns><c>false</c> if the hook could not be installed.</returns>

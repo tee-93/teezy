@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="Teezy logo">
+<defs>
+  <linearGradient id="wordBlue" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#2147F5"/>
+    <stop offset="100%" stop-color="#1186FF"/>
+  </linearGradient>
+</defs>
+
+<g transform="translate(55,35) scale(1.0)">
+  <defs>
+    <linearGradient id="waveIcon" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2147F5"/>
+      <stop offset="100%" stop-color="#1186FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Speech / text bubble -->
+  <path d="M385 180 H690
+           Q800 180 800 290
+           V690
+           Q800 800 690 800
+           H420
+           L300 870
+           V670"
+        fill="none" stroke="#081A4E" stroke-width="44"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M300 315 V270 Q300 180 385 180"
+        fill="none" stroke="#081A4E" stroke-width="44"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Flowing voice -->
+  <circle cx="105" cy="360" r="18" fill="url(#waveIcon)"/>
+  <circle cx="70" cy="495" r="18" fill="url(#waveIcon)"/>
+  <circle cx="130" cy="625" r="18" fill="url(#waveIcon)"/>
+
+  <path d="M155 370 C235 390 300 390 365 355 C410 330 450 323 510 323"
+        fill="none" stroke="url(#waveIcon)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M130 495 C225 505 290 535 380 500 C425 482 465 475 525 475"
+        fill="none" stroke="url(#waveIcon)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M165 625 C255 635 320 665 390 630 C440 605 480 600 530 600"
+        fill="none" stroke="url(#waveIcon)" stroke-width="34" stroke-linecap="round"/>
+
+  <!-- Text -->
+  <rect x="575" y="455" width="95" height="28" rx="14" fill="#081A4E"/>
+  <rect x="575" y="520" width="110" height="28" rx="14" fill="#081A4E"/>
+  <rect x="575" y="585" width="82" height="28" rx="14" fill="#081A4E"/>
+  <rect x="715" y="455" width="38" height="28" rx="14" fill="#081A4E"/>
+  <rect x="715" y="520" width="38" height="28" rx="14" fill="#081A4E"/>
+
+  <!-- Text cursor -->
+  <line x1="690" y1="390" x2="690" y2="655"
+        stroke="#1E63FF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="672" y1="390" x2="708" y2="390"
+        stroke="#1E63FF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="672" y1="655" x2="708" y2="655"
+        stroke="#1E63FF" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- Clean-up sparkle -->
+  <path d="M535 295
+           C548 331 563 346 600 358
+           C563 371 548 386 535 422
+           C522 386 507 371 470 358
+           C507 346 522 331 535 295 Z"
+        fill="#F6B32B"/>
+</g>
+</svg>

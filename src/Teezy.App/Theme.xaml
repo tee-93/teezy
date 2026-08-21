@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!--
       The whole design system. Views must not contain literal colours, sizes or radii: if a
@@ -33,24 +34,33 @@
     <SolidColorBrush x:Key="Faint"      Color="#A8A29A"/>
 
     <!--
-      Accent, taken from the mark. Accent is the blue the sound waves are drawn in and
-      AccentInk is the navy of the speech bubble; the other two are derived from them.
+      Accent, taken from the mark rather than chosen beside it. Accent is the blue the sound
+      waves start in and AccentInk is the navy of the speech bubble; the other two are derived.
 
-      Accent carries white text at 6.2:1 and AccentInk sits on AccentSoft at 14.6:1, so both
+      Accent carries white text at 6.4:1 and AccentInk sits on AccentSoft at 14.3:1, so both
       pairings clear AA for body text rather than only for the large type they mostly carry.
     -->
-    <SolidColorBrush x:Key="Accent"     Color="#014AFD"/>
-    <SolidColorBrush x:Key="AccentDeep" Color="#0033C9"/>
-    <SolidColorBrush x:Key="AccentSoft" Color="#E7EDFF"/>
-    <SolidColorBrush x:Key="AccentInk"  Color="#041945"/>
+    <SolidColorBrush x:Key="Accent"     Color="#2147F5"/>
+    <SolidColorBrush x:Key="AccentDeep" Color="#1633C4"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#E9EEFF"/>
+    <SolidColorBrush x:Key="AccentInk"  Color="#081A4E"/>
 
     <!--
-      The sparkle in the mark, and nowhere else yet. It is the one warm note in the logo, so
-      it is defined here to keep it out of the general palette: promoting it to a UI accent
-      would put a warm colour next to the recording red, which is the whole thing the palette
-      is arranged to avoid.
+      Mark-only colours. None of these may become UI colours, for two separate reasons.
+
+      MarkWaveEnd is the far end of the wave gradient and manages only 3.6:1 against white —
+      fine as one end of a ramp across a stroke, and a quiet accessibility failure the moment
+      anything sets text on it. MarkSparkle is the single warm note in the brand; promoting it
+      would stand a warm colour next to the recording red, which is the whole thing the
+      palette is arranged to prevent.
+
+      MarkReversed is the ink the logo files use on dark grounds.
     -->
-    <SolidColorBrush x:Key="MarkSparkle" Color="#FCB247"/>
+    <Color x:Key="MarkWaveStart">#2147F5</Color>
+    <Color x:Key="MarkWaveEnd">#1186FF</Color>
+    <SolidColorBrush x:Key="MarkCursor"   Color="#1E63FF"/>
+    <SolidColorBrush x:Key="MarkSparkle"  Color="#F6B32B"/>
+    <SolidColorBrush x:Key="MarkReversed" Color="#F8FAFF"/>
 
     <!-- Recording. Nothing else in the app is this colour. -->
     <SolidColorBrush x:Key="Record"     Color="#E5484D"/>
@@ -68,11 +78,144 @@
     <SolidColorBrush x:Key="CautionInk"    Color="#7A5A17"/>
 
     <!--
-      The Teezy mark on a 100x100 grid: a "T" whose stem is a microphone capsule.
-      Two shapes only — a real glyph at 16 px in the system tray turns to mush.
+      ============================== The mark ==============================
+
+      The Teezy mark: speech flowing into a text bubble, cleaned up. Two versions, because
+      one drawing cannot serve both a 46 px card and a 16 px tray icon.
+
+      MarkImage is the logo as drawn, on the 1000x1000 grid of Logo\teezy-icon.svg, which
+      stays the source of truth for the artwork. Coordinates are copied across unchanged so
+      the two can be diffed by eye.
+
+      MarkGeometry is the small-size glyph — see the note above it.
     -->
-    <PathGeometry x:Key="MarkGeometry"
-                  Figures="M22,25 L78,25 A7,7 0 0 1 78,39 L57,39 L57,63 A7,7 0 0 1 43,63 L43,39 L22,39 A7,7 0 0 1 22,25 Z"/>
+
+    <LinearGradientBrush x:Key="MarkWave" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="{StaticResource MarkWaveStart}" Offset="0"/>
+        <GradientStop Color="{StaticResource MarkWaveEnd}"   Offset="1"/>
+    </LinearGradientBrush>
+
+    <DrawingImage x:Key="MarkImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+
+                <!-- Speech bubble. Open on the left between y=315 and y=670, which is the
+                     gap the voice flows in through. -->
+                <GeometryDrawing Geometry="M385,180 H690 Q800,180 800,290 V690 Q800,800 690,800 H420 L300,870 V670">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{StaticResource AccentInk}" Thickness="44"
+                             StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M300,315 V270 Q300,180 385,180">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{StaticResource AccentInk}" Thickness="44"
+                             StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+
+                <!-- Flowing voice. Each wave carries the gradient across its own bounding
+                     box, exactly as the SVG's objectBoundingBox units do. -->
+                <GeometryDrawing Brush="{StaticResource MarkWave}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="105,360" RadiusX="18" RadiusY="18"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource MarkWave}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="70,495" RadiusX="18" RadiusY="18"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource MarkWave}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="130,625" RadiusX="18" RadiusY="18"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <GeometryDrawing Geometry="M155,370 C235,390 300,390 365,355 C410,330 450,323 510,323">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{StaticResource MarkWave}" Thickness="34"
+                             StartLineCap="Round" EndLineCap="Round"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M130,495 C225,505 290,535 380,500 C425,482 465,475 525,475">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{StaticResource MarkWave}" Thickness="34"
+                             StartLineCap="Round" EndLineCap="Round"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M165,625 C255,635 320,665 390,630 C440,605 480,600 530,600">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{StaticResource MarkWave}" Thickness="34"
+                             StartLineCap="Round" EndLineCap="Round"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+
+                <!-- The text it lands as -->
+                <GeometryDrawing Brush="{StaticResource AccentInk}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="575,455,95,28"  RadiusX="14" RadiusY="14"/>
+                            <RectangleGeometry Rect="575,520,110,28" RadiusX="14" RadiusY="14"/>
+                            <RectangleGeometry Rect="575,585,82,28"  RadiusX="14" RadiusY="14"/>
+                            <RectangleGeometry Rect="715,455,38,28"  RadiusX="14" RadiusY="14"/>
+                            <RectangleGeometry Rect="715,520,38,28"  RadiusX="14" RadiusY="14"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!-- Text cursor -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{StaticResource MarkCursor}" Thickness="18"
+                             StartLineCap="Round" EndLineCap="Round"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <LineGeometry StartPoint="690,390" EndPoint="690,655"/>
+                            <LineGeometry StartPoint="672,390" EndPoint="708,390"/>
+                            <LineGeometry StartPoint="672,655" EndPoint="708,655"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!-- Clean-up sparkle -->
+                <GeometryDrawing Brush="{StaticResource MarkSparkle}"
+                                 Geometry="M535,295 C548,331 563,346 600,358 C563,371 548,386 535,422 C522,386 507,371 470,358 C507,346 522,331 535,295 Z"/>
+
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!--
+      The mark at small sizes, on a 100x100 grid, as one monochrome path so the tray can tint
+      it per state and the .ico can render it at 16 px.
+
+      IT IS NOT A SHRUNK MarkImage, and must not become one. At 16 px the bubble's 44-unit
+      stroke lands on two thirds of a pixel, the three waves collapse into each other, and
+      the sparkle and cursor disappear entirely — the whole thing greys into a smudge. So the
+      bubble becomes a silhouette, the text lines are knocked out of it with EvenOdd, and the
+      waves are dropped rather than rendered as mush. What survives is the silhouette, which
+      is the half of the mark that reads at any size.
+    -->
+    <PathGeometry x:Key="MarkGeometry" FillRule="EvenOdd"
+                  Figures="M30,14 H70 A16,16 0 0 1 86,30 V58 A16,16 0 0 1 70,74 H46 L30,90 V74 A16,16 0 0 1 14,58 V30 A16,16 0 0 1 30,14 Z
+                           M32,30 H60 A5,5 0 0 1 60,40 H32 A5,5 0 0 1 32,30 Z
+                           M32,48 H52 A5,5 0 0 1 52,58 H32 A5,5 0 0 1 32,48 Z"/>
+
+    <!--
+      How that glyph is laid into a square tile for the tray and the .ico: a squircle in the
+      state colour with the glyph knocked out in white.
+
+      These live here, rather than in the two renderers, because there are two of them —
+      TrayIcons draws the live tray icon and tools\make-icon.ps1 writes Teezy.ico, and a tray
+      that disagreed with the taskbar would be the kind of drift nobody notices for months.
+      Both read these values out of this file. Neither hardcodes the glyph's own bounds
+      either; they take them from the geometry above, so re-drawing it re-centres itself.
+    -->
+    <sys:Double x:Key="MarkTileInset">1.5</sys:Double>
+    <sys:Double x:Key="MarkTileRadius">30</sys:Double>
+    <sys:Double x:Key="MarkGlyphFill">0.66</sys:Double>
 
     <FontFamily x:Key="DisplayFont">Georgia, Cambria, Segoe UI Variable Display, serif</FontFamily>
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>

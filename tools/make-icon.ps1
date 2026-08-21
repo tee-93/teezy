@@ -8,11 +8,16 @@
   do not satisfy any of those: the shell reads the file, not the running process.
 
   So this is the one place the mark exists as a binary asset. It is generated rather than
-  hand-drawn, from the same geometry Brand.MarkGeometry and TrayIcons use, so the three cannot
-  drift. Re-run it after changing the mark or the accent colour.
+  hand-drawn, and it is generated from src\Teezy.App\Theme.xaml itself — the same
+  MarkGeometry, tile metrics and accent colour the running app uses. This script used to
+  redraw the mark in GDI+ from remembered coordinates, which matched the app only for as long
+  as somebody changed both. Re-run it after changing the mark or the accent.
 
   Entries are PNG-compressed at every size. Windows Vista and later read PNG icon entries at
   any size, and the app manifest already declares Windows 10 as the floor.
+
+.PARAMETER Out
+  Where to write the .ico. Defaults to src\Teezy.App\Teezy.ico.
 #>
 [CmdletBinding()]
 param(
@@ -23,67 +28,81 @@ $ErrorActionPreference = 'Stop'
 
 # Resolved here rather than as a parameter default: $PSScriptRoot is not reliably populated
 # while param defaults are being evaluated under Windows PowerShell 5.1.
-if (-not $Out) {
-    $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $Out = Join-Path (Split-Path -Parent $here) 'src\Teezy.App\Teezy.ico'
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$root = Split-Path -Parent $here
+if (-not $Out) { $Out = Join-Path $root 'src\Teezy.App\Teezy.ico' }
+
+# RenderTargetBitmap needs a single-threaded apartment, and a host that started MTA cannot be
+# switched in place - so re-launch rather than fail with an opaque COM error.
+if ([Threading.Thread]::CurrentThread.GetApartmentState() -ne 'STA') {
+    Write-Host 'Re-launching in STA (WPF rendering requires it) ...'
+    & powershell.exe -STA -NoProfile -ExecutionPolicy Bypass -File $MyInvocation.MyCommand.Path -Out $Out
+    exit $LASTEXITCODE
 }
-Add-Type -AssemblyName System.Drawing
+
+Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase, System.Xaml
 
 # The sizes Windows actually asks for: 16 tray/small, 32 taskbar and Alt-Tab, 48 Explorer
 # large, 256 extra-large and Start tiles. The rest keep scaled sizes crisp on high DPI.
 $sizes = 16, 20, 24, 32, 40, 48, 64, 128, 256
 
-# Must match Brand.Accent and Theme.xaml. PowerShell cannot share the constant, so this is
-# the one hand-copied colour left in the project - change it here whenever the accent moves.
-$accent = [System.Drawing.Color]::FromArgb(0x01, 0x4A, 0xFD)
+$themePath = Join-Path $root 'src\Teezy.App\Theme.xaml'
+$stream = [IO.File]::OpenRead($themePath)
+try { $theme = [Windows.Markup.XamlReader]::Load($stream) } finally { $stream.Dispose() }
 
-function New-RoundedPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$r) {
-    $d = $r * 2
-    $p = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $p.AddArc($x, $y, $d, $d, 180, 90)
-    $p.AddArc($x + $w - $d, $y, $d, $d, 270, 90)
-    $p.AddArc($x + $w - $d, $y + $h - $d, $d, $d, 0, 90)
-    $p.AddArc($x, $y + $h - $d, $d, $d, 90, 90)
-    $p.CloseFigure()
-    return $p
-}
+$glyph  = $theme['MarkGeometry']
+$accent = $theme['Accent']
+$inset  = $theme['MarkTileInset']
+$radius = $theme['MarkTileRadius']
+$fill   = $theme['MarkGlyphFill']
+$white  = [Windows.Media.Brushes]::White
+
+if (-not $glyph -or -not $accent) { throw "Theme.xaml did not yield MarkGeometry and Accent." }
 
 function New-MarkBitmap([int]$size) {
-    $bmp = New-Object System.Drawing.Bitmap $size, $size
-    $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.SmoothingMode = 'AntiAlias'
-    $g.Clear([System.Drawing.Color]::Transparent)
-
-    # One 100x100 grid for every element, matching Brand.MarkGeometry.
+    # Everything in the resource dictionary is authored on a 100x100 grid.
     $s = $size / 100.0
-    $back = New-Object System.Drawing.SolidBrush $accent
-    $white = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)
 
-    # Full-bleed squircle. A tiny inset keeps the anti-aliased edge from being clipped.
-    $sq = New-RoundedPath (2 * $s) (2 * $s) (96 * $s) (96 * $s) (28 * $s)
-    $g.FillPath($back, $sq); $sq.Dispose()
+    $visual = New-Object Windows.Media.DrawingVisual
+    $dc = $visual.RenderOpen()
 
-    $bar = New-RoundedPath (22 * $s) (25 * $s) (56 * $s) (14 * $s) (7 * $s)
-    $g.FillPath($white, $bar); $bar.Dispose()
+    $tile = New-Object Windows.Rect(($inset * $s), ($inset * $s),
+                                    ($size - 2 * $inset * $s), ($size - 2 * $inset * $s))
+    $squircle = New-Object Windows.Media.RectangleGeometry($tile, ($radius * $s), ($radius * $s))
+    $dc.DrawGeometry($accent, $null, $squircle)
 
-    $stem = New-RoundedPath (43 * $s) (25 * $s) (14 * $s) (45 * $s) (7 * $s)
-    $g.FillPath($white, $stem); $stem.Dispose()
+    # Centred from the geometry's own bounds rather than remembered numbers, so re-drawing the
+    # glyph re-centres it instead of quietly sitting off to one side.
+    $b = $glyph.Bounds
+    $k = $s * $fill
+    $placed = $glyph.Clone()
+    $tg = New-Object Windows.Media.TransformGroup
+    $tg.Children.Add((New-Object Windows.Media.ScaleTransform($k, $k)))
+    $tg.Children.Add((New-Object Windows.Media.TranslateTransform(
+        ((($size - $b.Width * $k) / 2) - $b.X * $k),
+        ((($size - $b.Height * $k) / 2) - $b.Y * $k))))
+    $placed.Transform = $tg
+    $dc.DrawGeometry($white, $null, $placed)
 
-    $back.Dispose(); $white.Dispose(); $g.Dispose()
-    return $bmp
+    $dc.Close()
+
+    $rtb = New-Object Windows.Media.Imaging.RenderTargetBitmap($size, $size, 96, 96, 'Pbgra32')
+    $rtb.Render($visual)
+    return $rtb
 }
 
 # Render every size to a PNG blob first; the header needs each blob's length up front.
 $blobs = foreach ($size in $sizes) {
-    $bmp = New-MarkBitmap $size
-    $ms = New-Object System.IO.MemoryStream
-    $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
-    $bmp.Dispose()
+    $rtb = New-MarkBitmap $size
+    $enc = New-Object Windows.Media.Imaging.PngBitmapEncoder
+    $enc.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($rtb))
+    $ms = New-Object IO.MemoryStream
+    $enc.Save($ms)
     , @{ Size = $size; Bytes = $ms.ToArray() }
 }
 
-$fs = [System.IO.File]::Create($Out)
-$w = New-Object System.IO.BinaryWriter($fs)
+$fs = [IO.File]::Create($Out)
+$w = New-Object IO.BinaryWriter($fs)
 try {
     # ICONDIR
     $w.Write([uint16]0)               # reserved

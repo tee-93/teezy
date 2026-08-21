@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 650" role="img" aria-label="Teezy logo">
+<defs>
+  <linearGradient id="wordBlue" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#2147F5"/>
+    <stop offset="100%" stop-color="#1186FF"/>
+  </linearGradient>
+</defs>
+
+<g transform="translate(70,10) scale(0.61)">
+  <defs>
+    <linearGradient id="waveReversed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2147F5"/>
+      <stop offset="100%" stop-color="#1186FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Speech / text bubble -->
+  <path d="M385 180 H690
+           Q800 180 800 290
+           V690
+           Q800 800 690 800
+           H420
+           L300 870
+           V670"
+        fill="none" stroke="#F8FAFF" stroke-width="44"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M300 315 V270 Q300 180 385 180"
+        fill="none" stroke="#F8FAFF" stroke-width="44"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Flowing voice -->
+  <circle cx="105" cy="360" r="18" fill="url(#waveReversed)"/>
+  <circle cx="70" cy="495" r="18" fill="url(#waveReversed)"/>
+  <circle cx="130" cy="625" r="18" fill="url(#waveReversed)"/>
+
+  <path d="M155 370 C235 390 300 390 365 355 C410 330 450 323 510 323"
+        fill="none" stroke="url(#waveReversed)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M130 495 C225 505 290 535 380 500 C425 482 465 475 525 475"
+        fill="none" stroke="url(#waveReversed)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M165 625 C255 635 320 665 390 630 C440 605 480 600 530 600"
+        fill="none" stroke="url(#waveReversed)" stroke-width="34" stroke-linecap="round"/>
+
+  <!-- Text -->
+  <rect x="575" y="455" width="95" height="28" rx="14" fill="#F8FAFF"/>
+  <rect x="575" y="520" width="110" height="28" rx="14" fill="#F8FAFF"/>
+  <rect x="575" y="585" width="82" height="28" rx="14" fill="#F8FAFF"/>
+  <rect x="715" y="455" width="38" height="28" rx="14" fill="#F8FAFF"/>
+  <rect x="715" y="520" width="38" height="28" rx="14" fill="#F8FAFF"/>
+
+  <!-- Text cursor -->
+  <line x1="690" y1="390" x2="690" y2="655"
+        stroke="#1E63FF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="672" y1="390" x2="708" y2="390"
+        stroke="#1E63FF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="672" y1="655" x2="708" y2="655"
+        stroke="#1E63FF" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- Clean-up sparkle -->
+  <path d="M535 295
+           C548 331 563 346 600 358
+           C563 371 548 386 535 422
+           C522 386 507 371 470 358
+           C507 346 522 331 535 295 Z"
+        fill="#F6B32B"/>
+</g>
+<g fill="#F8FAFF" transform="translate(620,465) scale(0.38,-0.38)"><path d="M366 50Q366 28 349.5 14.0Q333 0 307 0H289Q240 0 199.5 25.5Q159 51 136.0 95.0Q113 139 113 194V441H67Q46 441 33.0 453.0Q20 465 20 483Q20 503 33.0 515.0Q46 527 67 527H113V671Q113 693 127.0 707.0Q141 721 163 721Q185 721 199.0 707.0Q213 693 213 671V527H298Q319 527 332.0 515.0Q345 503 345 483Q345 465 332.0 453.0Q319 441 298 441H213V194Q213 154 235.0 127.0Q257 100 289 100H323Q341 100 353.5 86.0Q366 72 366 50Z" transform="translate(0,0)"/><path d="M535 238H155Q166 168 218.5 125.0Q271 82 347 82Q377 82 409.5 93.0Q442 104 463 120Q477 131 496 131Q515 131 526 121Q544 106 544 87Q544 69 528 57Q494 30 443.5 13.0Q393 -4 347 -4Q265 -4 200.0 31.5Q135 67 98.5 130.0Q62 193 62 273Q62 353 96.5 416.5Q131 480 192.5 515.5Q254 551 332 551Q409 551 465.0 517.0Q521 483 551.0 422.0Q581 361 581 282Q581 263 568.0 250.5Q555 238 535 238ZM156 318H489Q480 385 439.0 425.0Q398 465 332 465Q259 465 213.5 425.0Q168 385 156 318Z" transform="translate(401,0)"/><path d="M535 238H155Q166 168 218.5 125.0Q271 82 347 82Q377 82 409.5 93.0Q442 104 463 120Q477 131 496 131Q515 131 526 121Q544 106 544 87Q544 69 528 57Q494 30 443.5 13.0Q393 -4 347 -4Q265 -4 200.0 31.5Q135 67 98.5 130.0Q62 193 62 273Q62 353 96.5 416.5Q131 480 192.5 515.5Q254 551 332 551Q409 551 465.0 517.0Q521 483 551.0 422.0Q581 361 581 282Q581 263 568.0 250.5Q555 238 535 238ZM156 318H489Q480 385 439.0 425.0Q398 465 332 465Q259 465 213.5 425.0Q168 385 156 318Z" transform="translate(1022,0)"/><path d="M500 47Q500 0 453 0H112Q65 0 65 47Q65 67 74 79L357 453H102Q55 453 55 500Q55 547 102 547H443Q490 547 490 500Q490 480 481 468L199 94H453Q500 94 500 47Z" transform="translate(1643,0)"/><path d="M539 503Q539 493 533 479L227 -209Q215 -240 188 -240Q178 -240 164 -234Q134 -221 134 -195Q134 -183 140 -171L240 54L15 481Q10 490 10 502Q10 515 18.0 526.0Q26 537 39 543Q48 547 59 547Q87 547 101 519L284 155L445 518Q458 547 484 547Q497 547 508 542Q539 530 539 503Z" transform="translate(2183,0)"/></g><path d="M 1604.58 227.50 L 1634.22 227.50 L 1623.58 294.00 L 1593.94 294.00 Z" fill="url(#wordBlue)"/></svg>

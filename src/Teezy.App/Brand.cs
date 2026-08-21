@@ -37,14 +37,7 @@ internal static class Brand
     /// <summary>Recording. Nothing else in the app is this colour.</summary>
     public static readonly Color Record = Color.FromRgb(0xE5, 0x48, 0x4D);
 
-    /// <summary>
-    /// The Teezy mark: a "T" whose stem is a rounded microphone capsule.
-    /// </summary>
-    /// <remarks>
-    /// Authored on a 100×100 grid so one definition serves the tray icon, the window icon and
-    /// the in-app logo. Two rounded bars rather than lettering — a real glyph at 16 px in the
-    /// system tray turns to mush, and this still reads as a T at that size.
-    /// </remarks>
-    public const string MarkGeometry =
-        "M22,25 L78,25 A7,7 0 0 1 78,39 L57,39 L57,63 A7,7 0 0 1 43,63 L43,39 L22,39 A7,7 0 0 1 22,25 Z";
+    // The mark itself is not here. It lives in Theme.xaml as MarkImage (the full logo) and
+    // MarkGeometry (the small glyph), and TrayIcons reads it from there at runtime. Keeping a
+    // second copy in C# is what let the tray drift from the window before.
 }

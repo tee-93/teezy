@@ -15,7 +15,7 @@
                     <StackPanel Orientation="Horizontal">
                         <Border Width="42" Height="42" CornerRadius="13" Background="{StaticResource Accent}">
                             <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
-                                  Width="23" Height="23" Margin="0,1,0,0"/>
+                                  Width="23" Height="23"/>
                         </Border>
                         <StackPanel Margin="15,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Push to talk" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>

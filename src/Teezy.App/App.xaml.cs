@@ -54,7 +54,7 @@ public partial class App : Application
                 """
                 Teezy is already running.
 
-                Look for the microphone icon in the system tray — click the ^ arrow
+                Look for the speech bubble in the system tray — click the ^ arrow
                 next to the clock if you cannot see it.
                 """,
                 "Teezy", MessageBoxButton.OK, MessageBoxImage.Information);

@@ -8,10 +8,10 @@
     <StackPanel Margin="30,26,30,24">
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-            <Border Width="44" Height="44" CornerRadius="14" Background="{StaticResource Accent}">
-                <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
-                      Width="24" Height="24" Margin="0,1,0,0"/>
-            </Border>
+            <!-- The full logo, not the glyph. This window is the first thing a new user
+                 sees and there is room for the mark to be itself. -->
+            <Image Source="{StaticResource MarkImage}" Height="52" Stretch="Uniform"
+                   VerticalAlignment="Center"/>
             <TextBlock Text="Almost there" Style="{StaticResource Display}" FontSize="24"
                        VerticalAlignment="Center" Margin="15,0,0,0"/>
         </StackPanel>

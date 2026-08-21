@@ -43,11 +43,13 @@
                 BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,1,0">
             <DockPanel LastChildFill="False">
 
-                <!-- The mark, doubling as the app's identity in the corner. -->
+                <!-- The mark, doubling as the app's identity in the corner. The small glyph
+                     rather than the full logo: at 34 px the waves and sparkle would be mush,
+                     and the rail wants one solid shape anyway. -->
                 <Border DockPanel.Dock="Top" Width="34" Height="34" CornerRadius="10"
                         Background="{StaticResource Accent}" Margin="0,16,0,18">
                     <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
-                          Width="19" Height="19" Margin="0,1,0,0"/>
+                          Width="19" Height="19"/>
                 </Border>
 
                 <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">

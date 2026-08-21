@@ -224,10 +224,24 @@ preferences, a segmented control where two options are two shapes of one thing, 
 overlay scrollbar, and a custom combo box. Stock WPF controls were the single biggest thing
 making this look like a tool rather than a product.
 
-The mark is a "T" whose stem is a rounded microphone capsule, authored once on a 100x100
-grid and drawn from that one definition everywhere: GDI+ for the tray icon, WPF geometry
-in the window, and `tools/make-icon.ps1` for the file icon. Two rounded bars rather than
-lettering, because a real glyph at 16 px in the system tray turns to mush.
+The mark is speech flowing into a text bubble and coming out cleaned up. It is authored in
+`Logo\teezy-icon.svg`, and `Theme.xaml` carries the same coordinates so the artwork and the
+app can be diffed by eye.
+
+**There are two of it, and that is not a compromise.** `MarkImage` is the logo as drawn,
+used where there is room for it: the first-run window and the empty state. `MarkGeometry` is
+a silhouette of the bubble with the text lines knocked out, used for the nav rail, the tray
+and the `.ico`. At 16 px the bubble's stroke lands on two thirds of a pixel, the three waves
+collapse into each other, and the sparkle and cursor vanish — a shrunken logo is a grey
+smudge, so the small sizes get a drawing that was designed to be small.
+
+**Nothing redraws the mark a second time.** The tray used to be hand-written GDI+ rectangles
+that happened to match the XAML, and they matched only while someone remembered to change
+both. `TrayIcons` now renders the real resource out of the dictionary, and
+`tools/make-icon.ps1` loads `Theme.xaml` and renders the same one — including the tile inset,
+corner radius and glyph scale, which live in the dictionary rather than in either renderer.
+Neither hardcodes the glyph's bounds either: they take them from the geometry, so re-drawing
+the mark re-centres it.
 
 **`Teezy.ico` is the one binary asset, and it is generated rather than drawn.** Windows reads
 the icon from the PE file, not from the running process — so Explorer, the Start Menu,

@@ -107,10 +107,10 @@
                         Background="{StaticResource Card}" CornerRadius="12"
                         BorderBrush="{StaticResource Hairline}" BorderThickness="1">
                     <StackPanel HorizontalAlignment="Center">
-                        <Border Width="46" Height="46" CornerRadius="14" Background="{StaticResource AccentSoft}">
-                            <Path Data="{StaticResource MarkGeometry}" Fill="{StaticResource Accent}"
-                                  Stretch="Uniform" Width="24" Height="24" Margin="0,2,0,0"/>
-                        </Border>
+                        <!-- The full logo. An empty state is all space, so this is the one
+                             place in the window the mark gets to be read properly. -->
+                        <Image Source="{StaticResource MarkImage}" Height="64" Stretch="Uniform"
+                               HorizontalAlignment="Center"/>
                         <TextBlock x:Name="EmptyTitle" Text="Nothing dictated yet" Style="{StaticResource H2}"
                                    Margin="0,16,0,0" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="EmptyHint" Margin="0,5,0,0" HorizontalAlignment="Center"

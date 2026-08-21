@@ -16,9 +16,17 @@ namespace Teezy.App;
 /// </remarks>
 internal static class Brand
 {
-    public static readonly Color Accent = Color.FromRgb(0x1E, 0x5F, 0x8E);
-    public static readonly Color AccentDeep = Color.FromRgb(0x16, 0x48, 0x6D);
-    public static readonly Color AccentSoft = Color.FromRgb(0xE4, 0xEF, 0xF7);
+    /// <summary>The blue the sound waves are drawn in.</summary>
+    public static readonly Color Accent = Color.FromRgb(0x01, 0x4A, 0xFD);
+
+    public static readonly Color AccentDeep = Color.FromRgb(0x00, 0x33, 0xC9);
+    public static readonly Color AccentSoft = Color.FromRgb(0xE7, 0xED, 0xFF);
+
+    /// <summary>The navy of the speech bubble — the mark's structural colour.</summary>
+    public static readonly Color AccentInk = Color.FromRgb(0x04, 0x19, 0x45);
+
+    /// <summary>The sparkle in the mark, and nothing else. See Theme.xaml.</summary>
+    public static readonly Color MarkSparkle = Color.FromRgb(0xFC, 0xB2, 0x47);
 
     public static readonly Color Paper = Color.FromRgb(0xFC, 0xFA, 0xF7);
     public static readonly Color Ink = Color.FromRgb(0x1B, 0x1A, 0x18);

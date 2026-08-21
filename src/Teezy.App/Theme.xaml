@@ -5,9 +5,14 @@
       The whole design system. Views must not contain literal colours, sizes or radii: if a
       component needs a value that is not here, add it here.
 
-      The direction is warm paper and ink with one calm accent — a serif for display type, a
-      humanist sans for everything else. Casual enough to live in the tray all day, quiet
-      enough not to compete with whatever the user is actually working on.
+      The direction is warm paper and ink against a cool, saturated accent — a serif for
+      display type, a humanist sans for everything else. Quiet enough to live in the tray all
+      day without competing with whatever the user is actually working on.
+
+      THE ACCENT IS THE LOGO'S. Electric blue over navy, taken from the mark rather than
+      chosen separately, so the app and its own logo cannot drift apart. It is bolder than
+      the muted blue it replaced; the warmth now lives entirely in the paper and the ink,
+      which is what keeps the pairing from shouting.
 
       RED IS RESERVED. It means recording and appears nowhere else, which is why the accent
       is a blue: any warm accent would compete with the one signal that must read instantly.
@@ -27,11 +32,25 @@
     <SolidColorBrush x:Key="Muted"      Color="#7A756E"/>
     <SolidColorBrush x:Key="Faint"      Color="#A8A29A"/>
 
-    <!-- Accent -->
-    <SolidColorBrush x:Key="Accent"     Color="#1E5F8E"/>
-    <SolidColorBrush x:Key="AccentDeep" Color="#16486D"/>
-    <SolidColorBrush x:Key="AccentSoft" Color="#E4EFF7"/>
-    <SolidColorBrush x:Key="AccentInk"  Color="#123C5C"/>
+    <!--
+      Accent, taken from the mark. Accent is the blue the sound waves are drawn in and
+      AccentInk is the navy of the speech bubble; the other two are derived from them.
+
+      Accent carries white text at 6.2:1 and AccentInk sits on AccentSoft at 14.6:1, so both
+      pairings clear AA for body text rather than only for the large type they mostly carry.
+    -->
+    <SolidColorBrush x:Key="Accent"     Color="#014AFD"/>
+    <SolidColorBrush x:Key="AccentDeep" Color="#0033C9"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#E7EDFF"/>
+    <SolidColorBrush x:Key="AccentInk"  Color="#041945"/>
+
+    <!--
+      The sparkle in the mark, and nowhere else yet. It is the one warm note in the logo, so
+      it is defined here to keep it out of the general palette: promoting it to a UI accent
+      would put a warm colour next to the recording red, which is the whole thing the palette
+      is arranged to avoid.
+    -->
+    <SolidColorBrush x:Key="MarkSparkle" Color="#FCB247"/>
 
     <!-- Recording. Nothing else in the app is this colour. -->
     <SolidColorBrush x:Key="Record"     Color="#E5484D"/>

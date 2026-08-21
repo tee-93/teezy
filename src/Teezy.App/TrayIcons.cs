@@ -16,9 +16,16 @@ internal static class TrayIcons
     private static Icon? _busy;
     private static Icon? _recording;
 
-    private static readonly Color Accent = Color.FromArgb(0x1E, 0x5F, 0x8E);
-    private static readonly Color Muted = Color.FromArgb(0xA8, 0xA2, 0x9A);
-    private static readonly Color Record = Color.FromArgb(0xE5, 0x48, 0x4D);
+    /// <summary>
+    /// GDI+ and WPF have separate <c>Color</c> types, which is the only reason these were
+    /// ever written out twice. Converting instead means the tray cannot drift from
+    /// <see cref="Brand"/> the next time the palette moves.
+    /// </summary>
+    private static Color Gdi(System.Windows.Media.Color c) => Color.FromArgb(c.R, c.G, c.B);
+
+    private static readonly Color Accent = Gdi(Brand.Accent);
+    private static readonly Color Muted = Gdi(Brand.Muted);
+    private static readonly Color Record = Gdi(Brand.Record);
 
     /// <summary>Armed and ready.</summary>
     public static Icon Ready => _ready ??= Draw(Accent);

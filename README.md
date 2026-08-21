@@ -196,14 +196,25 @@ Four inference threads measured fastest; **eight measured slower**. That is why
 
 ## Look and feel
 
-Warm paper and ink with one calm accent: a serif for display type, a humanist sans for
-everything else. Quiet enough to live in the tray all day without competing with whatever
-the user is actually working on.
+Warm paper and ink against a cool, saturated accent: a serif for display type, a humanist
+sans for everything else. Quiet enough to live in the tray all day without competing with
+whatever the user is actually working on.
 
 `Theme.xaml` is the whole design system — palette, type scale, and templates for every
 control the app uses. **Views must not contain literal colours**; there are none left. That
 is not tidiness for its own sake: it is what lets the tray icon, the floating meter and four
 pages be recoloured together and stay one product.
+
+**The accent is taken from the mark, not chosen next to it.** `Accent` `#014AFD` is the blue
+the sound waves are drawn in and `AccentInk` `#041945` is the navy of the speech bubble, so
+the app cannot drift away from its own logo. Both pairings were checked rather than eyeballed
+— white on `Accent` is 6.2:1 and `AccentInk` on `AccentSoft` is 14.6:1, clearing AA for body
+text and not merely for the large type they mostly carry.
+
+The mark's amber sparkle is deliberately **not** in the general palette. It lives as
+`MarkSparkle`, for the logo alone: promoting the one warm note in the brand to a UI accent
+would set it beside the recording red, which is precisely what the palette is arranged to
+prevent. The brand art itself is in `Logo\`.
 
 **Red is reserved.** It means recording and appears nowhere else, which is why the accent is
 a blue — a warm accent would compete with the one signal the user must read instantly.

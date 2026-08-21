@@ -33,7 +33,9 @@ Add-Type -AssemblyName System.Drawing
 # large, 256 extra-large and Start tiles. The rest keep scaled sizes crisp on high DPI.
 $sizes = 16, 20, 24, 32, 40, 48, 64, 128, 256
 
-$accent = [System.Drawing.Color]::FromArgb(0x1E, 0x5F, 0x8E)
+# Must match Brand.Accent and Theme.xaml. PowerShell cannot share the constant, so this is
+# the one hand-copied colour left in the project - change it here whenever the accent moves.
+$accent = [System.Drawing.Color]::FromArgb(0x01, 0x4A, 0xFD)
 
 function New-RoundedPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$r) {
     $d = $r * 2

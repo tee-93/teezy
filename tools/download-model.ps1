@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Downloads the Parakeet speech model Wisper needs to transcribe.
+  Downloads the Parakeet speech model Teezy needs to transcribe.
 
 .DESCRIPTION
   NVIDIA Parakeet TDT 0.6B, exported to ONNX and quantized to int8 (~661 MB).
@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$dir  = Join-Path $env:LOCALAPPDATA "Wisper\models\parakeet-$Variant"
+$dir  = Join-Path $env:LOCALAPPDATA "Teezy\models\parakeet-$Variant"
 $base = "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-$Variant-int8/resolve/main"
 
 New-Item -ItemType Directory -Force $dir | Out-Null
@@ -56,4 +56,4 @@ foreach ($k in $expected.Keys | Sort-Object) {
 }
 
 if ($bad) { exit 1 }
-Write-Host "`nDone. Start Wisper and hold Right Ctrl to dictate." -ForegroundColor Green
+Write-Host "`nDone. Start Teezy and hold Right Ctrl to dictate." -ForegroundColor Green

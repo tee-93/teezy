@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Teezy.App/Teezy.App.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+    <Project Path="src/Teezy.Core/Teezy.Core.csproj" />
+    <Project Path="src/Teezy.Platform.Windows/Teezy.Platform.Windows.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+    <Project Path="src/Teezy.Speech/Teezy.Speech.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Teezy.Core.Tests/Teezy.Core.Tests.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+  </Folder>
+</Solution>

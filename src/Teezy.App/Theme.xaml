@@ -1,0 +1,87 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        <!--
+          The whole palette, in one place. Views must not contain literal colours: if a
+          component needs a value that is not here, add it here. Red is reserved for
+          recording and appears nowhere else.
+        -->
+        <SolidColorBrush x:Key="Brand"      Color="#5B4CE0"/>
+        <SolidColorBrush x:Key="BrandDeep"  Color="#3D30B0"/>
+        <SolidColorBrush x:Key="BrandSoft"  Color="#EEECFD"/>
+        <SolidColorBrush x:Key="Ink"        Color="#17171F"/>
+        <SolidColorBrush x:Key="Surface"    Color="#FBFBFD"/>
+        <SolidColorBrush x:Key="Card"       Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="Hairline"   Color="#E6E6EC"/>
+        <SolidColorBrush x:Key="Muted"      Color="#6E6E7A"/>
+        <SolidColorBrush x:Key="Faint"      Color="#9A9AA6"/>
+        <SolidColorBrush x:Key="Record"     Color="#FF3B30"/>
+        <SolidColorBrush x:Key="RailBg"     Color="#F4F4F7"/>
+
+        <!-- The mark, authored on a 100x100 grid so one definition serves every size. -->
+        <PathGeometry x:Key="MarkGeometry"
+                      Figures="M24,27 L76,27 A6.5,6.5 0 0 1 76,40 L58,40 L58,73 A8,8 0 0 1 42,73 L42,40 L24,40 A6.5,6.5 0 0 1 24,27 Z"/>
+
+        <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+        <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
+
+        <Style x:Key="H1" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource DisplayFont}"/>
+            <Setter Property="FontSize" Value="26"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Faint}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="StatNumber" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource DisplayFont}"/>
+            <Setter Property="FontSize" Value="30"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+        </Style>
+
+        <Style x:Key="StatCaption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Faint}"/>
+        </Style>
+
+        <Style x:Key="CardPanel" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Card}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+        </Style>
+
+        <!-- Flat, quiet buttons. The default WPF chrome would fight everything else. -->
+        <Style x:Key="Quiet" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrandSoft}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Brand}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+</ResourceDictionary>

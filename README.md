@@ -1,8 +1,12 @@
-# Wisper
+# Teezy
 
 Push-to-talk dictation for Windows. Hold a key, talk, release — cleaned-up text is typed
 into whatever had focus. Fully on-device: after the one-time model download, nothing leaves
 the machine.
+
+Everything dictated is kept, searchable, in an app window with usage stats — because the
+text goes into *someone else's* app, and when that app eats it, mangles it, or you simply
+want it again, history is the only place it still exists.
 
 **Status:** working end to end. Built and verified on Windows 11 ARM64 (Snapdragon X Plus).
 
@@ -16,7 +20,7 @@ Build a single self-contained executable — no .NET runtime, no SDK, no loose f
 powershell -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
-That writes `dist\win-x64\Wisper.exe` (80 MB) and `dist\win-arm64\Wisper.exe` (75 MB), then
+That writes `dist\win-x64\Teezy.exe` (80 MB) and `dist\win-arm64\Teezy.exe` (75 MB), then
 verifies the architecture actually written rather than trusting the flag — an ARM64 native
 library inside an x64 exe fails at load, on someone else's machine, with no useful message.
 
@@ -27,17 +31,43 @@ Intel and AMD. The x64 build runs on ARM64 through emulation, but transcribes fa
 progress window, verifies every file, and only then starts. Nothing touches the network
 afterwards. `tools\download-model.ps1` does the same from a shell if you prefer.
 
-Wisper lives in the system tray — click the `^` arrow next to the clock if you cannot see it.
-**Hold Right Ctrl, speak, release.**
+Teezy lives in the system tray — click the `^` arrow next to the clock if you cannot see it.
+**Hold Right Ctrl, speak, release.** Double-click the tray icon to open the window.
 
-For development, `dotnet run --project src\Wisper.App -c Release` still works.
+For development, `dotnet run --project src\Teezy.App -c Release` still works.
+
+---
+
+## The window
+
+Teezy runs from the tray and never needs its window, so the window is built for the two
+moments you actually want it.
+
+**Home** is the history: every dictation, newest first, grouped by day, searchable. Hover a
+row to copy or delete it. Entries are recorded **even when injection failed** — that is
+precisely when you need the text back, because it did not land anywhere you can reach.
+
+**Insights** is the aggregate: words per minute, dictionary fixes, total words, where the
+text went, and a 26-week activity grid.
+
+Two numbers are easy to compute dishonestly, so both are defined deliberately:
+
+- **Words per minute is weighted by time, not by utterance.** A plain mean lets a two-word
+  "yes" count as much as a two-minute paragraph, which flatters short bursts badly.
+- **Time saved is measured against 40 wpm typing**, stated on the card rather than hidden.
+  If you type quickly, read it as an upper bound.
+
+History is JSON Lines at `%LOCALAPPDATA%\Teezy\history.jsonl` — appended one line per
+utterance, so a crash mid-write can damage at most the last entry, and a torn final line is
+skipped rather than failing the whole file. Stats are always recomputed from it rather than
+accumulated, so deleting an entry corrects them instead of leaving them drifted.
 
 ---
 
 ## How it fits together
 
 ```
- hold Right Ctrl ──► WindowsHotkeySource ──► DictationController ◄── WisperSettings
+ hold Right Ctrl ──► WindowsHotkeySource ──► DictationController ◄── TeezySettings
                                                     │
                                   ┌─────────────────┼─────────────────┐
                                   ▼                 ▼                 ▼
@@ -57,12 +87,12 @@ For development, `dotnet run --project src\Wisper.App -c Release` still works.
 
 | Project | Target | Contains |
 |---|---|---|
-| `Wisper.Core` | `net10.0` | State machine, formatter, dictionary, settings, interfaces |
-| `Wisper.Speech` | `net10.0` | Parakeet via sherpa-onnx |
-| `Wisper.Platform.Windows` | `net10.0-windows` | The only Win32 code in the repo |
-| `Wisper.App` | `net10.0-windows` | WPF tray app, HUD, settings |
+| `Teezy.Core` | `net10.0` | State machine, formatter, dictionary, history, stats, settings |
+| `Teezy.Speech` | `net10.0` | Parakeet via sherpa-onnx |
+| `Teezy.Platform.Windows` | `net10.0-windows` | The only Win32 code in the repo |
+| `Teezy.App` | `net10.0-windows` | WPF tray app, HUD, main window, settings |
 
-`Wisper.Core` targets plain `net10.0` deliberately: `CA1416` is escalated to a build error,
+`Teezy.Core` targets plain `net10.0` deliberately: `CA1416` is escalated to a build error,
 so any Win32 call that drifts into the testable layer fails the build rather than quietly
 becoming code the tests cannot reach.
 
@@ -131,12 +161,12 @@ user. At 30x realtime none of it is worth it.
 
 ## Personal dictionary
 
-Plain text at `%LOCALAPPDATA%\Wisper\dictionary.txt`, reloaded automatically when saved.
+Plain text at `%LOCALAPPDATA%\Teezy\dictionary.txt`, reloaded automatically when saved.
 
 ```
 Anthropic                    # bias the engine toward this spelling
 cloud code -> Claude Code    # rewrite the left side to the right
-# off: wisper -> Wisper      # disabled, kept for later
+# off: teezy -> Teezy      # disabled, kept for later
 ```
 
 Corrections apply longest-trigger-first and match whole words only, so `cloud code` never
@@ -147,11 +177,12 @@ touches `Cloudflare`. Glued and hyphenated forms (`CloudCode`, `cloud-code`) sti
 ## Building and testing
 
 ```powershell
-dotnet build Wisper.slnx -c Release
-dotnet test  tests\Wisper.Core.Tests
+dotnet build Teezy.slnx -c Release
+dotnet test  tests\Teezy.Core.Tests
 ```
 
-36 tests cover the formatter, the dictionary, and the state machine — including the
+63 tests cover the formatter, the dictionary, the state machine, the level mapping and the
+history and stats — including the
 re-entrancy guard that stops a second key press during transcription from typing the
 utterance twice.
 
@@ -171,13 +202,13 @@ synthesised key events).
 3. **A settings UI for the dictionary.** It opens in Notepad today.
 4. **Installer and autostart.**
 5. **Elevated-window injection.** A non-elevated process cannot type into an elevated
-   window. Elevating Wisper would be worse than the problem.
+   window. Elevating Teezy would be worse than the problem.
 
 ---
 
 ## Other platforms
 
-`Wisper.Core` and `Wisper.Speech` (~800 lines — state machine, cleanup, dictionary,
+`Teezy.Core` and `Teezy.Speech` (~800 lines — state machine, cleanup, dictionary,
 Parakeet) are plain `net10.0` and port unchanged. The remaining ~1,950 lines are the hotkey,
 injection, tray and overlay, and those are Windows-specific by nature. sherpa-onnx ships
 native runtimes for macOS, Linux, Android and Windows alike, so **the engine is never the

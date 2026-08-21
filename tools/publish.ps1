@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Builds shippable single-file Wisper executables.
+  Builds shippable single-file Teezy executables.
 
 .DESCRIPTION
   Produces one self-contained .exe per architecture under dist\. Each bundles the .NET
@@ -21,7 +21,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $rids = if ($Rid -eq 'all') { @('win-x64', 'win-arm64') } else { @($Rid) }
 
 # A running instance holds its own DLLs open and fails the build with a file-lock error.
-Get-Process Wisper -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process Teezy -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
 
 foreach ($r in $rids) {
@@ -29,7 +29,7 @@ foreach ($r in $rids) {
     Write-Host "`nPublishing $r ..." -ForegroundColor Cyan
     Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
 
-    dotnet publish (Join-Path $root 'src\Wisper.App') `
+    dotnet publish (Join-Path $root 'src\Teezy.App') `
         -c Release -r $r --self-contained true `
         -p:PublishSingleFile=true `
         -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -53,11 +53,11 @@ function Get-PEMachine([string]$path) {
 Write-Host "`nResult:" -ForegroundColor Cyan
 $expected = @{ 'win-x64' = 'x64'; 'win-arm64' = 'ARM64' }
 foreach ($r in $rids) {
-    $exe = Join-Path $root "dist\$r\Wisper.exe"
+    $exe = Join-Path $root "dist\$r\Teezy.exe"
     $arch = Get-PEMachine $exe
     $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
     $ok = $arch -eq $expected[$r]
     $colour = if ($ok) { 'Green' } else { 'Red' }
     Write-Host ("  {0,-11} {1,6} MB   PE={2,-6} {3}" -f $r, $mb, $arch, $(if ($ok) { 'OK' } else { "EXPECTED $($expected[$r])" })) -ForegroundColor $colour
 }
-Write-Host "`nCopy the matching Wisper.exe to the target machine and run it." -ForegroundColor Green
+Write-Host "`nCopy the matching Teezy.exe to the target machine and run it." -ForegroundColor Green

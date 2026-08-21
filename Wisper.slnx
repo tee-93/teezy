@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Wisper.App/Wisper.App.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+    <Project Path="src/Wisper.Core/Wisper.Core.csproj" />
+    <Project Path="src/Wisper.Platform.Windows/Wisper.Platform.Windows.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+    <Project Path="src/Wisper.Speech/Wisper.Speech.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Wisper.Core.Tests/Wisper.Core.Tests.csproj">
+      <Platform Project="ARM64" />
+    </Project>
+  </Folder>
+</Solution>

@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <!-- The neutral projects target plain net10.0 precisely so CA1416 turns any accidental
+         Win32 call into a build error. That guarantee is worthless as a mere warning. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CA1416</WarningsAsErrors>
+
+    <!-- CA1716: "Stop" collides with a Visual Basic keyword. This is a Windows-only C#
+         app; there is no cross-language consumer to protect. -->
+    <NoWarn>$(NoWarn);CA1716</NoWarn>
+
+    <!-- ARM64 is the only target that matters here: the x64 build runs under emulation and
+         transcription is dramatically slower. -->
+    <Platforms>ARM64</Platforms>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+</Project>

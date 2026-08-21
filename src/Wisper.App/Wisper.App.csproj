@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-arm64</RuntimeIdentifier>
+    <UseWPF>true</UseWPF>
+    <!-- For the tray icon only: WPF still has no NotifyIcon of its own, and the WinForms
+         one is the smallest honest answer. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Wisper</AssemblyName>
+    <RootNamespace>Wisper.App</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- WinForms is referenced only for the tray icon, but its implicit global usings pull
+         in System.Drawing and System.Windows.Forms, which collide with WPF on Application,
+         Rectangle, Color, Size and Point. Explicit usings are clearer than qualifying each. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Wisper.Core\Wisper.Core.csproj" />
+    <ProjectReference Include="..\Wisper.Speech\Wisper.Speech.csproj" />
+    <ProjectReference Include="..\Wisper.Platform.Windows\Wisper.Platform.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The RID-specific native package. Without a RuntimeIdentifier the native libraries
+         land in runtimes/<rid>/native/ and P/Invoke fails at runtime with
+         DllNotFoundException. -->
+    <PackageReference Include="org.k2fsa.sherpa.onnx.runtime.win-arm64" />
+  </ItemGroup>
+</Project>

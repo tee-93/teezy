@@ -1,0 +1,16 @@
+# Normalise line endings so the repo stays LF and checkouts stay native.
+* text=auto
+
+*.cs      text diff=csharp
+*.csproj  text
+*.slnx    text
+*.props   text
+*.xaml    text
+*.json    text
+*.md      text
+*.ps1     text eol=crlf
+*.manifest text
+
+*.onnx    binary
+*.ico     binary
+*.png     binary

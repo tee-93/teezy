@@ -17,6 +17,11 @@
     <!-- ARM64 is the only target that matters here: the x64 build runs under emulation and
          transcription is dramatically slower. -->
     <Platforms>ARM64</Platforms>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Globalization-invariant mode is NOT compatible with WPF: the text layer builds
+         new CultureInfo("en") while measuring a TextBlock, which throws
+         CultureNotFoundException in invariant mode and kills the process the first time
+         any window renders text. Do not set this to true.
+         https://aka.ms/GlobalizationInvariantMode -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 </Project>

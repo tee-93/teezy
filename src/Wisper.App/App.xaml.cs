@@ -29,6 +29,7 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        CrashLog.Install(this);
 
         _settings = WisperSettings.Load();
         _dictionary = new DictionaryStore(DictionaryStore.DefaultPath);

@@ -101,6 +101,91 @@
                 </StackPanel>
             </Border>
 
+            <!-- Smarter cleanup. Off by default: switching it on ends the offline guarantee. -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
+                <StackPanel>
+                    <Grid Margin="0,0,0,4">
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                            <TextBlock Text="Smarter cleanup with Claude" Style="{StaticResource H2}"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="A second pass that fixes grammar, formats lists and honours spoken corrections. Needs your own Anthropic API key, and sends each transcript to the API."/>
+                        </StackPanel>
+                        <CheckBox x:Name="LlmBox" Style="{StaticResource Switch}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Click="OnLlmToggled"/>
+                    </Grid>
+
+                    <StackPanel x:Name="LlmDetail" Visibility="Collapsed">
+                        <Border Style="{StaticResource CautionPanel}" Margin="0,14,0,0">
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
+                                       Text="This is the one thing in Teezy that leaves your machine. Transcripts are sent to the Anthropic API, billed to your own account — a Claude Pro or Max subscription does not cover it. Roughly $0.60 a month at 400 dictations, and it adds about a second to each one."/>
+                        </Border>
+
+                        <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}" Margin="0,16,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- PasswordBox, not TextBox: the key must not be shoulder-readable,
+                                 and WPF never puts its contents in the visual tree as text. -->
+                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
+                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
+                                <PasswordBox x:Name="ApiKeyBox" BorderThickness="0" Background="Transparent"
+                                             VerticalContentAlignment="Center" Margin="12,0"
+                                             PasswordChar="•" FontSize="13"
+                                             PasswordChanged="OnApiKeyTyped"/>
+                            </Border>
+
+                            <Button x:Name="SaveKeyButton" Grid.Column="1" Content="Save key"
+                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
+                                    IsEnabled="False" Click="OnSaveApiKey"/>
+                        </Grid>
+
+                        <Grid Margin="0,10,0,0">
+                            <TextBlock x:Name="KeyStatus" Style="{StaticResource Hint}" Margin="0"
+                                       HorizontalAlignment="Left"/>
+                            <Button x:Name="ForgetKeyButton" Content="Forget key" Style="{StaticResource Quiet}"
+                                    HorizontalAlignment="Right" Visibility="Collapsed" Click="OnForgetApiKey"/>
+                        </Grid>
+
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                   Text="Create a key at console.anthropic.com. It is encrypted for your Windows account and never written to settings.json."/>
+
+                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                <TextBlock Text="Model" Foreground="{StaticResource Ink}"/>
+                                <TextBlock x:Name="ModelCost" Style="{StaticResource Hint}"/>
+                            </StackPanel>
+                            <ComboBox x:Name="LlmModelPicker" Width="180" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center" SelectionChanged="OnLlmModelChanged"/>
+                        </Grid>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                <TextBlock Text="Give up after" Foreground="{StaticResource Ink}"/>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Past this, Teezy types the offline result instead. Text appearing beats a slower tidy-up."/>
+                            </StackPanel>
+                            <ComboBox x:Name="LlmTimeoutPicker" Width="180" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                        </Grid>
+
+                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Button x:Name="TestButton" Content="Test it" Style="{StaticResource Secondary}"
+                                    Click="OnTestLlm"/>
+                            <TextBlock x:Name="TestResult" Style="{StaticResource Hint}" Margin="12,0,0,0"
+                                       VerticalAlignment="Center" MaxWidth="440"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Speech model -->
             <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
                 <StackPanel>

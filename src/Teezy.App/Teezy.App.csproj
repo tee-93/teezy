@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Teezy.Core\Teezy.Core.csproj" />
     <ProjectReference Include="..\Teezy.Speech\Teezy.Speech.csproj" />
+    <ProjectReference Include="..\Teezy.Cleanup\Teezy.Cleanup.csproj" />
     <ProjectReference Include="..\Teezy.Platform.Windows\Teezy.Platform.Windows.csproj" />
   </ItemGroup>
 

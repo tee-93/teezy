@@ -113,6 +113,7 @@ accumulated, so deleting an entry corrects them instead of leaving them drifted.
 |---|---|---|
 | `Teezy.Core` | `net10.0` | State machine, formatter, dictionary, history, stats, settings |
 | `Teezy.Speech` | `net10.0` | Parakeet via sherpa-onnx |
+| `Teezy.Cleanup` | `net10.0` | Optional Claude cleanup tier |
 | `Teezy.Platform.Windows` | `net10.0-windows` | The only Win32 code in the repo |
 | `Teezy.App` | `net10.0-windows` | WPF tray app, HUD, main window, settings |
 
@@ -227,6 +228,36 @@ user. At 30x realtime none of it is worth it.
 
 ---
 
+## Smarter cleanup with Claude (optional, off by default)
+
+A second cleanup pass that fixes grammar, formats lists and honours spoken corrections.
+**Off by default, and that default is the honest one** — it is the only thing in Teezy that
+leaves your machine.
+
+- **A Claude Pro or Max subscription does not cover this.** The Anthropic API is billed
+  separately, pay-as-you-go from prepaid credits at `console.anthropic.com`. Roughly
+  **$0.60 a month** at 400 dictations on Sonnet 5; Haiku 4.5 about a third of that, Opus 5
+  about double.
+- **The real price is latency.** Dictation is ~170 ms end to end today; a round trip adds
+  about a second to every utterance.
+
+**The offline rules always run first and their output is the floor.** Claude is asked to
+improve an already-cleaned string, and every failure path — no key, no network, rate limit,
+timeout, refusal — returns the offline result. Dictation is a foreground interaction: it must
+never fail, and it must never be worse than with the tier switched off.
+
+**The reply is validated before it is typed.** An LLM handed a transcript will sometimes
+*answer* it — "should we ship Friday?" comes back as advice about Fridays — and typing that
+into your document is a far worse failure than leaving an "um" in. Replies wildly shorter or
+longer than the input, empty, or fenced are discarded in favour of the offline text.
+
+**The API key is not in `settings.json`.** It is encrypted with DPAPI for your Windows account
+under `%LOCALAPPDATA%\Teezy\secrets`, which makes it useless on another machine or to another
+user. Not a vault — anything running as you can decrypt it — but the key never appears in
+plain text on disk or in a settings file someone opens in an editor.
+
+---
+
 ## Personal dictionary
 
 Edited in the app, on its own page. Two kinds of entry:
@@ -270,7 +301,7 @@ dotnet build Teezy.slnx -c Release
 dotnet test  tests\Teezy.Core.Tests
 ```
 
-105 tests cover the formatter, the dictionary and its warnings, hotkey combinations and
+114 tests cover the formatter, the dictionary and its warnings, hotkey combinations and
 settings migration, the state machine, the level
 mapping and the
 history and stats — including the
@@ -286,10 +317,7 @@ synthesised key events).
 
 ## Not built yet
 
-1. **LLM cleanup tier.** `ITextFormatter` is the seam; a Claude-backed formatter would add
-   tone, list formatting and spoken corrections. Costs an API key and a network round trip,
-   so the app would stop being fully offline.
-2. **Command mode.** Select text, hold a second key, "make this more formal."
+1. **Command mode.** Select text, hold a second key, "make this more formal."
 3. **Installer.** Autostart is done; a real installer is not.
 4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.

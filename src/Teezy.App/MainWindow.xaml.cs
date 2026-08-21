@@ -1,3 +1,4 @@
+using Teezy.Cleanup;
 using Teezy.Core.Hotkeys;
 using Teezy.Core.Abstractions;
 using System;
@@ -27,6 +28,8 @@ public partial class MainWindow : Window
     private readonly ParakeetTranscriber? _transcriber;
     private readonly IAutostart? _autostart;
     private readonly IHotkeyCapture? _capture;
+    private readonly ISecretStore? _secrets;
+    private readonly ClaudeFormatter? _claude;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -40,7 +43,9 @@ public partial class MainWindow : Window
         Action<TeezySettings> saveSettings,
         ParakeetTranscriber? transcriber,
         IAutostart? autostart = null,
-        IHotkeyCapture? capture = null)
+        IHotkeyCapture? capture = null,
+        ISecretStore? secrets = null,
+        ClaudeFormatter? claude = null)
     {
         InitializeComponent();
         _history = history;
@@ -50,6 +55,8 @@ public partial class MainWindow : Window
         _transcriber = transcriber;
         _autostart = autostart;
         _capture = capture;
+        _secrets = secrets;
+        _claude = claude;
 
         Icon = LogoImage.Create(48);
         ShowHome();
@@ -132,7 +139,7 @@ public partial class MainWindow : Window
 
     private void ShowSettings()
     {
-        _settingsView ??= new SettingsView(_settings, _saveSettings, _transcriber, _autostart, _capture);
+        _settingsView ??= new SettingsView(_settings, _saveSettings, _transcriber, _autostart, _capture, _secrets, _claude);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

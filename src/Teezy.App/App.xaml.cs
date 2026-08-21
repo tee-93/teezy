@@ -1,3 +1,5 @@
+using Teezy.Cleanup;
+using Teezy.Core.Formatting;
 using Teezy.Core.History;
 using System.Threading.Tasks;
 using System;
@@ -18,6 +20,9 @@ namespace Teezy.App;
 
 public partial class App : Application
 {
+    /// <summary>Name the API key is filed under in the encrypted secret store.</summary>
+    internal const string ApiKeyName = "anthropic-api-key";
+
     private DictationController? _controller;
     private ParakeetTranscriber? _transcriber;
     private WindowsAutostart? _autostart;
@@ -31,6 +36,8 @@ public partial class App : Application
     private SingleInstance? _instance;
     private Forms.ToolStripMenuItem? _downloadItem;
     private HistoryStore? _history;
+    private ISecretStore? _secrets;
+    private ClaudeFormatter? _claude;
     private MainWindow? _main;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -78,6 +85,16 @@ public partial class App : Application
         // to record a combination.
         _hotkeySource = new WindowsHotkeySource();
 
+        _secrets = new WindowsSecretStore();
+
+        // Composed so the offline rules always run and their output is the floor: the LLM is
+        // asked to improve an already-clean string, and every failure path returns it.
+        _claude = new ClaudeFormatter(
+            new RuleBasedFormatter(),
+            () => _settings.LlmCleanupEnabled ? _secrets.Read(ApiKeyName) : null,
+            () => _settings.LlmModel,
+            TimeSpan.FromSeconds(Math.Clamp(_settings.LlmTimeoutSeconds, 2, 30)));
+
         _controller = new DictationController(
             _hotkeySource,
             new WindowsAudioCapture(),
@@ -85,7 +102,8 @@ public partial class App : Application
             new WindowsTextInjector(),
             _dictionary,
             () => _settings,
-            new WindowsForegroundApp());
+            new WindowsForegroundApp(),
+            () => _settings.LlmCleanupEnabled ? _claude! : new RuleBasedFormatter());
 
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.
@@ -241,7 +259,9 @@ public partial class App : Application
             updated => ApplySettings(updated),
             _transcriber,
             _autostart,
-            _hotkeySource);
+            _hotkeySource,
+            _secrets,
+            _claude);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;

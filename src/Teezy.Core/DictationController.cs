@@ -42,6 +42,10 @@ public sealed class DictationController : IDisposable
     private readonly Func<TeezySettings> _settings;
     private readonly IForegroundApp _foregroundApp;
 
+    /// <summary>Built per utterance so a settings change takes effect on the very next hold
+    /// rather than needing a restart.</summary>
+    private readonly Func<ITextFormatter> _formatter;
+
     /// <summary>Serialises state transitions. Press and release arrive on the hook thread,
     /// audio on the capture thread, and the tail runs on a pool thread.</summary>
     private readonly Lock _gate = new();
@@ -67,9 +71,11 @@ public sealed class DictationController : IDisposable
         ITextInjector injector,
         DictionaryStore dictionary,
         Func<TeezySettings> settings,
-        IForegroundApp? foregroundApp = null)
+        IForegroundApp? foregroundApp = null,
+        Func<ITextFormatter>? formatter = null)
     {
         _foregroundApp = foregroundApp ?? new UnknownForegroundApp();
+        _formatter = formatter ?? (() => new RuleBasedFormatter());
         _hotkey = hotkey;
         _capture = capture;
         _transcriber = transcriber;
@@ -184,7 +190,7 @@ public sealed class DictationController : IDisposable
             }
 
             var cleaned = settings.CleanupEnabled
-                ? await new RuleBasedFormatter().FormatAsync(raw).ConfigureAwait(false)
+                ? await _formatter().FormatAsync(raw).ConfigureAwait(false)
                 : raw.Trim();
 
             // The dictionary runs last and runs unconditionally. Biasing only improves the

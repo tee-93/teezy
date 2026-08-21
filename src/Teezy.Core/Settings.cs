@@ -42,6 +42,20 @@ public sealed record TeezySettings
     /// <summary>Override the model directory. Null means the default location.</summary>
     public string? ModelPath { get; init; }
 
+    /// <summary>Send the cleaned text to Claude for a second, smarter pass.</summary>
+    /// <remarks>
+    /// Off by default, and off is the honest default: switching it on ends the guarantee that
+    /// nothing leaves the machine, needs a paid API account, and adds a network round trip to
+    /// every utterance. The API key is <b>not</b> stored here - see <c>ISecretStore</c>.
+    /// </remarks>
+    public bool LlmCleanupEnabled { get; init; }
+
+    /// <summary>Which Claude model does the cleanup pass.</summary>
+    public string LlmModel { get; init; } = "claude-sonnet-5";
+
+    /// <summary>How long to wait before giving up and typing the offline text.</summary>
+    public int LlmTimeoutSeconds { get; init; } = 6;
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

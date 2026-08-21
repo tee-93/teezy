@@ -13,6 +13,9 @@
     <!-- Audio. PINNED TO 2.3.0: NAudio 3.x will not restore here. -->
     <PackageVersion Include="NAudio" Version="2.3.0" />
 
+    <!-- Optional LLM cleanup tier. The app runs fully without it. -->
+    <PackageVersion Include="Anthropic" Version="12.42.0" />
+
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Platform-neutral. Kept out of Teezy.Core so the offline path has no network
+         dependency at all: Core builds, runs and is tested without this project present. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Teezy.Core\Teezy.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Anthropic" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Teezy.Core.Tests" />
+  </ItemGroup>
+</Project>

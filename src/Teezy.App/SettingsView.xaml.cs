@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -218,12 +219,40 @@ public partial class SettingsView : UserControl
     {
         if (_loading) return;
 
-        if (AutostartBox.IsChecked == true) _autostart.Enable();
-        else _autostart.Disable();
+        var wanted = AutostartBox.IsChecked == true;
+
+        try
+        {
+            if (wanted) _autostart.Enable();
+            else _autostart.Disable();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
+        {
+            // A managed machine can refuse writes to the Run key outright. Saying so beats a
+            // switch that flicks back on its own, which reads as the app being broken.
+            ShowAutostartState();
+            ExplainAutostart($"Windows would not let Teezy change the startup entry — {ex.Message}");
+            return;
+        }
 
         // Read back rather than trusting the write: the registry call can fail silently under
         // a restrictive policy, and the switch should show what is actually true.
         ShowAutostartState();
+
+        // A switch that springs back and says nothing is the worst of both worlds — it looks
+        // like the click missed. If the OS did not end up where the user asked, say so.
+        if (_autostart.IsEnabled != wanted)
+        {
+            ExplainAutostart(wanted
+                ? "The startup entry did not stick. Something on this machine is preventing it — try Task Manager ▸ Startup."
+                : "Teezy could not remove its startup entry.");
+        }
+    }
+
+    private void ExplainAutostart(string message)
+    {
+        AutostartNote.Text = message;
+        AutostartNote.Visibility = Visibility.Visible;
     }
 
     // ---- Smarter cleanup ----

@@ -20,7 +20,7 @@
 ; The version of record. build-installer.ps1 reads it back out of this file rather than
 ; carrying a default of its own, so there is nowhere for the two to disagree.
 #ifndef AppVersion
-  #define AppVersion "1.1.2"
+  #define AppVersion "1.1.3"
 #endif
 
 [Setup]

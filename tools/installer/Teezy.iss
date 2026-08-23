@@ -17,10 +17,12 @@
 #define AppPublisher "Zack Tarczynski"
 #define AppUrl "https://github.com/tee-93/teezy"
 
-; The version of record. build-installer.ps1 reads it back out of this file rather than
-; carrying a default of its own, so there is nowhere for the two to disagree.
+; No default on purpose. The version of record is <Version> in Directory.Build.props, which
+; is also what becomes the assembly version the About line reads - a default here would be a
+; second place to forget, and forgetting it is exactly how About came to report 1.0.0 for four
+; releases while the installer said otherwise. build-installer.ps1 passes it in.
 #ifndef AppVersion
-  #define AppVersion "1.2.0"
+  #error AppVersion was not supplied. Build with tools\build-installer.ps1, which reads it from Directory.Build.props.
 #endif
 
 [Setup]

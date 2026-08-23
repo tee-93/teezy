@@ -1,5 +1,17 @@
 <Project>
   <PropertyGroup>
+    <!--
+      THE VERSION OF RECORD. Bump it here and nowhere else.
+
+      It reaches the installer because tools\build-installer.ps1 reads this file and passes
+      it to ISCC, and it reaches Settings ▸ About because it becomes the assembly version.
+      Teezy.iss refuses to compile without being told, so the two cannot disagree.
+
+      They did disagree, silently, for four releases: nothing set a version, so every build
+      reported 1.0.0 in About while the installer said otherwise.
+    -->
+    <Version>1.3.0</Version>
+
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

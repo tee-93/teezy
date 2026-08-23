@@ -15,9 +15,9 @@
       winget install -e --id JRSoftware.InnoSetup
 
 .PARAMETER Version
-  Version stamped into the installer and shown in Apps & features. Defaults to the
-  AppVersion in Teezy.iss, which is the version of record — a default here as well would be
-  a second place to forget.
+  Version stamped into the installer and shown in Apps & features. Defaults to <Version> in
+  Directory.Build.props, which is the version of record and is also what becomes the assembly
+  version the About line reads — so the installer and the app cannot disagree.
 
 .PARAMETER SkipBuild
   Use whatever is already in dist\win-x64 and dist\win-arm64.
@@ -32,9 +32,11 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $iss = Join-Path $PSScriptRoot 'installer\Teezy.iss'
 
+$props = Join-Path $root 'Directory.Build.props'
+
 if (-not $Version) {
-    $match = Select-String -Path $iss -Pattern '#define\s+AppVersion\s+"([^"]+)"' | Select-Object -First 1
-    if (-not $match) { throw "No AppVersion found in $iss." }
+    $match = Select-String -Path $props -Pattern '<Version>([^<]+)</Version>' | Select-Object -First 1
+    if (-not $match) { throw "No <Version> found in $props." }
     $Version = $match.Matches[0].Groups[1].Value
 }
 

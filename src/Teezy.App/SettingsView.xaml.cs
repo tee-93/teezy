@@ -89,7 +89,9 @@ public partial class SettingsView : UserControl
 
         foreach (var n in new[] { 1, 2, 4, 6, 8 }) ThreadPicker.Items.Add(n);
 
-        var version = typeof(SettingsView).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        // Not "1.0.0" when it cannot be read. A plausible-looking default is what let About
+        // report 1.0.0 through four releases without anyone noticing it was not the truth.
+        var version = typeof(SettingsView).Assembly.GetName().Version?.ToString(3) ?? "unknown version";
         var arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture;
         AboutVersion.Text = $"Teezy {version} · {arch} · .NET {Environment.Version.ToString(2)}";
 

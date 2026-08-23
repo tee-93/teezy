@@ -34,7 +34,9 @@ public sealed class WindowsSecretStore : ISecretStore
 
     private string PathFor(string name) => Path.Combine(_directory, $"{name}.bin");
 
-    public bool Has(string name) => File.Exists(PathFor(name));
+    // Describe() comes from the interface, which decrypts rather than testing for a file.
+    // Checking File.Exists here would be cheaper and would go back to answering the wrong
+    // question: a file that will not decrypt is not a saved key.
 
     public string? Read(string name)
     {

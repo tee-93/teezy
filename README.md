@@ -353,6 +353,17 @@ under `%LOCALAPPDATA%\Teezy\secrets`, which makes it useless on another machine 
 user. Not a vault — anything running as you can decrypt it — but the key never appears in
 plain text on disk or in a settings file someone opens in an editor.
 
+**Settings shows the key's last four characters, and that is load-bearing.** Saving clears the
+box and never pre-fills it, so with nothing to show, a save that worked and a save that did
+nothing look identical — an empty box either way. Printing `sk-ant-…9gAA` makes the
+confirmation about the key you just pasted rather than a reassuring sentence.
+
+**"A key is saved" means it was decrypted, not that a file exists.** `ISecretStore.Describe`
+reads and masks the secret, which is what produces that hint; the check it replaced only asked
+`File.Exists`, so a file that would not decrypt still counted as a saved key and the page
+happily said so while cleanup fell back to the offline rules. Saving also reads the key
+straight back, because `Write` is void and a store can accept bytes it cannot return.
+
 ---
 
 ## Personal dictionary

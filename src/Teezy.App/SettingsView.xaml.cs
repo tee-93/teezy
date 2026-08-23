@@ -266,14 +266,23 @@ public partial class SettingsView : UserControl
         ShowKeyState();
     }
 
+    /// <summary>
+    /// Shows whether a key is stored, and which one.
+    /// </summary>
+    /// <remarks>
+    /// The mask is the whole point. Saving clears the box — it is never pre-filled — so
+    /// without something to show, a successful save and a save that did nothing look
+    /// identical: an empty box either way. Printing the key's own last four characters means
+    /// the confirmation is about the key you just pasted rather than a reassuring sentence.
+    /// </remarks>
     private void ShowKeyState()
     {
-        var stored = _secrets?.Has(App.ApiKeyName) == true;
+        var hint = _secrets?.Describe(App.ApiKeyName);
 
-        KeyStatus.Text = stored
-            ? "A key is saved and encrypted for your Windows account."
+        KeyStatus.Text = hint is not null
+            ? $"Saved and encrypted for your Windows account · {hint}"
             : "No key saved yet — cleanup falls back to the offline rules.";
-        ForgetKeyButton.Visibility = stored ? Visibility.Visible : Visibility.Collapsed;
+        ForgetKeyButton.Visibility = hint is not null ? Visibility.Visible : Visibility.Collapsed;
         ApiKeyBox.Password = string.Empty;
         SaveKeyButton.IsEnabled = false;
     }
@@ -296,9 +305,9 @@ public partial class SettingsView : UserControl
 
     /// <summary>Enables Save only once something has been typed.</summary>
     /// <remarks>
-    /// The box is deliberately never pre-filled with the stored key. Reading a secret back
-    /// out of the store just to display it — even masked — puts it in memory and on screen
-    /// for no benefit; the only useful actions are replace and forget.
+    /// The box is still never pre-filled with the whole key — putting a usable credential
+    /// back on screen buys nothing, and the only useful actions are replace and forget. The
+    /// masked hint under it carries the part worth seeing.
     /// </remarks>
     private void OnApiKeyTyped(object sender, RoutedEventArgs e) =>
         SaveKeyButton.IsEnabled = ApiKeyBox.Password.Trim().Length > 0;
@@ -311,6 +320,15 @@ public partial class SettingsView : UserControl
         _secrets.Write(App.ApiKeyName, key);
         TestResult.Text = string.Empty;
         ShowKeyState();
+
+        // Write is void and a store can accept bytes it cannot give back — a profile on a
+        // network share, a DPAPI context that changed under us. ShowKeyState has just tried
+        // to read the key back; if that failed, say so here rather than leaving up a message
+        // that reads as "no key" and looks like the save silently did nothing.
+        if (_secrets.Describe(App.ApiKeyName) is null)
+        {
+            KeyStatus.Text = "Saved, but it could not be read back — the key is not usable.";
+        }
     }
 
     private void OnForgetApiKey(object sender, RoutedEventArgs e)

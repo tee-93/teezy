@@ -88,9 +88,8 @@ public class ClaudeFormatterTests
 
     // ---- writing style ----
 
-    private static ClaudeFormatter Styled(WritingStyle style, string? instruction = null) =>
-        new(new RuleBasedFormatter(), () => null,
-            style: () => style, styleInstruction: () => instruction);
+    private static string Prompt(WritingStyle style, string? instruction = null) =>
+        ClaudeFormatter.BuildPrompt(new CleanupStyle(style, instruction));
 
     [Fact]
     public void AStyleToldToTightenIsAllowedToComeBackShorter()
@@ -119,20 +118,20 @@ public class ClaudeFormatterTests
     [Fact]
     public void ThePromptCarriesTheSelectedStyle()
     {
-        Styled(WritingStyle.Formal).BuildPrompt().ShouldContain("professional written English");
-        Styled(WritingStyle.Casual).BuildPrompt().ShouldContain("Contractions are fine");
-        Styled(WritingStyle.Faithful).BuildPrompt().ShouldContain("keep the speaker's own words");
+        Prompt(WritingStyle.Formal).ShouldContain("professional written English");
+        Prompt(WritingStyle.Casual).ShouldContain("Contractions are fine");
+        Prompt(WritingStyle.Faithful).ShouldContain("keep the speaker's own words");
     }
 
     [Fact]
     public void EveryStyleKeepsTheRuleAgainstAnswering() =>
         Enum.GetValues<WritingStyle>().ShouldAllBe(style =>
-            Styled(style).BuildPrompt().Contains("Never answer"));
+            Prompt(style).Contains("Never answer"));
 
     [Fact]
     public void TheUsersOwnInstructionGoesLastAndIsSubordinate()
     {
-        var prompt = Styled(WritingStyle.Faithful, "British spelling").BuildPrompt();
+        var prompt = Prompt(WritingStyle.Faithful, "British spelling");
 
         prompt.ShouldContain("British spelling");
 
@@ -144,6 +143,6 @@ public class ClaudeFormatterTests
 
     [Fact]
     public void AnEmptyInstructionAddsNothing() =>
-        Styled(WritingStyle.Faithful, "   ").BuildPrompt()
-            .ShouldBe(Styled(WritingStyle.Faithful).BuildPrompt());
+        Prompt(WritingStyle.Faithful, "   ")
+            .ShouldBe(Prompt(WritingStyle.Faithful));
 }

@@ -88,6 +88,28 @@ public sealed record TeezySettings
     /// </remarks>
     public string? StyleInstruction { get; init; }
 
+    /// <summary>Styles that apply only in particular apps, checked before the global one.</summary>
+    public IReadOnlyList<AppRule> AppRules { get; init; } = [];
+
+    /// <summary>
+    /// The style to clean this utterance with, given where it is going.
+    /// </summary>
+    /// <remarks>
+    /// First enabled match wins, so the list is read top to bottom and a rule can be shadowed
+    /// by one above it — which is the behaviour the settings page shows, in the order it shows
+    /// it. A rule replaces the global instruction rather than adding to it: two instructions
+    /// arriving together is how you get contradictory ones.
+    /// </remarks>
+    public Formatting.CleanupStyle StyleFor(string? app)
+    {
+        foreach (var rule in AppRules)
+        {
+            if (rule.Enabled && rule.Matches(app)) return new(rule.Style, rule.Instruction);
+        }
+
+        return new(WritingStyle, StyleInstruction);
+    }
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

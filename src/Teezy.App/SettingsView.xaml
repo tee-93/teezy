@@ -203,6 +203,30 @@
                             <TextBlock x:Name="TestResult" Style="{StaticResource Hint}" Margin="12,0,0,0"
                                        VerticalAlignment="Center" MaxWidth="440"/>
                         </StackPanel>
+
+                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+
+                        <TextBlock Text="PER-APP RULES" Style="{StaticResource SectionLabel}"
+                                   Margin="0,16,0,0"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
+                                   Text="A style that applies only where the text is going, so an email and a chat message do not have to share one setting. First match wins; anything with no rule uses the style above."/>
+
+                        <StackPanel x:Name="RuleRows" Margin="0,10,0,0"/>
+
+                        <TextBlock x:Name="NoRules" Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                   Text="No rules yet. Add one below — the list offers the apps you have already dictated into."/>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="NewRuleApp" Grid.Column="0" IsEditable="True"
+                                      VerticalAlignment="Center"/>
+                            <Button x:Name="AddRuleButton" Grid.Column="1" Content="Add rule"
+                                    Style="{StaticResource Secondary}" Margin="10,0,0,0"
+                                    Click="OnAddRule"/>
+                        </Grid>
                     </StackPanel>
                 </StackPanel>
             </Border>

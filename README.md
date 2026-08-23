@@ -373,6 +373,32 @@ your text on your machine, not untrusted input — but "rewrite my dictation" an
 dictation" are one careless sentence apart, and the ordering plus the guard mean a badly
 worded line degrades to a fallback rather than typing an answer into whatever had focus.
 
+### Per-app rules
+
+A style that applies only where the text is going: Outlook formal, Teams casual, the editor
+faithful with no trailing full stop. An email and a chat message should not have to share one
+setting, and remembering to change a global one before each is worse than not having it.
+
+Teezy already knew which app it was typing into — that is what the Insights breakdown is —
+so the rules list offers those apps to pick from rather than asking you to know that Outlook
+reports itself as `OUTLOOK`.
+
+Three decisions in the matching, each the less clever option on purpose:
+
+- **Exact process name, case-insensitive**, `.exe` ignored. Substring matching would make a
+  rule for `code` quietly capture `vscode`, which is unpredictable from the list you are
+  looking at.
+- **First match wins, in the order shown.** A rule can shadow one below it — visibly, rather
+  than by some hidden precedence.
+- **A rule replaces the global instruction rather than adding to it.** Two instructions
+  arriving together is how you get contradictory ones.
+
+**The foreground app is now read before cleanup, not after.** It has to be, for a rule to
+have anything to act on — and it is the more truthful moment anyway: what had focus when the
+words were spoken, rather than wherever focus drifted during a second of network round trip.
+The old comment worried about reading it *after injection*, which is a different and genuinely
+too-late moment.
+
 **The offline rules always run first and their output is the floor.** Claude is asked to
 improve an already-cleaned string, and every failure path — no key, no network, rate limit,
 timeout, refusal — returns the offline result. Dictation is a foreground interaction: it must

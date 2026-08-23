@@ -10,6 +10,18 @@ public interface ITextFormatter
 {
     /// <param name="raw">Engine output, exactly as produced.</param>
     Task<string> FormatAsync(string raw, CancellationToken ct = default);
+
+    /// <summary>
+    /// The same, told where the text is about to go.
+    /// </summary>
+    /// <remarks>
+    /// A default implementation that discards the context, because most formatters have no
+    /// use for it — the offline rules punctuate a sentence the same way whatever app is in
+    /// front. Only the Claude tier overrides this, which is also the only tier with a style
+    /// to vary.
+    /// </remarks>
+    Task<string> FormatAsync(string raw, FormatContext context, CancellationToken ct = default) =>
+        FormatAsync(raw, ct);
 }
 
 /// <summary>A formatter that can say what its last run consumed.</summary>

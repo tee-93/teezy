@@ -111,8 +111,7 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
     private readonly ITextFormatter _offline;
     private readonly Func<string?> _apiKey;
     private readonly Func<string> _model;
-    private readonly Func<WritingStyle> _style;
-    private readonly Func<string?> _styleInstruction;
+    private readonly Func<FormatContext, CleanupStyle> _styleFor;
     private readonly TimeSpan _timeout;
 
     /// <summary>The last attempt, so settings can show whether it is actually working.</summary>
@@ -123,14 +122,12 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
         Func<string?> apiKey,
         Func<string>? model = null,
         TimeSpan? timeout = null,
-        Func<WritingStyle>? style = null,
-        Func<string?>? styleInstruction = null)
+        Func<FormatContext, CleanupStyle>? styleFor = null)
     {
         _offline = offline;
         _apiKey = apiKey;
         _model = model ?? (() => DefaultModel);
-        _style = style ?? (() => WritingStyle.Faithful);
-        _styleInstruction = styleInstruction ?? (() => null);
+        _styleFor = styleFor ?? (_ => new CleanupStyle(WritingStyle.Faithful, null));
 
         // A ceiling on how long the user waits, not on how long the request may take. Past
         // this the offline text is typed and the request is abandoned — a slow tidy-up is
@@ -138,8 +135,16 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
         _timeout = timeout ?? TimeSpan.FromSeconds(6);
     }
 
-    public async Task<string> FormatAsync(string raw, CancellationToken ct = default)
+    public Task<string> FormatAsync(string raw, CancellationToken ct = default) =>
+        FormatAsync(raw, FormatContext.None, ct);
+
+    public async Task<string> FormatAsync(
+        string raw, FormatContext context, CancellationToken ct = default)
     {
+        // Resolved once, up front. Reading it again later would let a settings edit mid-flight
+        // prompt with one style and validate against another's threshold.
+        var style = _styleFor(context);
+
         var offline = await _offline.FormatAsync(raw, ct).ConfigureAwait(false);
 
         if (offline.Length == 0) return offline;
@@ -155,13 +160,13 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
             deadline.CancelAfter(_timeout);
 
-            var (polished, tokens) = await CallAsync(key, offline, deadline.Token).ConfigureAwait(false);
+            var (polished, tokens) = await CallAsync(key, offline, style, deadline.Token).ConfigureAwait(false);
             var elapsed = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
             // Tokens are recorded even when the reply is rejected. They were spent either way,
             // and a cost report that only counted the calls that worked would understate the
             // bill exactly when something is going wrong.
-            if (!IsPlausible(offline, polished, MinRatioFor(_style())))
+            if (!IsPlausible(offline, polished, MinRatioFor(style.Style)))
             {
                 LastOutcome = new CleanupOutcome(
                     false, "Reply did not look like a rewrite.", elapsed, tokens, _model());
@@ -194,11 +199,11 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
     /// plus the plausibility guard mean a badly worded instruction degrades to a fallback
     /// rather than typing an answer into whatever had focus.
     /// </remarks>
-    internal string BuildPrompt()
+    internal static string BuildPrompt(CleanupStyle style)
     {
-        var prompt = $"{BasePrompt}\n\n{StyleClause(_style())}";
+        var prompt = $"{BasePrompt}\n\n{StyleClause(style.Style)}";
 
-        if (_styleInstruction() is { } extra && !string.IsNullOrWhiteSpace(extra))
+        if (style.Instruction is { } extra && !string.IsNullOrWhiteSpace(extra))
         {
             prompt += "\n\nThe user also asked for this, where it does not conflict with "
                       + $"anything above:\n{extra.Trim()}";
@@ -208,7 +213,7 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
     }
 
     private async Task<(string Text, TokenUsage Tokens)> CallAsync(
-        string apiKey, string text, CancellationToken ct)
+        string apiKey, string text, CleanupStyle style, CancellationToken ct)
     {
         var client = new AnthropicClient { ApiKey = apiKey };
 
@@ -225,7 +230,7 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
             // prompt is the cacheable prefix. It is also the larger half of a short request.
             System = new List<TextBlockParam>
             {
-                new() { Text = BuildPrompt(), CacheControl = new CacheControlEphemeral() },
+                new() { Text = BuildPrompt(style), CacheControl = new CacheControlEphemeral() },
             },
             Messages = [new() { Role = Role.User, Content = text }],
         }, cancellationToken: ct).ConfigureAwait(false);

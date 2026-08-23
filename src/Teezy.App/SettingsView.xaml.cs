@@ -58,6 +58,7 @@ public partial class SettingsView : UserControl
     private readonly ParakeetTranscriber? _transcriber;
     private readonly ISecretStore? _secrets;
     private readonly ClaudeFormatter? _claude;
+    private readonly Func<IReadOnlyList<string>>? _knownApps;
 
     /// <summary>Suppresses change events while controls are populated, so opening the page
     /// does not look like the user editing it.</summary>
@@ -70,7 +71,8 @@ public partial class SettingsView : UserControl
         IAutostart? autostart,
         IHotkeyCapture? capture,
         ISecretStore? secrets = null,
-        ClaudeFormatter? claude = null)
+        ClaudeFormatter? claude = null,
+        Func<IReadOnlyList<string>>? knownApps = null)
     {
         InitializeComponent();
 
@@ -81,6 +83,7 @@ public partial class SettingsView : UserControl
         _capture = capture;
         _secrets = secrets;
         _claude = claude;
+        _knownApps = knownApps;
 
         RecordButton.IsEnabled = _capture is not null;
 
@@ -111,6 +114,7 @@ public partial class SettingsView : UserControl
         ShowModelState();
         ShowSpeechOptions(settings);
         ShowLlmState();
+        ShowAppRules(settings);
 
         _loading = wasLoading;
     }
@@ -371,6 +375,134 @@ public partial class SettingsView : UserControl
         if (typed == stored) return;
 
         _write(current with { StyleInstruction = typed.Length == 0 ? null : typed });
+    }
+
+    // ---- Per-app rules ----
+
+    /// <summary>
+    /// Rebuilds the rule list from settings.
+    /// </summary>
+    /// <remarks>
+    /// Rows are built in code and thrown away on every change rather than data-bound. The
+    /// list is short, edits are rare, and a rebuild cannot drift out of step with what was
+    /// saved — which a two-way binding over a record list can, quietly.
+    /// </remarks>
+    private void ShowAppRules(TeezySettings settings)
+    {
+        RuleRows.Children.Clear();
+
+        foreach (var rule in settings.AppRules)
+        {
+            RuleRows.Children.Add(BuildRuleRow(rule));
+        }
+
+        NoRules.Visibility = settings.AppRules.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // Offer the apps already in history, minus the ones that have a rule. Typing a name
+        // still works — the box is editable — but nobody should have to know that Outlook
+        // reports itself as "OUTLOOK".
+        var taken = settings.AppRules.Select(r => r.App).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var known = (_knownApps?.Invoke() ?? [])
+            .Where(a => !taken.Contains(a))
+            .OrderBy(a => a, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        NewRuleApp.ItemsSource = known;
+        NewRuleApp.Text = string.Empty;
+    }
+
+    private UIElement BuildRuleRow(AppRule rule)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var name = new TextBlock
+        {
+            Text = rule.App,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Foreground = (System.Windows.Media.Brush)FindResource("Ink"),
+        };
+        Grid.SetColumn(name, 0);
+        grid.Children.Add(name);
+
+        var style = new ComboBox { Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
+        foreach (var (_, label, _) in Styles) style.Items.Add(label);
+        style.SelectedIndex = Math.Max(0, Array.FindIndex(Styles, s => s.Style == rule.Style));
+        style.SelectionChanged += (_, _) =>
+        {
+            if (_loading || style.SelectedIndex < 0) return;
+            ReplaceRule(rule, rule with { Style = Styles[style.SelectedIndex].Style });
+        };
+        Grid.SetColumn(style, 1);
+        grid.Children.Add(style);
+
+        var instruction = new TextBox
+        {
+            Text = rule.Instruction ?? string.Empty,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+            Height = 30,
+            ToolTip = "An extra line for this app only. Replaces the global one.",
+        };
+        instruction.LostFocus += (_, _) =>
+        {
+            if (_loading) return;
+            var typed = instruction.Text.Trim();
+            if (typed == (rule.Instruction ?? string.Empty)) return;
+            ReplaceRule(rule, rule with { Instruction = typed.Length == 0 ? null : typed });
+        };
+        Grid.SetColumn(instruction, 2);
+        grid.Children.Add(instruction);
+
+        var remove = new Button
+        {
+            Content = "Remove",
+            Style = (Style)FindResource("Quiet"),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        remove.Click += (_, _) => ReplaceRule(rule, null);
+        Grid.SetColumn(remove, 3);
+        grid.Children.Add(remove);
+
+        return grid;
+    }
+
+    /// <summary>Swaps one rule for another, or drops it when <paramref name="replacement"/>
+    /// is null. Order is preserved, because first match wins and the user can see the order.</summary>
+    private void ReplaceRule(AppRule existing, AppRule? replacement)
+    {
+        var settings = _read();
+        var rules = settings.AppRules.ToList();
+
+        var index = rules.FindIndex(r => ReferenceEquals(r, existing) || r == existing);
+        if (index < 0) return;
+
+        if (replacement is null) rules.RemoveAt(index);
+        else rules[index] = replacement;
+
+        _write(settings with { AppRules = rules });
+        ShowAppRules(_read());
+    }
+
+    private void OnAddRule(object sender, RoutedEventArgs e)
+    {
+        var app = (NewRuleApp.Text ?? string.Empty).Trim();
+        if (app.Length == 0) return;
+
+        var settings = _read();
+        if (settings.AppRules.Any(r => r.Matches(app))) return;
+
+        // Appended, not inserted. First match wins, so adding to the top would silently
+        // shadow a rule the user added earlier and can still see.
+        var rules = settings.AppRules.ToList();
+        rules.Add(new AppRule { App = app, Style = settings.WritingStyle });
+
+        _write(settings with { AppRules = rules });
+        ShowAppRules(_read());
     }
 
     private void OnLlmModelChanged(object sender, RoutedEventArgs e)

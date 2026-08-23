@@ -191,10 +191,16 @@ public sealed class DictationController : IDisposable
                 return;
             }
 
+            // Read before cleanup, not after. Per-app rules need to know where the text is
+            // going while there is still a decision to make, and this is also the more
+            // truthful moment: it is what had focus when the words were spoken, rather than
+            // wherever focus drifted during a second of network round trip.
+            var app = _foregroundApp.Current;
+
             var formatter = settings.CleanupEnabled ? _formatter() : null;
             var cleaned = formatter is null
                 ? raw.Trim()
-                : await formatter.FormatAsync(raw).ConfigureAwait(false);
+                : await formatter.FormatAsync(raw, new FormatContext(app)).ConfigureAwait(false);
 
             // Read straight after the call, before anything else can run one. Only the paid
             // tier reports this; a local formatter simply is not IReportsUsage and the entry
@@ -206,9 +212,6 @@ public sealed class DictationController : IDisposable
             // something the user can switch off by accident along with cleanup.
             var (text, corrections) = _dictionary.Corrector.Apply(cleaned);
 
-            // Read the target before injecting. Afterwards is too late in the cases that
-            // matter: a paste can shift focus, and an app that closes on submit would be gone.
-            var app = _foregroundApp.Current;
             var injection = _injector.Insert(text);
 
             Completed?.Invoke(new DictationCompleted(

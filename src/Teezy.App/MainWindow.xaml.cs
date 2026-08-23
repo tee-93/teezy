@@ -1,3 +1,4 @@
+using System.Linq;
 using Teezy.Cleanup;
 using Teezy.Core.Hotkeys;
 using Teezy.Core.Abstractions;
@@ -141,7 +142,14 @@ public partial class MainWindow : Window
 
     private void ShowSettings()
     {
-        _settingsView ??= new SettingsView(_settings, _saveSettings, _transcriber, _autostart, _capture, _secrets, _claude);
+        _settingsView ??= new SettingsView(
+            _settings, _saveSettings, _transcriber, _autostart, _capture, _secrets, _claude,
+
+            // The apps you have actually dictated into, so a rule can be added by picking
+            // rather than by knowing that Outlook reports itself as "OUTLOOK".
+            knownApps: () => [.. UsageStats
+                .From(_history.Load(), DateOnly.FromDateTime(DateTime.Today))
+                .Apps.Select(a => a.App)]);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

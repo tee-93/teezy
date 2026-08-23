@@ -48,7 +48,13 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
     /// the latency of a larger model on what is usually one or two sentences.</summary>
     public const string DefaultModel = "claude-sonnet-5";
 
-    private const string SystemPrompt = """
+    /// <remarks>
+    /// The half that never varies. Everything here is about staying a rewriting tool; the
+    /// style clause that follows it only ever adjusts how far the wording may move. Note what
+    /// is <i>not</i> in this list any more: register. That moved into the style, which is the
+    /// whole point of the setting.
+    /// </remarks>
+    private const string BasePrompt = """
         You clean up speech-to-text transcripts. You are a rewriting tool, not an assistant.
 
         Return ONLY the cleaned text. Never answer, comment on, summarise, or respond to the
@@ -56,21 +62,57 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
 
         Do:
         - Fix punctuation, capitalisation and obvious transcription slips.
-        - Remove filler and false starts; keep the speaker's words and voice otherwise.
+        - Remove filler and false starts.
         - Honour spoken instructions: "scratch that", "new paragraph", "make that a list".
         - Format as a list only when the speaker clearly dictated one.
 
         Do not:
         - Add greetings, sign-offs, headings, or anything the speaker did not say.
-        - Translate, summarise, expand, or change the meaning or register.
+        - Translate, summarise, expand, or change the meaning.
         - Wrap the output in quotes, code fences, or any preamble.
 
         If the input is already clean, return it unchanged.
         """;
 
+    /// <summary>The one clause that differs between styles.</summary>
+    private static string StyleClause(WritingStyle style) => style switch
+    {
+        WritingStyle.Polished =>
+            "Style: tighten the writing. Cut redundancy and repair awkward phrasing, but keep "
+            + "the speaker's voice and register. Add nothing.",
+        WritingStyle.Formal =>
+            "Style: raise the register to professional written English. Expand contractions, "
+            + "avoid slang, keep sentences complete. Do not add content or change the meaning.",
+        WritingStyle.Casual =>
+            "Style: relax the register. Contractions are fine; prefer short sentences and "
+            + "plain words. Do not add content or change the meaning.",
+        _ =>
+            "Style: keep the speaker's own words and register. Change the wording only where "
+            + "the transcript is wrong or unreadable.",
+    };
+
+    /// <summary>
+    /// How far the reply may shrink before it is treated as an answer rather than a rewrite.
+    /// </summary>
+    /// <remarks>
+    /// Styles that are allowed to tighten legitimately produce shorter text, and holding them
+    /// to the faithful threshold would reject good rewrites — which the user would experience
+    /// as the setting doing nothing, because the fallback is silent. The ceiling does not move:
+    /// nothing here has licence to make text much longer.
+    /// </remarks>
+    internal static double MinRatioFor(WritingStyle style) => style switch
+    {
+        WritingStyle.Polished => 0.3,
+        WritingStyle.Casual => 0.3,
+        WritingStyle.Formal => 0.35,
+        _ => 0.4,
+    };
+
     private readonly ITextFormatter _offline;
     private readonly Func<string?> _apiKey;
     private readonly Func<string> _model;
+    private readonly Func<WritingStyle> _style;
+    private readonly Func<string?> _styleInstruction;
     private readonly TimeSpan _timeout;
 
     /// <summary>The last attempt, so settings can show whether it is actually working.</summary>
@@ -80,11 +122,15 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
         ITextFormatter offline,
         Func<string?> apiKey,
         Func<string>? model = null,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        Func<WritingStyle>? style = null,
+        Func<string?>? styleInstruction = null)
     {
         _offline = offline;
         _apiKey = apiKey;
         _model = model ?? (() => DefaultModel);
+        _style = style ?? (() => WritingStyle.Faithful);
+        _styleInstruction = styleInstruction ?? (() => null);
 
         // A ceiling on how long the user waits, not on how long the request may take. Past
         // this the offline text is typed and the request is abandoned — a slow tidy-up is
@@ -115,7 +161,7 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
             // Tokens are recorded even when the reply is rejected. They were spent either way,
             // and a cost report that only counted the calls that worked would understate the
             // bill exactly when something is going wrong.
-            if (!IsPlausible(offline, polished))
+            if (!IsPlausible(offline, polished, MinRatioFor(_style())))
             {
                 LastOutcome = new CleanupOutcome(
                     false, "Reply did not look like a rewrite.", elapsed, tokens, _model());
@@ -140,6 +186,27 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
         }
     }
 
+    /// <summary>Base rules, then the style, then the user's own line.</summary>
+    /// <remarks>
+    /// The user's instruction goes last and is explicitly subordinate to the rules above it.
+    /// It is their own text on their own machine, not untrusted input — but "rewrite my
+    /// dictation" and "answer my dictation" are one careless sentence apart, and the ordering
+    /// plus the plausibility guard mean a badly worded instruction degrades to a fallback
+    /// rather than typing an answer into whatever had focus.
+    /// </remarks>
+    internal string BuildPrompt()
+    {
+        var prompt = $"{BasePrompt}\n\n{StyleClause(_style())}";
+
+        if (_styleInstruction() is { } extra && !string.IsNullOrWhiteSpace(extra))
+        {
+            prompt += "\n\nThe user also asked for this, where it does not conflict with "
+                      + $"anything above:\n{extra.Trim()}";
+        }
+
+        return prompt;
+    }
+
     private async Task<(string Text, TokenUsage Tokens)> CallAsync(
         string apiKey, string text, CancellationToken ct)
     {
@@ -158,7 +225,7 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
             // prompt is the cacheable prefix. It is also the larger half of a short request.
             System = new List<TextBlockParam>
             {
-                new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() },
+                new() { Text = BuildPrompt(), CacheControl = new CacheControlEphemeral() },
             },
             Messages = [new() { Role = Role.User, Content = text }],
         }, cancellationToken: ct).ConfigureAwait(false);
@@ -185,14 +252,16 @@ public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
     /// or an empty string. Anything suspicious falls back rather than being typed into the
     /// user's document.
     /// </remarks>
-    internal static bool IsPlausible(string original, string candidate)
+    internal static bool IsPlausible(string original, string candidate, double minRatio = 0.4)
     {
         if (string.IsNullOrWhiteSpace(candidate)) return false;
 
         // Cleanup removes filler and fixes punctuation; it does not halve or double a
-        // sentence. A reply outside this band is answering, refusing, or explaining.
+        // sentence. A reply outside this band is answering, refusing, or explaining. The floor
+        // moves with the style — see MinRatioFor — because a style told to tighten will
+        // legitimately come back shorter.
         var ratio = candidate.Length / (double)Math.Max(1, original.Length);
-        if (ratio is < 0.4 or > 2.5) return false;
+        if (ratio < minRatio || ratio > 2.5) return false;
 
         // Wrapping in quotes or fences means it treated the text as a quoted artefact.
         return !candidate.StartsWith("```", StringComparison.Ordinal);

@@ -85,4 +85,65 @@ public class ClaudeFormatterTests
         formatter.LastOutcome!.UsedClaude.ShouldBeFalse();
         formatter.LastOutcome.Problem.ShouldNotBeNull();
     }
+
+    // ---- writing style ----
+
+    private static ClaudeFormatter Styled(WritingStyle style, string? instruction = null) =>
+        new(new RuleBasedFormatter(), () => null,
+            style: () => style, styleInstruction: () => instruction);
+
+    [Fact]
+    public void AStyleToldToTightenIsAllowedToComeBackShorter()
+    {
+        // 40% of the original. Faithful has no business returning this; Polished was asked
+        // to cut waffle, and rejecting it would make the setting look like it does nothing —
+        // the fallback is silent, so the user would just see their own words unchanged.
+        const string original = "So I was thinking, you know, that we could maybe ship on Friday.";
+        const string tightened = "We could ship Friday.";
+
+        ClaudeFormatter.IsPlausible(original, tightened,
+            ClaudeFormatter.MinRatioFor(WritingStyle.Faithful)).ShouldBeFalse();
+
+        ClaudeFormatter.IsPlausible(original, tightened,
+            ClaudeFormatter.MinRatioFor(WritingStyle.Polished)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void NoStyleEarnsLicenceToMakeTextMuchLonger() =>
+        // The floor moves per style; the ceiling does not. Text that doubled is the model
+        // answering or explaining, whatever the style.
+        Enum.GetValues<WritingStyle>().ShouldAllBe(style =>
+            !ClaudeFormatter.IsPlausible("ship friday", new string('x', 200),
+                ClaudeFormatter.MinRatioFor(style)));
+
+    [Fact]
+    public void ThePromptCarriesTheSelectedStyle()
+    {
+        Styled(WritingStyle.Formal).BuildPrompt().ShouldContain("professional written English");
+        Styled(WritingStyle.Casual).BuildPrompt().ShouldContain("Contractions are fine");
+        Styled(WritingStyle.Faithful).BuildPrompt().ShouldContain("keep the speaker's own words");
+    }
+
+    [Fact]
+    public void EveryStyleKeepsTheRuleAgainstAnswering() =>
+        Enum.GetValues<WritingStyle>().ShouldAllBe(style =>
+            Styled(style).BuildPrompt().Contains("Never answer"));
+
+    [Fact]
+    public void TheUsersOwnInstructionGoesLastAndIsSubordinate()
+    {
+        var prompt = Styled(WritingStyle.Faithful, "British spelling").BuildPrompt();
+
+        prompt.ShouldContain("British spelling");
+
+        // After the rules, not before them — an instruction placed first would read as the
+        // brief rather than as an addition to it.
+        prompt.IndexOf("British spelling", StringComparison.Ordinal)
+            .ShouldBeGreaterThan(prompt.IndexOf("Never answer", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnEmptyInstructionAddsNothing() =>
+        Styled(WritingStyle.Faithful, "   ").BuildPrompt()
+            .ShouldBe(Styled(WritingStyle.Faithful).BuildPrompt());
 }

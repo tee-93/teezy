@@ -93,7 +93,9 @@ public partial class App : Application
             new RuleBasedFormatter(),
             () => _settings.LlmCleanupEnabled ? _secrets.Read(ApiKeyName) : null,
             () => _settings.LlmModel,
-            TimeSpan.FromSeconds(Math.Clamp(_settings.LlmTimeoutSeconds, 2, 30)));
+            TimeSpan.FromSeconds(Math.Clamp(_settings.LlmTimeoutSeconds, 2, 30)),
+            () => _settings.WritingStyle,
+            () => _settings.StyleInstruction);
 
         _controller = new DictationController(
             _hotkeySource,

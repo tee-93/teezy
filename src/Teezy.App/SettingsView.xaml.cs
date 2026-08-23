@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Teezy.Core;
 using Teezy.Core.Abstractions;
+using Teezy.Core.Formatting;
 using Teezy.Core.Hotkeys;
 using Teezy.Speech;
 
@@ -283,6 +284,7 @@ public partial class SettingsView : UserControl
         {
             foreach (var (_, label, _) in LlmModels) LlmModelPicker.Items.Add(label);
             foreach (var seconds in LlmTimeouts) LlmTimeoutPicker.Items.Add($"{seconds} seconds");
+            foreach (var (_, label, _) in Styles) StylePicker.Items.Add(label);
         }
 
         var index = Array.FindIndex(LlmModels, m => m.Id == settings.LlmModel);
@@ -291,6 +293,11 @@ public partial class SettingsView : UserControl
 
         var timeout = Array.IndexOf(LlmTimeouts, settings.LlmTimeoutSeconds);
         LlmTimeoutPicker.SelectedIndex = timeout >= 0 ? timeout : 2;
+
+        var style = Array.FindIndex(Styles, s => s.Style == settings.WritingStyle);
+        StylePicker.SelectedIndex = style >= 0 ? style : 0;
+        StyleHint.Text = Styles[StylePicker.SelectedIndex].Hint;
+        StyleInstructionBox.Text = settings.StyleInstruction ?? string.Empty;
 
         ShowKeyState();
     }
@@ -321,6 +328,48 @@ public partial class SettingsView : UserControl
         if (_loading) return;
         _write(_read() with { LlmCleanupEnabled = LlmBox.IsChecked == true });
         ShowLlmState();
+    }
+
+    /// <summary>The styles, with what each one is actually for.</summary>
+    /// <remarks>
+    /// Described by outcome rather than by adjective. "Polished" tells you nothing on its
+    /// own; "tightens waffle, keeps your voice" tells you whether it is the one you want.
+    /// </remarks>
+    private static readonly (WritingStyle Style, string Label, string Hint)[] Styles =
+    [
+        (WritingStyle.Faithful, "Faithful — your words",
+            "Fixes the transcript and nothing else. The safe default."),
+        (WritingStyle.Polished, "Polished — tightened",
+            "Cuts waffle and repairs awkward phrasing, keeping your voice."),
+        (WritingStyle.Formal, "Formal — professional",
+            "Raises the register. Expands contractions, drops slang."),
+        (WritingStyle.Casual, "Casual — relaxed",
+            "Contractions, short sentences, plain words."),
+    ];
+
+    private void OnStyleChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading || StylePicker.SelectedIndex < 0) return;
+
+        var chosen = Styles[StylePicker.SelectedIndex];
+        StyleHint.Text = chosen.Hint;
+        _write(_read() with { WritingStyle = chosen.Style });
+    }
+
+    /// <remarks>
+    /// On lost focus, not on every keystroke: this is persisted to disk and rides on every
+    /// request, and saving a half-typed instruction would send it.
+    /// </remarks>
+    private void OnStyleInstructionChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        var typed = StyleInstructionBox.Text.Trim();
+        var current = _read();
+        var stored = current.StyleInstruction ?? string.Empty;
+        if (typed == stored) return;
+
+        _write(current with { StyleInstruction = typed.Length == 0 ? null : typed });
     }
 
     private void OnLlmModelChanged(object sender, RoutedEventArgs e)

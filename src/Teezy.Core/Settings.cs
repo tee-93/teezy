@@ -56,6 +56,24 @@ public sealed record TeezySettings
     /// <summary>How long to wait before giving up and typing the offline text.</summary>
     public int LlmTimeoutSeconds { get; init; } = 6;
 
+    /// <summary>How much licence the cleanup pass has to change your wording.</summary>
+    /// <remarks>
+    /// Claude tier only — the offline rules are not tunable. Faithful by default, because a
+    /// dictation tool that quietly rephrases you is a worse default than one that leaves an
+    /// awkward sentence awkward.
+    /// </remarks>
+    public Formatting.WritingStyle WritingStyle { get; init; } = Formatting.WritingStyle.Faithful;
+
+    /// <summary>
+    /// One extra instruction of your own, appended to whichever style is selected.
+    /// </summary>
+    /// <remarks>
+    /// For the things a preset cannot know: "British spelling", "never use em dashes", "I
+    /// write commit messages, keep them imperative". Kept short deliberately — this rides on
+    /// every request, and a paragraph here costs tokens on every utterance.
+    /// </remarks>
+    public string? StyleInstruction { get; init; }
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

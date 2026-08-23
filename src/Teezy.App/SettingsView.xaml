@@ -166,6 +166,27 @@
 
                         <Grid Margin="0,16,0,0">
                             <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                <TextBlock Text="Writing style" Foreground="{StaticResource Ink}"/>
+                                <TextBlock x:Name="StyleHint" Style="{StaticResource Hint}"/>
+                            </StackPanel>
+                            <ComboBox x:Name="StylePicker" Width="180" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center" SelectionChanged="OnStyleChanged"/>
+                        </Grid>
+
+                        <TextBlock Text="AND ALWAYS" Style="{StaticResource SectionLabel}"
+                                   Margin="0,16,0,7"/>
+                        <Border Background="{StaticResource Sunken}" CornerRadius="9"
+                                BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                            <TextBox x:Name="StyleInstructionBox" BorderThickness="0"
+                                     Background="Transparent" MinHeight="34" Padding="12,8"
+                                     FontSize="13" TextWrapping="Wrap" AcceptsReturn="False"
+                                     LostFocus="OnStyleInstructionChanged"/>
+                        </Border>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="One line of your own, added to every request — “British spelling”, “never use em dashes”. It rides on every utterance, so keep it short."/>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
                                 <TextBlock Text="Give up after" Foreground="{StaticResource Ink}"/>
                                 <TextBlock Style="{StaticResource Hint}"
                                            Text="Past this, Teezy types the offline result instead. Text appearing beats a slower tidy-up."/>

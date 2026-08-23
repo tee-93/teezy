@@ -58,10 +58,60 @@ public partial class InsightsView : UserControl
 
         BuildAppBars(stats);
         BuildHeatmap(stats, today);
+        BuildSpend(stats);
 
         StreakNumber.Text = stats.CurrentStreak.ToString(CultureInfo.CurrentCulture);
         LongestStreak.Text = $"LONGEST · {stats.LongestStreak}";
     }
+
+    /// <summary>Spend on the Claude tier, counted from the tokens the API reported.</summary>
+    /// <remarks>
+    /// Money is stated in one place and hedged in one place. The figure is what Teezy spent —
+    /// it cannot see the rest of the account — and it comes from a local rate table, so the
+    /// note says "about" and any call the table could not price is declared rather than
+    /// silently dropped from the total.
+    /// </remarks>
+    private void BuildSpend(UsageStats stats)
+    {
+        if (stats.ClaudeCalls == 0)
+        {
+            SpendCard.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        SpendCard.Visibility = Visibility.Visible;
+
+        SpendMonth.Text = Money(stats.CostThisMonthUsd);
+        SpendTotal.Text = $"{Money(stats.CostUsd)} ALL TIME";
+        SpendTokens.Text =
+            $"{stats.ClaudeCalls:N0} CALLS · {stats.TotalTokens.Total:N0} TOKENS";
+
+        ModelRows.ItemsSource = stats.Models
+            .Select(m => new
+            {
+                Name = m.Model,
+                Detail = $"{m.Calls:N0} calls · {m.Tokens.InputTokens:N0} in / {m.Tokens.OutputTokens:N0} out",
+                Cost = m.CostUsd is { } c ? Money(c) : "—",
+            })
+            .ToList();
+
+        var note = "Counted from the tokens the API reported, priced locally — about right, "
+                   + "not your bill. It cannot see anything else on your account.";
+
+        if (stats.UnpricedCalls > 0)
+        {
+            note += $" {stats.UnpricedCalls:N0} call(s) used a model this build has no price "
+                    + "for and are left out of the totals.";
+        }
+
+        SpendNote.Text = note;
+    }
+
+    /// <summary>Cents are the wrong unit to hide here — a month of dictation can cost 30c.</summary>
+    private static string Money(decimal usd) =>
+        usd >= 1m
+            ? usd.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
+            : $"{usd * 100:0.#}¢";
 
     private void BuildAppBars(UsageStats stats)
     {

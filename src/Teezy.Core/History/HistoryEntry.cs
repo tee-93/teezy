@@ -28,6 +28,25 @@ public sealed record HistoryEntry
 
     public int Corrections { get; init; }
 
+    /// <summary>What the cleanup call consumed, or null if Claude did not run for this one.</summary>
+    public Cost.TokenUsage? Tokens { get; init; }
+
+    /// <summary>The model that cleaned it up, stored so the cost can be worked out later at
+    /// the rate that applied on the day rather than today's.</summary>
+    public string? Model { get; init; }
+
+    /// <summary>
+    /// What this dictation cost, in US dollars, or null if it cannot be priced.
+    /// </summary>
+    /// <remarks>
+    /// Derived rather than stored, like the word count above, and for the same reason: a price
+    /// written into the file would be read back as authoritative long after the rate table was
+    /// corrected. Priced against <see cref="At"/>, not today — the rate that applied when the
+    /// words were spoken is the one that was billed.
+    /// </remarks>
+    [JsonIgnore]
+    public decimal? CostUsd => Cost.ModelRates.Cost(Model, Tokens, DateOnly.FromDateTime(At.Date));
+
     /// <remarks>
     /// Not serialised. Derived values in the file would bloat every line and, worse, could be
     /// read back as authoritative after the text was edited or the counting rule changed.

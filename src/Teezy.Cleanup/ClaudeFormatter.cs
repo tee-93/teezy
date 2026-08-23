@@ -2,12 +2,25 @@ using System.Diagnostics;
 using Anthropic;
 using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
+using Teezy.Core.Cost;
 using Teezy.Core.Formatting;
 
 namespace Teezy.Cleanup;
 
 /// <summary>What happened on the last cleanup, for the settings page.</summary>
-public sealed record CleanupOutcome(bool UsedClaude, string? Problem, double Milliseconds);
+/// <param name="Tokens">
+/// What the call consumed, as counted by the API. Null when no call was made — which is not
+/// the same as a call that consumed nothing, and the difference is what stops a failed
+/// request being recorded as a free one.
+/// </param>
+/// <param name="Model">The model actually asked, so history can be priced later against the
+/// rate that applied at the time rather than against whatever is selected today.</param>
+public sealed record CleanupOutcome(
+    bool UsedClaude,
+    string? Problem,
+    double Milliseconds,
+    TokenUsage? Tokens = null,
+    string? Model = null);
 
 /// <summary>Cleans dictated text with Claude, falling back to the offline rules.</summary>
 /// <remarks>
@@ -25,8 +38,12 @@ public sealed record CleanupOutcome(bool UsedClaude, string? Problem, double Mil
 /// document would be a far worse failure than leaving an "um" in.
 /// </para>
 /// </remarks>
-public sealed class ClaudeFormatter : ITextFormatter
+public sealed class ClaudeFormatter : ITextFormatter, IReportsUsage
 {
+    public TokenUsage? LastTokens => LastOutcome?.Tokens;
+
+    public string? LastModel => LastOutcome?.Model;
+
     /// <summary>Sonnet 5: enough judgement for list structure and spoken corrections, without
     /// the latency of a larger model on what is usually one or two sentences.</summary>
     public const string DefaultModel = "claude-sonnet-5";
@@ -92,16 +109,20 @@ public sealed class ClaudeFormatter : ITextFormatter
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
             deadline.CancelAfter(_timeout);
 
-            var polished = await CallAsync(key, offline, deadline.Token).ConfigureAwait(false);
+            var (polished, tokens) = await CallAsync(key, offline, deadline.Token).ConfigureAwait(false);
             var elapsed = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
+            // Tokens are recorded even when the reply is rejected. They were spent either way,
+            // and a cost report that only counted the calls that worked would understate the
+            // bill exactly when something is going wrong.
             if (!IsPlausible(offline, polished))
             {
-                LastOutcome = new CleanupOutcome(false, "Reply did not look like a rewrite.", elapsed);
+                LastOutcome = new CleanupOutcome(
+                    false, "Reply did not look like a rewrite.", elapsed, tokens, _model());
                 return offline;
             }
 
-            LastOutcome = new CleanupOutcome(true, null, elapsed);
+            LastOutcome = new CleanupOutcome(true, null, elapsed, tokens, _model());
             return polished;
         }
         catch (OperationCanceledException)
@@ -119,7 +140,8 @@ public sealed class ClaudeFormatter : ITextFormatter
         }
     }
 
-    private async Task<string> CallAsync(string apiKey, string text, CancellationToken ct)
+    private async Task<(string Text, TokenUsage Tokens)> CallAsync(
+        string apiKey, string text, CancellationToken ct)
     {
         var client = new AnthropicClient { ApiKey = apiKey };
 
@@ -141,11 +163,19 @@ public sealed class ClaudeFormatter : ITextFormatter
             Messages = [new() { Role = Role.User, Content = text }],
         }, cancellationToken: ct).ConfigureAwait(false);
 
-        return string.Concat(response.Content
+        var reply = string.Concat(response.Content
                 .Select(block => block.Value)
                 .OfType<TextBlock>()
                 .Select(block => block.Text))
             .Trim();
+
+        var usage = new TokenUsage(
+            (int)response.Usage.InputTokens,
+            (int)response.Usage.OutputTokens,
+            (int)(response.Usage.CacheReadInputTokens ?? 0),
+            (int)(response.Usage.CacheCreationInputTokens ?? 0));
+
+        return (reply, usage);
     }
 
     /// <summary>Does the reply look like a rewrite of the input rather than a reply to it?</summary>

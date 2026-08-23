@@ -1,7 +1,13 @@
+using Teezy.Core.Cost;
+
 namespace Teezy.Core.History;
 
 /// <summary>One app and how much dictation went into it.</summary>
 public sealed record AppUsage(string App, int Count, double Fraction);
+
+/// <summary>What one model was asked to do, and what it cost.</summary>
+/// <param name="CostUsd">Null when the rate table does not cover the model.</param>
+public sealed record ModelSpend(string Model, int Calls, TokenUsage Tokens, decimal? CostUsd);
 
 /// <summary>Everything the Insights page shows, computed from the history log.</summary>
 /// <remarks>
@@ -35,6 +41,31 @@ public sealed record UsageStats
 
     public IReadOnlyList<AppUsage> Apps { get; init; } = [];
 
+    // ---- What the Claude tier consumed ----
+
+    /// <summary>Dictations that actually went to the API. Not every entry does — cleanup can
+    /// be off, the tier can be off, and a failed call still produced text locally.</summary>
+    public int ClaudeCalls { get; init; }
+
+    public TokenUsage TotalTokens { get; init; } = TokenUsage.None;
+
+    /// <summary>Everything that could be priced, in US dollars.</summary>
+    /// <remarks>
+    /// An estimate of what <b>Teezy</b> spent, not a copy of the bill: it cannot see anything
+    /// else on the account, and it prices from a table that will eventually go stale.
+    /// </remarks>
+    public decimal CostUsd { get; init; }
+
+    /// <summary>The same figure for the current calendar month, which is the one people
+    /// actually want — a lifetime total answers a question nobody asked.</summary>
+    public decimal CostThisMonthUsd { get; init; }
+
+    /// <summary>Calls the rate table could not price, so the totals above can say so rather
+    /// than quietly under-reporting.</summary>
+    public int UnpricedCalls { get; init; }
+
+    public IReadOnlyList<ModelSpend> Models { get; init; } = [];
+
     /// <summary>
     /// Time saved against typing, in minutes.
     /// </summary>
@@ -64,6 +95,14 @@ public sealed record UsageStats
         var byDay = new Dictionary<DateOnly, int>();
         var byApp = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
+        var claudeCalls = 0;
+        var totalTokens = TokenUsage.None;
+        var costUsd = 0m;
+        var costThisMonth = 0m;
+        var unpriced = 0;
+        var byModel = new Dictionary<string, (int Calls, TokenUsage Tokens, decimal Cost, bool AllPriced)>(
+            StringComparer.OrdinalIgnoreCase);
+
         foreach (var e in list)
         {
             var words = e.WordCount;
@@ -83,6 +122,31 @@ public sealed record UsageStats
 
             var app = string.IsNullOrWhiteSpace(e.App) ? "Other" : e.App;
             byApp[app] = byApp.GetValueOrDefault(app) + 1;
+
+            if (e.Tokens is not { IsEmpty: false } tokens) continue;
+
+            claudeCalls++;
+            totalTokens += tokens;
+
+            var cost = e.CostUsd;
+            if (cost is { } spent)
+            {
+                costUsd += spent;
+                if (day.Year == today.Year && day.Month == today.Month) costThisMonth += spent;
+            }
+            else
+            {
+                unpriced++;
+            }
+
+            var model = string.IsNullOrWhiteSpace(e.Model) ? "unknown" : e.Model;
+            var prior = byModel.GetValueOrDefault(
+                model, (Calls: 0, Tokens: TokenUsage.None, Cost: 0m, AllPriced: true));
+            byModel[model] = (
+                prior.Calls + 1,
+                prior.Tokens + tokens,
+                prior.Cost + (cost ?? 0m),
+                prior.AllPriced && cost is not null);
         }
 
         var (current, longest) = Streaks([.. byDay.Keys], today);
@@ -102,6 +166,19 @@ public sealed record UsageStats
             Apps = [.. byApp
                 .OrderByDescending(kv => kv.Value)
                 .Select(kv => new AppUsage(kv.Key, kv.Value, kv.Value / (double)list.Count))],
+            ClaudeCalls = claudeCalls,
+            TotalTokens = totalTokens,
+            CostUsd = costUsd,
+            CostThisMonthUsd = costThisMonth,
+            UnpricedCalls = unpriced,
+
+            // A model with any unpriced call reports null rather than a partial total, which
+            // would look like a complete one.
+            Models = [.. byModel
+                .OrderByDescending(kv => kv.Value.Calls)
+                .Select(kv => new ModelSpend(
+                    kv.Key, kv.Value.Calls, kv.Value.Tokens,
+                    kv.Value.AllPriced ? kv.Value.Cost : null))],
         };
     }
 

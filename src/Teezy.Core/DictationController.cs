@@ -21,7 +21,9 @@ public sealed record DictationCompleted(
     TimeSpan ProcessingTime,
     InjectionResult Injection,
     IReadOnlyList<AppliedCorrection> Corrections,
-    string? App);
+    string? App,
+    Cost.TokenUsage? Tokens = null,
+    string? Model = null);
 
 /// <summary>
 /// Owns the push-to-talk lifecycle: hold the key, capture audio, release, transcribe, clean
@@ -189,9 +191,15 @@ public sealed class DictationController : IDisposable
                 return;
             }
 
-            var cleaned = settings.CleanupEnabled
-                ? await _formatter().FormatAsync(raw).ConfigureAwait(false)
-                : raw.Trim();
+            var formatter = settings.CleanupEnabled ? _formatter() : null;
+            var cleaned = formatter is null
+                ? raw.Trim()
+                : await formatter.FormatAsync(raw).ConfigureAwait(false);
+
+            // Read straight after the call, before anything else can run one. Only the paid
+            // tier reports this; a local formatter simply is not IReportsUsage and the entry
+            // records no tokens, which is the truth rather than a zero.
+            var usage = formatter as IReportsUsage;
 
             // The dictionary runs last and runs unconditionally. Biasing only improves the
             // odds; this is the pass that guarantees the spelling, so it must not be
@@ -204,7 +212,8 @@ public sealed class DictationController : IDisposable
             var injection = _injector.Insert(text);
 
             Completed?.Invoke(new DictationCompleted(
-                text, held, Stopwatch.GetElapsedTime(started), injection, corrections, app));
+                text, held, Stopwatch.GetElapsedTime(started), injection, corrections, app,
+                usage?.LastTokens, usage?.LastModel));
 
             Reset();
         }

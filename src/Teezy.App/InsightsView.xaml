@@ -134,6 +134,50 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <!-- What the Claude tier has cost. Hidden entirely when it has never run, so
+                 someone using Teezy offline never sees a card about money. -->
+            <Border x:Name="SpendCard" Style="{StaticResource CardPanel}" Margin="0,18,0,0"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock x:Name="SpendMonth" Style="{StaticResource StatNumber}"/>
+                            <TextBlock Text="CLEANUP THIS MONTH" Style="{StaticResource SectionLabel}"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top">
+                            <TextBlock x:Name="SpendTotal" Style="{StaticResource StatCaption}"
+                                       HorizontalAlignment="Right"/>
+                            <TextBlock x:Name="SpendTokens" Style="{StaticResource StatCaption}"
+                                       HorizontalAlignment="Right" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <ItemsControl x:Name="ModelRows" Margin="0,16,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,7">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                               Foreground="{StaticResource Body}" FontSize="12.5"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Detail}"
+                                               Foreground="{StaticResource Muted}" FontSize="12"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Cost}"
+                                               Foreground="{StaticResource Ink}" FontSize="12.5"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock x:Name="SpendNote" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

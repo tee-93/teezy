@@ -208,6 +208,8 @@ public partial class App : Application
             ProcessingMs = result.ProcessingTime.TotalMilliseconds,
             App = result.App,
             Corrections = result.Corrections.Count,
+            Tokens = result.Tokens,
+            Model = result.Model,
         });
 
         // A window that is open should show the utterance that just landed.

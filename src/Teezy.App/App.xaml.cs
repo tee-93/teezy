@@ -70,7 +70,19 @@ public partial class App : Application
         _hud = new HudWindow();
         BuildTray();
 
-        _transcriber = new ParakeetTranscriber(_settings.ModelPath, _settings.NumThreads);
+        _transcriber = new ParakeetTranscriber(
+            _settings.ModelPath,
+            new SpeechOptions
+            {
+                Threads = _settings.NumThreads,
+                Decoding = _settings.Decoding,
+                BeamSize = _settings.BeamSize,
+                HotwordScore = (float)_settings.HotwordScore,
+            },
+
+            // Read when the recogniser is built. ReloadDictionary rebuilds it after an edit,
+            // so a hint added at lunchtime works that afternoon rather than after a restart.
+            hotwords: () => _dictionary?.Hotwords());
 
         _history = new HistoryStore();
         _history.Compact();

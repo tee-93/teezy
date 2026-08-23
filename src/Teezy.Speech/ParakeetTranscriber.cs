@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using SherpaOnnx;
 using Teezy.Core.Abstractions;
+using Teezy.Core.Speech;
 
 namespace Teezy.Speech;
 
@@ -30,7 +31,8 @@ public sealed class ParakeetTranscriber : ITranscriber
     private const int MaxSeconds = 380;
 
     private readonly string? _configuredDirectory;
-    private readonly int _threads;
+    private readonly SpeechOptions _options;
+    private readonly Func<string?> _hotwords;
     private OfflineRecognizer? _recognizer;
 
     /// <summary>sherpa-onnx is not documented as thread-safe for concurrent decode on one
@@ -45,10 +47,20 @@ public sealed class ParakeetTranscriber : ITranscriber
     public ModelPaths? Paths { get; private set; }
     public TimeSpan LoadTime { get; private set; }
 
-    public ParakeetTranscriber(string? modelDirectory = null, int threads = 4)
+    /// <param name="hotwords">
+    /// Words to bias toward, newline-separated. Read when the recogniser is built, not per
+    /// utterance — sherpa-onnx's C# binding has no per-stream hotwords for offline models —
+    /// so it is a provider rather than a value, and <see cref="ReloadAsync"/> is what makes
+    /// an edited dictionary take effect.
+    /// </param>
+    public ParakeetTranscriber(
+        string? modelDirectory = null,
+        SpeechOptions? options = null,
+        Func<string?>? hotwords = null)
     {
         _configuredDirectory = modelDirectory;
-        _threads = threads;
+        _options = options ?? new SpeechOptions();
+        _hotwords = hotwords ?? (() => null);
     }
 
     public Task LoadAsync(CancellationToken ct = default)
@@ -82,9 +94,25 @@ public sealed class ParakeetTranscriber : ITranscriber
             cfg.ModelConfig.Transducer.Joiner = paths.Joiner;
             cfg.ModelConfig.Tokens = paths.Tokens;
             cfg.ModelConfig.ModelType = "nemo_transducer";      // REQUIRED — omit and load fails
-            cfg.ModelConfig.NumThreads = _threads;
+            cfg.ModelConfig.NumThreads = _options.Threads;
             cfg.ModelConfig.Provider = "cpu";
-            cfg.DecodingMethod = "greedy_search";
+            cfg.DecodingMethod = _options.SherpaDecodingMethod;
+            cfg.MaxActivePaths = _options.BeamSize;
+            cfg.HotwordsScore = _options.HotwordScore;
+
+            // Hotwords belong to the recogniser, not the stream: the C# binding exposes no
+            // per-stream overload for offline models, so changing the hints means rebuilding.
+            // Only under beam search — greedy decoding keeps no alternatives to re-score, and
+            // sherpa-onnx silently ignores hotwords rather than saying so.
+            if (_options.Decoding == DecodingMethod.BeamSearch &&
+                _hotwords() is { Length: > 0 } words)
+            {
+                var vocabulary = HotwordEncoder.LoadVocabulary(paths.Tokens);
+                var encoded = HotwordEncoder.Encode(
+                    words.Split('\n', StringSplitOptions.RemoveEmptyEntries), vocabulary);
+
+                if (encoded is not null) cfg.HotwordsFile = WriteHotwords(paths.Directory, encoded);
+            }
 
             try
             {
@@ -98,6 +126,39 @@ public sealed class ParakeetTranscriber : ITranscriber
             Paths = paths;
             LoadTime = sw.Elapsed;
         }, ct);
+    }
+
+    /// <summary>
+    /// Rebuilds the recogniser so edited hints take effect.
+    /// </summary>
+    /// <remarks>
+    /// Costs a full model load, which is why it is not called after every keystroke in the
+    /// dictionary page. Cheap enough to call when the file is saved, and the alternative —
+    /// hints that only work after a restart — is the kind of thing nobody discovers and
+    /// everybody assumes is broken.
+    /// </remarks>
+    public async Task ReloadAsync(CancellationToken ct = default)
+    {
+        await _decodeGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _recognizer?.Dispose();
+            _recognizer = null;
+        }
+        finally
+        {
+            _decodeGate.Release();
+        }
+
+        await LoadAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>sherpa-onnx reads hotwords from a file path, so there has to be a file.</summary>
+    private static string WriteHotwords(string directory, string words)
+    {
+        var path = Path.Combine(directory, "hotwords.txt");
+        File.WriteAllText(path, words.ReplaceLineEndings("\n") + "\n");
+        return path;
     }
 
     public async Task<string> TranscribeAsync(ReadOnlyMemory<float> samples, CancellationToken ct = default)

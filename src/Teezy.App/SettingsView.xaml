@@ -233,6 +233,43 @@
                         <ComboBox x:Name="ThreadPicker" Width="86" HorizontalAlignment="Right"
                                   VerticalAlignment="Center" SelectionChanged="OnChanged"/>
                     </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                            <TextBlock Text="Decoding" Foreground="{StaticResource Ink}"/>
+                            <TextBlock x:Name="DecodingHint" Style="{StaticResource Hint}"/>
+                        </StackPanel>
+                        <ComboBox x:Name="DecodingPicker" Width="180" HorizontalAlignment="Right"
+                                  VerticalAlignment="Center" SelectionChanged="OnDecodingChanged"/>
+                    </Grid>
+
+                    <!-- Only meaningful under beam search, so hidden under greedy rather than
+                         shown greyed out next to a setting that would do nothing. -->
+                    <StackPanel x:Name="BeamOptions" Visibility="Collapsed">
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,120,0">
+                                <TextBlock Text="Candidates kept" Foreground="{StaticResource Ink}"/>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="How many transcripts beam search weighs before choosing. More is slower and rarely better past four."/>
+                            </StackPanel>
+                            <ComboBox x:Name="BeamPicker" Width="86" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                        </Grid>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                <TextBlock Text="Hint strength" Foreground="{StaticResource Ink}"/>
+                                <TextBlock x:Name="HotwordHint" Style="{StaticResource Hint}"/>
+                            </StackPanel>
+                            <ComboBox x:Name="HotwordPicker" Width="180" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <Border Style="{StaticResource CautionPanel}" Margin="0,16,0,0">
+                        <TextBlock Foreground="{StaticResource CautionInk}" TextWrapping="Wrap"
+                                   Text="Decoding settings are compiled into the recogniser, so they take effect when Teezy next starts."/>
+                    </Border>
                 </StackPanel>
             </Border>
 

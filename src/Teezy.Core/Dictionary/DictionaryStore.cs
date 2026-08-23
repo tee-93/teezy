@@ -27,6 +27,34 @@ public sealed class DictionaryStore
         Reload();
     }
 
+    /// <summary>
+    /// Hint entries as a hotwords list for the recogniser, or null if there are none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is what makes a hint a hint. Until it existed, <c>EntryKind.Term</c> entries were
+    /// written to the file, shown in the dictionary page and documented as biasing the
+    /// engine — and then read by nothing at all. Corrections did the visible work and terms
+    /// were inert.
+    /// </para>
+    /// <para>
+    /// Correction targets are deliberately not included. A correction already guarantees its
+    /// spelling by rewriting the text afterwards, so biasing toward it as well would spend
+    /// accuracy on a word that was going to be right regardless.
+    /// </para>
+    /// </remarks>
+    public string? Hotwords()
+    {
+        var terms = Entries
+            .Where(e => e.IsEnabled && e.Kind == EntryKind.Term)
+            .Select(e => e.Write.Trim())
+            .Where(w => w.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return terms.Count == 0 ? null : string.Join('\n', terms);
+    }
+
     public static string DefaultPath => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Teezy", "dictionary.txt");

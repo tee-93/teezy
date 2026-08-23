@@ -42,6 +42,20 @@ public sealed record TeezySettings
     /// <summary>Override the model directory. Null means the default location.</summary>
     public string? ModelPath { get; init; }
 
+    /// <summary>How the recogniser decodes. Takes effect when the model is next loaded.</summary>
+    /// <remarks>
+    /// Greedy by default: it is faster, and it is what every measurement in the README was
+    /// taken against. Beam search is the setting to reach for when the engine keeps missing
+    /// unusual words — and it is required for dictionary hints to do anything at all.
+    /// </remarks>
+    public Abstractions.DecodingMethod Decoding { get; init; } = Abstractions.DecodingMethod.Greedy;
+
+    /// <summary>Candidates beam search keeps alive. Ignored under greedy decoding.</summary>
+    public int BeamSize { get; init; } = 4;
+
+    /// <summary>How hard dictionary hints pull the recogniser toward their spelling.</summary>
+    public double HotwordScore { get; init; } = 1.5;
+
     /// <summary>Send the cleaned text to Claude for a second, smarter pass.</summary>
     /// <remarks>
     /// Off by default, and off is the honest default: switching it on ends the guarantee that

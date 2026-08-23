@@ -338,6 +338,41 @@ leaves your machine.
 - **The real price is latency.** Dictation is ~170 ms end to end today; a round trip adds
   about a second to every utterance.
 
+### What it actually costs you
+
+**Insights shows measured spend, not the estimate above.** Every response carries a `usage`
+block, so Teezy records the tokens each dictation consumed and prices them locally. There is
+no endpoint that reports account spend to an ordinary API key — the Console has that — but
+this is the more useful figure anyway: it is what *Teezy* cost, not what the account cost.
+
+**Prices are dated, because one of them changes.** Sonnet 5 runs an introductory rate until
+2026-08-31 and goes up by half after it. A single hardcoded number would misreport every
+entry on one side of that date or the other, so each dictation is priced against the rate
+that applied on the day it was spoken, and the cost is derived rather than stored — fixing
+the table fixes history instead of leaving a stale figure baked into the log.
+
+**It refuses to guess.** A model the table does not know prices to `null`, not zero, and the
+card says how many calls it could not price rather than dropping them from a total that would
+then look complete.
+
+### Writing style
+
+How much licence the pass has to change your words: **Faithful** (fix the transcript, leave
+the writing alone), **Polished** (tighten waffle, keep the voice), **Formal**, **Casual** —
+plus one instruction of your own appended to every request. None of them may add content,
+answer the text, or change the meaning; only the register and the tightening move.
+
+**The plausibility guard moves with the style, and has to.** A style told to cut waffle
+legitimately returns text at 40% of the input length, which the fixed floor rejected — and
+the fallback is silent, so the setting would have looked like it did nothing. The floor is
+now per-style. The ceiling is not: text that doubled is the model answering, whatever was
+asked for.
+
+Your own instruction goes **last** and is explicitly subordinate to the rules above it. It is
+your text on your machine, not untrusted input — but "rewrite my dictation" and "answer my
+dictation" are one careless sentence apart, and the ordering plus the guard mean a badly
+worded line degrades to a fallback rather than typing an answer into whatever had focus.
+
 **The offline rules always run first and their output is the floor.** Claude is asked to
 improve an already-cleaned string, and every failure path — no key, no network, rate limit,
 timeout, refusal — returns the offline result. Dictation is a foreground interaction: it must
@@ -377,6 +412,30 @@ Edited in the app, on its own page. Two kinds of entry:
 
 That distinction is the whole reason corrections exist, and it is why they run even when
 cleanup is switched off.
+
+**Hints need beam search, and they did nothing at all until they got it.** They were written
+to the file, listed on the dictionary page and documented here as biasing the engine — and
+read by no code whatsoever. Making them real took three things, each of which failed
+silently on its own:
+
+1. **Beam search.** Greedy decoding keeps no alternative transcripts, so there is nothing for
+   a bias to re-rank. Hints are ignored under it, without a word of complaint. Settings ▸
+   **Decoding**.
+2. **Tokenised hints.** The Parakeet export ships `tokens.txt` and no `bpe.model`, so
+   sherpa-onnx cannot split a word itself — it looks up each piece of a hint directly in the
+   vocabulary, fails on `Phoebe`, and skips it. `HotwordEncoder` does the splitting: greedy
+   longest-match against the 1025-piece SentencePiece vocabulary, `▁ph oe be`.
+3. **A rebuild.** Hints are compiled into the recogniser, and the C# binding has no
+   per-stream override for offline models. Saving the dictionary rebuilds it — but only when
+   the *hints* changed, since editing a correction should not cost a model load.
+
+**Hint strength is a real trade, measured rather than guessed.** On the model's own test
+clip, `1.5` changed the transcript not at all and `2.5` changed it for the worse — stray
+apostrophes around the biased word. Bias hard enough and the engine hears your hinted words
+in audio that never contained them, which is a worse failure than the misspelling it was
+meant to fix: a name in the wrong place is harder to spot than one spelled wrong.
+`tools\hotword-probe` decodes a clip with and without hints so the setting can be tuned
+against evidence instead of feel.
 
 **Entries are checked as you type them**, before they are added. A correction rewrites text
 silently and after the fact, which makes a bad rule genuinely hard to notice — the

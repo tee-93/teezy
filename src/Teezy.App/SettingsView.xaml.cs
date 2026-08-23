@@ -109,6 +109,7 @@ public partial class SettingsView : UserControl
 
         ShowAutostartState();
         ShowModelState();
+        ShowSpeechOptions(settings);
         ShowLlmState();
 
         _loading = wasLoading;
@@ -448,6 +449,61 @@ public partial class SettingsView : UserControl
 
     // ---- Model ----
 
+    private static readonly (DecodingMethod Method, string Label, string Hint)[] Decoders =
+    [
+        (DecodingMethod.Greedy, "Greedy — fastest",
+            "Takes the best token at each step. What every timing in the README was measured against."),
+        (DecodingMethod.BeamSearch, "Beam search — accurate",
+            "Weighs several transcripts before choosing. Slower, better on unusual words, and required for dictionary hints."),
+    ];
+
+    private static readonly int[] BeamSizes = [2, 4, 8, 16];
+
+    /// <remarks>
+    /// Described by consequence, because the number means nothing on its own and the failure
+    /// mode is not "it did not work" — it is the engine hearing your hinted words in audio
+    /// that never contained them.
+    /// </remarks>
+    private static readonly (double Score, string Label, string Hint)[] HotwordStrengths =
+    [
+        (1.5, "Gentle", "Nudges toward your hints. Measured to change nothing on clean audio."),
+        (2.5, "Firm", "Noticeably biases decoding. Can disturb punctuation around the hinted word."),
+        (4.0, "Heavy", "Strong pull. Expect hinted words to appear where you did not say them."),
+    ];
+
+    private void OnDecodingChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading || DecodingPicker.SelectedIndex < 0) return;
+
+        var chosen = Decoders[DecodingPicker.SelectedIndex];
+        _write(_read() with { Decoding = chosen.Method });
+        ShowSpeechOptions(_read());
+    }
+
+    private void ShowSpeechOptions(TeezySettings settings)
+    {
+        if (DecodingPicker.Items.Count == 0)
+        {
+            foreach (var (_, label, _) in Decoders) DecodingPicker.Items.Add(label);
+            foreach (var size in BeamSizes) BeamPicker.Items.Add(size);
+            foreach (var (_, label, _) in HotwordStrengths) HotwordPicker.Items.Add(label);
+        }
+
+        var decoder = Array.FindIndex(Decoders, d => d.Method == settings.Decoding);
+        DecodingPicker.SelectedIndex = decoder >= 0 ? decoder : 0;
+        DecodingHint.Text = Decoders[DecodingPicker.SelectedIndex].Hint;
+
+        BeamOptions.Visibility = settings.Decoding == DecodingMethod.BeamSearch
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        BeamPicker.SelectedItem = BeamSizes.Contains(settings.BeamSize) ? settings.BeamSize : 4;
+
+        var strength = Array.FindIndex(HotwordStrengths, h => Math.Abs(h.Score - settings.HotwordScore) < 0.01);
+        HotwordPicker.SelectedIndex = strength >= 0 ? strength : 0;
+        HotwordHint.Text = HotwordStrengths[HotwordPicker.SelectedIndex].Hint;
+    }
+
     private void ShowModelState()
     {
         var loaded = _transcriber?.IsLoaded == true;
@@ -474,7 +530,16 @@ public partial class SettingsView : UserControl
             CleanupEnabled = CleanupBox.IsChecked == true,
             ShowHud = HudBox.IsChecked == true,
             SoundEnabled = SoundBox.IsChecked == true,
+            BeamSize = BeamPicker.SelectedItem as int? ?? _read().BeamSize,
+            HotwordScore = HotwordPicker.SelectedIndex >= 0
+                ? HotwordStrengths[HotwordPicker.SelectedIndex].Score
+                : _read().HotwordScore,
         });
+
+        if (HotwordPicker.SelectedIndex >= 0)
+        {
+            HotwordHint.Text = HotwordStrengths[HotwordPicker.SelectedIndex].Hint;
+        }
     }
 
     private void OnOpenDataFolder(object sender, RoutedEventArgs e)

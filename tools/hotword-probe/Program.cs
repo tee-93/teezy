@@ -13,6 +13,28 @@
 using Teezy.Core.Abstractions;
 using Teezy.Speech;
 
+// "bench" runs the same thread sweep the Check this machine button runs, against the real
+// recogniser, so the button can be verified without driving the UI.
+if (args.Length > 0 && args[0] == "bench")
+{
+    var bench = new ParakeetTranscriber(null, new SpeechOptions { Threads = 4 });
+    await bench.LoadAsync();
+
+    Console.WriteLine($"{Environment.ProcessorCount} logical processors\n");
+
+    var report = await Teezy.Speech.MachineCheck.RunAsync(
+        bench, new Progress<string>(Console.WriteLine));
+
+    Console.WriteLine();
+    foreach (var r in report.Results) Console.WriteLine($"  {r.Threads,2} threads : {r.Milliseconds,6:0} ms");
+    Console.WriteLine();
+    Console.WriteLine($"best={report.Best}  was={report.Previous}  "
+                      + $"gain={report.GainPercent:0.#}%  worthApplying={report.IsWorthApplying}");
+
+    bench.Dispose();
+    return;
+}
+
 var wavPath = args.Length > 0 ? args[0] : "test.wav";
 var hotwords = args.Length > 1 ? args[1].Replace("|", "\n") : null;
 var score = args.Length > 2 ? float.Parse(args[2]) : 5.0f;

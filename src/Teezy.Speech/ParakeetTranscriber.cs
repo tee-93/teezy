@@ -31,7 +31,7 @@ public sealed class ParakeetTranscriber : ITranscriber
     private const int MaxSeconds = 380;
 
     private readonly string? _configuredDirectory;
-    private readonly SpeechOptions _options;
+    private SpeechOptions _options;
     private readonly Func<string?> _hotwords;
     private OfflineRecognizer? _recognizer;
 
@@ -137,6 +137,24 @@ public sealed class ParakeetTranscriber : ITranscriber
     /// hints that only work after a restart — is the kind of thing nobody discovers and
     /// everybody assumes is broken.
     /// </remarks>
+    /// <summary>The settings the recogniser was last built with.</summary>
+    public SpeechOptions Options => _options;
+
+    /// <summary>
+    /// Rebuilds with different settings — the only way to change any of them, since
+    /// sherpa-onnx bakes them into the recogniser.
+    /// </summary>
+    /// <remarks>
+    /// Reusing this instance rather than standing a second one up beside it is deliberate:
+    /// the model is about 900 MB resident, and benchmarking thread counts by holding two
+    /// recognisers at once would nearly double that on machines least able to afford it.
+    /// </remarks>
+    public Task ReloadAsync(SpeechOptions options, CancellationToken ct = default)
+    {
+        _options = options;
+        return ReloadAsync(ct);
+    }
+
     public async Task ReloadAsync(CancellationToken ct = default)
     {
         await _decodeGate.WaitAsync(ct).ConfigureAwait(false);

@@ -294,6 +294,23 @@
                         <TextBlock Foreground="{StaticResource CautionInk}" TextWrapping="Wrap"
                                    Text="Decoding settings are compiled into the recogniser, so they take effect when Teezy next starts."/>
                     </Border>
+
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+
+                    <TextBlock Text="TUNE FOR THIS MACHINE" Style="{StaticResource SectionLabel}"
+                               Margin="0,16,0,0"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
+                               Text="Times the recogniser at several thread counts and keeps the fastest. Dictation pauses while it runs, and it takes under a minute."/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="CheckMachineButton" Content="Check this machine"
+                                Style="{StaticResource Secondary}" Click="OnCheckMachine"/>
+                        <TextBlock x:Name="CheckProgress" Style="{StaticResource Hint}"
+                                   Margin="12,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock x:Name="CheckResult" Style="{StaticResource Hint}" Margin="0,10,0,0"
+                               Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
 

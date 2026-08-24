@@ -200,6 +200,41 @@ Snapdragon X Plus (8 cores, ARM64), 16 GB, everything CPU-only.
 Four inference threads measured fastest; **eight measured slower**. That is why
 `NumThreads` defaults to 4 rather than to core count.
 
+### When it is slow somewhere else
+
+Those numbers are one machine. On a throttled corporate laptop the same work can take several
+times longer, and until recently Teezy could not say *why* — it recorded a single number for
+everything between releasing the key and seeing text, so the model, the network and the target
+app were indistinguishable.
+
+**Insights now breaks the wait into transcribe, cleanup and type-it-in**, as medians with the
+worst case called out separately. Medians because one dictation that hits the six-second
+cleanup timeout drags a mean somewhere no individual dictation ever was. The realtime factor
+is the figure worth comparing between machines, since it divides out how long you talked for.
+
+**Settings ▸ Speech model ▸ Check this machine** sweeps thread counts and keeps the fastest.
+Two things it is careful about:
+
+- **It compares thread counts against each other, not absolute speed.** The audio is
+  synthesised, so the encoder — which dominates and costs the same whatever the audio
+  contains — is exercised honestly, while the decoder emits fewer tokens than real speech
+  and finishes early. The ratios mean something; the milliseconds are a floor. The real
+  figure comes from Insights, measured on actual dictations.
+- **It refuses to change the setting for a margin it cannot stand behind.** A 5% floor, on a
+  best-of-two benchmark, is about where a real difference stops being another process
+  borrowing the CPU. A run of this sweep produced 4 threads at 172 ms and 6 at 173 ms; an
+  earlier run had called 6 a 7.3% win. Same machine, pure noise — and the threshold is what
+  stops that becoming a settings change.
+
+The sweep always tries the machine's own core count. The first version trimmed its ladder from
+the top and never tested 8 threads on an 8-core machine, which is the one value the table
+above says is worth knowing about.
+
+**Thread count is the only part of a slow machine a setting can fix.** A throttled CPU, a
+corporate proxy in front of the Claude tier, and endpoint security sitting on the microphone
+all look identical from inside the app, so the check reports what it cannot help with rather
+than quietly changing a number and leaving you no faster.
+
 ---
 
 ## Look and feel

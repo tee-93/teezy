@@ -12,6 +12,7 @@ using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Formatting;
 using Teezy.Core.Hotkeys;
+using Teezy.Core.Speech;
 using Teezy.Speech;
 
 namespace Teezy.App;
@@ -636,6 +637,72 @@ public partial class SettingsView : UserControl
         var strength = Array.FindIndex(HotwordStrengths, h => Math.Abs(h.Score - settings.HotwordScore) < 0.01);
         HotwordPicker.SelectedIndex = strength >= 0 ? strength : 0;
         HotwordHint.Text = HotwordStrengths[HotwordPicker.SelectedIndex].Hint;
+    }
+
+    /// <summary>
+    /// Benchmarks thread counts on this machine and keeps the fastest.
+    /// </summary>
+    /// <remarks>
+    /// The result deliberately reports what it <i>cannot</i> fix as well as what it did. Thread
+    /// count is the only part of a slow machine that a setting can address; a throttled CPU, a
+    /// corporate proxy in front of the Claude tier and an endpoint-security product sitting on
+    /// the microphone all look identical from in here, and a tuner that quietly changed a
+    /// number and said nothing would leave someone none the wiser about any of them.
+    /// </remarks>
+    private async void OnCheckMachine(object sender, RoutedEventArgs e)
+    {
+        if (_transcriber is null || !_transcriber.IsLoaded)
+        {
+            CheckResult.Text = "The speech model is not loaded yet.";
+            CheckResult.Visibility = Visibility.Visible;
+            return;
+        }
+
+        CheckMachineButton.IsEnabled = false;
+        CheckResult.Visibility = Visibility.Collapsed;
+        var progress = new Progress<string>(text => CheckProgress.Text = text);
+
+        try
+        {
+            var result = await MachineCheck.RunAsync(_transcriber, progress);
+
+            // Persist it, or the winner is lost the next time the recogniser is built.
+            _write(_read() with { NumThreads = result.Best });
+            ThreadPicker.SelectedItem = result.Best;
+
+            CheckResult.Text = Describe(result);
+            CheckResult.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex) when (ex is TranscriberException or InvalidOperationException)
+        {
+            CheckResult.Text = $"Could not finish the check — {ex.Message}";
+            CheckResult.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            CheckProgress.Text = string.Empty;
+            CheckMachineButton.IsEnabled = true;
+            ShowModelState();
+        }
+    }
+
+    private static string Describe(MachineCheckResult result)
+    {
+        var timings = string.Join("  ·  ",
+            result.Results.Select(r => $"{r.Threads}: {r.Milliseconds:0} ms"));
+
+        var verdict = result.IsWorthApplying
+            ? $"Switched to {result.Best} threads — about {result.GainPercent:0}% faster than {result.Previous}."
+            : result.Best == result.Previous
+                ? $"{result.Previous} threads was already the best of these."
+                : $"{result.Best} threads won, but only by {result.GainPercent:0}% — close enough to be noise.";
+
+        return $"{verdict}\n{timings}\n\n"
+               + "These compare thread counts against each other on synthesised audio; the "
+               + "milliseconds are a floor, not your real speed. Insights reports what actual "
+               + "dictations cost. Nothing here can help with a throttled CPU, a slow network "
+               + "for the Claude tier, or security software in the way — if the numbers above "
+               + "are close and Teezy still feels slow, the cause is one of those.";
     }
 
     private void ShowModelState()

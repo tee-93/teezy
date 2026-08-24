@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private readonly IHotkeyCapture? _capture;
     private readonly ISecretStore? _secrets;
     private readonly ClaudeFormatter? _claude;
+    private readonly Func<IAudioCapture>? _microphone;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -46,7 +47,8 @@ public partial class MainWindow : Window
         IAutostart? autostart = null,
         IHotkeyCapture? capture = null,
         ISecretStore? secrets = null,
-        ClaudeFormatter? claude = null)
+        ClaudeFormatter? claude = null,
+        Func<IAudioCapture>? microphone = null)
     {
         InitializeComponent();
         _history = history;
@@ -58,6 +60,7 @@ public partial class MainWindow : Window
         _capture = capture;
         _secrets = secrets;
         _claude = claude;
+        _microphone = microphone;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -149,7 +152,8 @@ public partial class MainWindow : Window
             // rather than by knowing that Outlook reports itself as "OUTLOOK".
             knownApps: () => [.. UsageStats
                 .From(_history.Load(), DateOnly.FromDateTime(DateTime.Today))
-                .Apps.Select(a => a.App)]);
+                .Apps.Select(a => a.App)],
+            microphone: _microphone);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }
@@ -158,7 +162,11 @@ public partial class MainWindow : Window
     {
         // Hide, never close. Teezy lives in the tray; disposing this window would mean
         // rebuilding it, and quitting on a window close would strand the hotkey.
+        //
+        // The settings page is told either way: it may be holding the microphone open for a
+        // level meter, and a hidden window has no business still recording.
         e.Cancel = true;
+        _settingsView?.Leaving();
         Hide();
         base.OnClosing(e);
     }

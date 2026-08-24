@@ -39,6 +39,10 @@ public partial class App : Application
     private ISecretStore? _secrets;
     private ClaudeFormatter? _claude;
     private MainWindow? _main;
+    private WindowsAudioCapture? _audio;
+
+    /// <summary>Keeps the "your microphone is missing" notice to once per run.</summary>
+    private bool _warnedAboutMicrophone;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -108,9 +112,13 @@ public partial class App : Application
             TimeSpan.FromSeconds(Math.Clamp(_settings.LlmTimeoutSeconds, 2, 30)),
             context => _settings.StyleFor(context.App));
 
+        // Held as a field too: Settings reads the device it actually opened, which is not
+        // always the one that was chosen.
+        _audio = new WindowsAudioCapture { PreferredDeviceId = _settings.InputDeviceId };
+
         _controller = new DictationController(
             _hotkeySource,
-            new WindowsAudioCapture(),
+            _audio,
             _transcriber,
             new WindowsTextInjector(),
             _dictionary,
@@ -298,7 +306,13 @@ public partial class App : Application
             _autostart,
             _hotkeySource,
             _secrets,
-            _claude);
+            _claude,
+
+            // A fresh capture per preview rather than the controller's own. Settings opens
+            // the microphone to show a level meter, and borrowing the instance dictation
+            // depends on would let a forgotten test leave it in a state a hotkey press then
+            // inherits.
+            microphone: () => new WindowsAudioCapture());
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -311,9 +325,15 @@ public partial class App : Application
     private void ApplySettings(TeezySettings updated)
     {
         var keyChanged = updated.Hotkey != _settings.Hotkey;
+        var micChanged = updated.InputDeviceId != _settings.InputDeviceId;
         _settings = updated;
         _settings.Save();
         if (keyChanged) _controller?.ReloadHotkey();
+
+        // A newly chosen microphone deserves to be reported on its own merits, even if the
+        // previous one had already been warned about.
+        if (micChanged) _warnedAboutMicrophone = false;
+
         SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
     }
 

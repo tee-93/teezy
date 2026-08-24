@@ -34,22 +34,67 @@ public sealed class WindowsAudioCapture : IAudioCapture
 
     public string? DeviceName { get; private set; }
 
+    /// <summary>Identifier of the device actually opened, which is not always the one asked for.</summary>
+    public string? DeviceId { get; private set; }
+
+    public string? PreferredDeviceId { get; set; }
+
+    public bool UsingFallbackDevice { get; private set; }
+
     /// <summary>True if any sample since <see cref="Start"/> was non-zero.</summary>
     public bool SawSignal { get; private set; }
+
+    /// <summary>Active capture endpoints, with the Windows choice marked.</summary>
+    /// <remarks>
+    /// Only <see cref="DeviceState.Active"/> devices are listed. Windows also reports
+    /// unplugged and disabled endpoints, and offering those would let someone pick a
+    /// microphone that cannot record — a setting that looks applied and produces nothing.
+    /// </remarks>
+    public IReadOnlyList<AudioDevice> Devices()
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+
+            string? defaultId = null;
+            if (enumerator.HasDefaultAudioEndpoint(DataFlow.Capture, Role.Communications))
+            {
+                using var preferred = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+                defaultId = preferred.ID;
+            }
+
+            // The collection itself is not disposable in NAudio 2.3.0; the devices in it are.
+            var devices = new List<AudioDevice>();
+            foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+            {
+                using (device)
+                {
+                    devices.Add(new AudioDevice(device.ID, device.FriendlyName, device.ID == defaultId));
+                }
+            }
+
+            return devices;
+        }
+        catch (COMException)
+        {
+            // A machine with no audio stack at all still has to render a settings page.
+            return [];
+        }
+    }
 
     public void Start()
     {
         Stop();
         SawSignal = false;
+        UsingFallbackDevice = false;
 
         try
         {
             using var enumerator = new MMDeviceEnumerator();
 
-            // Role.Communications, not Role.Console: Windows lets the user nominate a
-            // different default specifically for voice, and dictation is exactly that.
-            _device = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+            _device = OpenPreferred(enumerator) ?? OpenDefault(enumerator);
             DeviceName = _device.FriendlyName;
+            DeviceId = _device.ID;
 
             _capture = new WasapiCapture(_device)
             {
@@ -65,6 +110,38 @@ public sealed class WindowsAudioCapture : IAudioCapture
                 $"Could not open the microphone: {e.Message}", e);
         }
     }
+
+    /// <summary>The chosen device, or null to fall back — never an exception.</summary>
+    /// <remarks>
+    /// A microphone that has been unplugged since it was chosen is an ordinary Tuesday, not a
+    /// failure worth refusing to dictate over. <see cref="UsingFallbackDevice"/> records that
+    /// it happened so Settings can say so, rather than silently appearing to honour a choice
+    /// it is not honouring.
+    /// </remarks>
+    private MMDevice? OpenPreferred(MMDeviceEnumerator enumerator)
+    {
+        if (PreferredDeviceId is not { Length: > 0 } id) return null;
+
+        try
+        {
+            var device = enumerator.GetDevice(id);
+            if (device.State == DeviceState.Active) return device;
+
+            device.Dispose();
+        }
+        catch (Exception e) when (e is COMException or ArgumentException)
+        {
+            // Gone entirely: the id refers to hardware that is no longer on this machine.
+        }
+
+        UsingFallbackDevice = true;
+        return null;
+    }
+
+    // Role.Communications, not Role.Console: Windows lets the user nominate a
+    // different default specifically for voice, and dictation is exactly that.
+    private static MMDevice OpenDefault(MMDeviceEnumerator enumerator) =>
+        enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
 
     private void OnData(object? sender, WaveInEventArgs e)
     {

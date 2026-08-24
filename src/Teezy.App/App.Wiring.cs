@@ -17,6 +17,8 @@ public partial class App
         if (_settings.ShowHud) _hud!.ShowState(state);
         else _hud!.Hide();
 
+        if (state == DictationState.Listening) WarnIfMicrophoneMissing();
+
         if (!_settings.SoundEnabled) return;
 
         // Tied to Listening and Finishing rather than to the key events, so a tone marks the
@@ -24,6 +26,24 @@ public partial class App
         // open. On a cold start those are meaningfully different.
         if (state == DictationState.Listening) Chime.Start();
         else if (state == DictationState.Finishing) Chime.Stop();
+    }
+
+    /// <summary>Says so, once, when the chosen microphone was not the one that opened.</summary>
+    /// <remarks>
+    /// The fallback itself is the right behaviour — an unplugged headset must not mean a dead
+    /// hotkey. But falling back silently would reproduce the exact problem the picker exists
+    /// to solve: dictating for a week through a microphone you did not choose and cannot see.
+    /// Once per run, because it is the same news on every utterance.
+    /// </remarks>
+    private void WarnIfMicrophoneMissing()
+    {
+        if (_warnedAboutMicrophone || _audio?.UsingFallbackDevice != true) return;
+
+        _warnedAboutMicrophone = true;
+
+        var chosen = _settings.InputDeviceName ?? "The microphone you chose";
+        Notify($"{chosen} is not available. Using {_audio.DeviceName} instead.",
+            Forms.ToolTipIcon.Warning);
     }
 
     /// <summary>Reloads the dictionary when the user edits the file in their own editor.</summary>

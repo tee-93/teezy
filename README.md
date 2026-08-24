@@ -150,6 +150,44 @@ accumulated, so deleting an entry corrects them instead of leaving them drifted.
 
 ---
 
+## Choosing a microphone
+
+Settings ▸ Microphone picks the device Teezy records from. The default is **Windows default**,
+which follows the communications endpoint Windows has chosen — so plugging in a headset
+switches to it automatically, and for most people that is the right answer permanently.
+
+It exists for the case Windows gets wrong, and that case does not announce itself. A laptop
+that keeps choosing its built-in far-field array over the headset you are speaking into does
+not fail: it records the room along with you, and the transcript comes back subtly wrong in a
+way that reads as a bad recogniser rather than a bad input. Nothing in the pipeline can
+recover words the microphone did not capture cleanly.
+
+**"Check it is hearing you"** opens the selected device and shows the live level, because a
+picker alone cannot tell you whether you chose correctly — device names are not descriptions.
+The verdict distinguishes *quiet* from *nothing*, which is the distinction that matters:
+
+- **Nothing at all** is almost always the Windows privacy setting. When "Let desktop apps
+  access your microphone" is off, WASAPI opens the device and returns digital zeroes forever.
+  Nothing throws, nothing logs, and the meter simply never moves — which reads as a broken
+  app, so the test names the real cause instead of leaving you to guess.
+- **Quiet but present** is a placement or gain problem, and speaking up genuinely fixes it.
+
+The test releases the device when you leave the page, close the window, or after thirty
+seconds, so a forgotten test never leaves the recording indicator lit in the tray.
+
+**A device is stored by its endpoint id, not its position in the list.** Device order changes
+the moment anything is plugged in, so an index saved on Tuesday points at the webcam on
+Wednesday. The friendly name is stored alongside it, but only so an absent device can be named
+in Settings rather than shown as an opaque id.
+
+**An unplugged microphone falls back to the Windows default rather than failing.** A chosen
+headset that is in another bag must not turn the hotkey into a dead key. It stays selected —
+plugging it back in is all it takes — and Teezy says once per run that it is using something
+else, because falling back *silently* would recreate the exact problem the picker exists to
+solve.
+
+---
+
 ## How it fits together
 
 ```

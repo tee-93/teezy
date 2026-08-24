@@ -134,6 +134,12 @@ public sealed class DictationController : IDisposable
 
         try
         {
+            // Read per utterance, like the formatter and for the same reason: choosing a
+            // different microphone in Settings should apply on the very next hold rather
+            // than at the next restart. Applied here rather than on change so it can never
+            // swap devices during a recording that is already running.
+            _capture.PreferredDeviceId = _settings().InputDeviceId;
+
             _capture.Start();
             lock (_gate)
             {

@@ -27,12 +27,27 @@ internal sealed class FakeCapture : IAudioCapture
     public int StartCount { get; private set; }
     public bool IsRunning { get; private set; }
 
+    public string? PreferredDeviceId { get; set; }
+    public bool UsingFallbackDevice { get; private set; }
+
+    /// <summary>The id this fake will refuse to open, standing in for an unplugged device.</summary>
+    public string? MissingDeviceId { get; set; }
+
     /// <summary>Set to make Start throw, standing in for a device that will not open.</summary>
     public bool FailOnStart { get; set; }
+
+    public bool SawSignal { get; set; }
+
+    public IReadOnlyList<AudioDevice> Devices() =>
+        [new AudioDevice("fake-default", "Fake microphone", true)];
 
     public void Start()
     {
         if (FailOnStart) throw new AudioCaptureException("no device");
+
+        // Mirrors the real capture: a chosen device that has gone away falls back to the
+        // default rather than failing, so dictation keeps working.
+        UsingFallbackDevice = PreferredDeviceId is not null && PreferredDeviceId == MissingDeviceId;
         StartCount++;
         IsRunning = true;
     }

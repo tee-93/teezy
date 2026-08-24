@@ -8,6 +8,7 @@ using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Formatting;
@@ -60,6 +61,15 @@ public partial class SettingsView : UserControl
     private readonly ISecretStore? _secrets;
     private readonly ClaudeFormatter? _claude;
     private readonly Func<IReadOnlyList<string>>? _knownApps;
+    private readonly Func<IAudioCapture>? _microphone;
+
+    /// <summary>The capture opened by the level test, or null when no test is running.</summary>
+    private IAudioCapture? _preview;
+    private DispatcherTimer? _previewTimer;
+    private DateTime _previewStarted;
+    private float _previewLevel;
+    private float _previewPeak;
+    private int _micDeviceCount;
 
     /// <summary>Suppresses change events while controls are populated, so opening the page
     /// does not look like the user editing it.</summary>
@@ -73,7 +83,8 @@ public partial class SettingsView : UserControl
         IHotkeyCapture? capture,
         ISecretStore? secrets = null,
         ClaudeFormatter? claude = null,
-        Func<IReadOnlyList<string>>? knownApps = null)
+        Func<IReadOnlyList<string>>? knownApps = null,
+        Func<IAudioCapture>? microphone = null)
     {
         InitializeComponent();
 
@@ -85,8 +96,10 @@ public partial class SettingsView : UserControl
         _secrets = secrets;
         _claude = claude;
         _knownApps = knownApps;
+        _microphone = microphone;
 
         RecordButton.IsEnabled = _capture is not null;
+        MicTestButton.IsEnabled = _microphone is not null;
 
         foreach (var n in new[] { 1, 2, 4, 6, 8 }) ThreadPicker.Items.Add(n);
 
@@ -108,6 +121,7 @@ public partial class SettingsView : UserControl
         var settings = _read();
 
         PopulateHotkeys(settings);
+        PopulateMicrophones(settings);
         ThreadPicker.SelectedItem = settings.NumThreads;
         CleanupBox.IsChecked = settings.CleanupEnabled;
         HudBox.IsChecked = settings.ShowHud;
@@ -199,6 +213,234 @@ public partial class SettingsView : UserControl
 
         _write(settings with { Hotkey = hotkey });
         Refresh();
+    }
+
+    // ---- Microphone ----
+
+    /// <summary>One row of the microphone picker.</summary>
+    /// <param name="Id">Null for the "whatever Windows chooses" row.</param>
+    /// <param name="Missing">Chosen previously, not present now.</param>
+    private sealed record MicChoice(string? Id, string? Name, string Label, bool Missing = false);
+
+    private void PopulateMicrophones(TeezySettings settings)
+    {
+        IReadOnlyList<AudioDevice> devices = [];
+        if (_microphone is not null)
+        {
+            // Disposed straight away: this one exists to ask what is plugged in, not to
+            // record. Enumerating does not open a device.
+            using var probe = _microphone();
+            devices = probe.Devices();
+        }
+
+        _micDeviceCount = devices.Count;
+
+        var rows = new List<MicChoice>
+        {
+            // Leading, and the default, because it is the right answer for most people: it
+            // re-decides when a headset is plugged in, which a pinned device cannot.
+            new(null, null, devices.FirstOrDefault(d => d.IsSystemDefault) is { } d
+                ? $"Windows default — {d.Name}"
+                : "Windows default"),
+        };
+
+        rows.AddRange(devices.Select(device => new MicChoice(device.Id, device.Name, device.Name)));
+
+        // A chosen microphone that is unplugged today keeps its row rather than vanishing.
+        // Dropping it would silently reset the setting, and the next time the headset came
+        // back it would not be used.
+        if (settings.InputDeviceId is { Length: > 0 } chosen && rows.All(r => r.Id != chosen))
+        {
+            rows.Add(new MicChoice(
+                chosen,
+                settings.InputDeviceName,
+                $"{settings.InputDeviceName ?? "Chosen microphone"} — not connected",
+                Missing: true));
+        }
+
+        MicPicker.Items.Clear();
+        foreach (var row in rows) MicPicker.Items.Add(row.Label);
+        MicPicker.Tag = rows;
+
+        var index = rows.FindIndex(r => r.Id == settings.InputDeviceId);
+        MicPicker.SelectedIndex = index >= 0 ? index : 0;
+        MicPicker.IsEnabled = _microphone is not null && devices.Count > 0;
+
+        ShowMicrophoneState(rows.ElementAtOrDefault(MicPicker.SelectedIndex));
+    }
+
+    private void ShowMicrophoneState(MicChoice? chosen)
+    {
+        if (_micDeviceCount == 0)
+        {
+            MicInUse.Text = "No microphone found. Plug one in, then reopen Settings.";
+            MicWarning.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        MicInUse.Text = chosen?.Id is null
+            ? "Follows Windows, so plugging in a headset switches to it automatically."
+            : "Teezy always records from this device, whatever Windows is set to.";
+
+        MicWarning.Visibility = chosen?.Missing == true ? Visibility.Visible : Visibility.Collapsed;
+        if (chosen?.Missing == true)
+        {
+            MicWarningText.Text =
+                $"{chosen.Name ?? "That microphone"} is not connected. Teezy is recording from the "
+                + "Windows default until it comes back — it stays selected, so plugging it in is "
+                + "all it takes.";
+        }
+    }
+
+    private void OnMicrophoneChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading || MicPicker.Tag is not List<MicChoice> rows) return;
+        if (MicPicker.SelectedIndex < 0 || MicPicker.SelectedIndex >= rows.Count) return;
+
+        var chosen = rows[MicPicker.SelectedIndex];
+
+        // The name rides along only so an absent device can be named later. The id is what
+        // selects.
+        _write(_read() with { InputDeviceId = chosen.Id, InputDeviceName = chosen.Name });
+
+        ShowMicrophoneState(chosen);
+
+        // A test in progress is about a device the user has just stopped caring about.
+        if (_preview is not null) StartPreview();
+    }
+
+    /// <summary>How long a forgotten test holds the microphone before closing it.</summary>
+    private static readonly TimeSpan PreviewLimit = TimeSpan.FromSeconds(30);
+
+    private void OnTestMicrophone(object sender, RoutedEventArgs e)
+    {
+        if (_preview is not null) StopPreview();
+        else StartPreview();
+    }
+
+    private void StartPreview()
+    {
+        if (_microphone is null) return;
+
+        StopPreview();
+
+        var capture = _microphone();
+        capture.PreferredDeviceId = _read().InputDeviceId;
+        capture.LevelChanged += OnPreviewLevel;
+
+        try
+        {
+            capture.Start();
+        }
+        catch (AudioCaptureException ex)
+        {
+            capture.LevelChanged -= OnPreviewLevel;
+            capture.Dispose();
+            MicTestStatus.Text = ex.Message;
+            return;
+        }
+
+        _preview = capture;
+        _previewStarted = DateTime.UtcNow;
+        _previewLevel = 0;
+        _previewPeak = 0;
+
+        MicTestButton.Content = "Stop test";
+        MicTestStatus.Text = "Opening the microphone…";
+
+        // Separate from the level events on purpose. The verdict depends on how long we have
+        // been listening, and a silent device raises no events at all to hang it off — which
+        // is precisely the case that most needs something said about it.
+        _previewTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(400),
+        };
+        _previewTimer.Tick += OnPreviewTick;
+        _previewTimer.Start();
+    }
+
+    private void StopPreview()
+    {
+        if (_previewTimer is not null)
+        {
+            _previewTimer.Stop();
+            _previewTimer.Tick -= OnPreviewTick;
+            _previewTimer = null;
+        }
+
+        if (_preview is not null)
+        {
+            _preview.LevelChanged -= OnPreviewLevel;
+            try { _preview.Stop(); } catch (AudioCaptureException) { /* already down */ }
+            _preview.Dispose();
+            _preview = null;
+        }
+
+        MicTestButton.Content = "Start test";
+        MicLevelFill.Width = 0;
+    }
+
+    /// <summary>Arrives on the capture thread.</summary>
+    private void OnPreviewLevel(float level) =>
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_preview is null) return;
+
+            // Snap up, fall slowly — the same asymmetry the HUD meter uses, and for the same
+            // reason: a syllable must register at once, but the bar must settle between words
+            // rather than strobe.
+            var rate = level > _previewLevel ? 0.6f : 0.15f;
+            _previewLevel += (level - _previewLevel) * rate;
+            _previewPeak = Math.Max(_previewPeak, level);
+
+            MicLevelFill.Width = MicLevelTrack.ActualWidth * _previewLevel;
+        });
+
+    private void OnPreviewTick(object? sender, EventArgs e)
+    {
+        if (_preview is null) return;
+
+        var elapsed = DateTime.UtcNow - _previewStarted;
+        if (elapsed > PreviewLimit)
+        {
+            StopPreview();
+            MicTestStatus.Text = "Test stopped. Start it again whenever you need it.";
+            return;
+        }
+
+        MicTestStatus.Text = Verdict(elapsed);
+    }
+
+    /// <summary>
+    /// What the meter means, said in words.
+    /// </summary>
+    /// <remarks>
+    /// The distinction that matters is between "quiet" and "nothing". Both draw an empty bar,
+    /// but one is solved by speaking up and the other cannot be solved by speaking at all —
+    /// when Windows blocks desktop apps from the microphone, WASAPI hands back digital zeroes
+    /// forever and nothing anywhere throws. Someone left to interpret a flat bar will always
+    /// try talking louder first.
+    /// </remarks>
+    private string Verdict(TimeSpan elapsed)
+    {
+        if (_preview?.SawSignal != true)
+        {
+            return elapsed < TimeSpan.FromSeconds(2)
+                ? "Listening — say something."
+                : "Not hearing anything at all. Check Settings › Privacy › Microphone in "
+                  + "Windows, and that “Let desktop apps access your microphone” is on.";
+        }
+
+        var device = _preview.DeviceName ?? "this microphone";
+
+        return _previewPeak switch
+        {
+            < 0.2f => $"{device} is picking up sound, but very faintly. Move closer, raise its "
+                      + "level in Windows, or try another device.",
+            < 0.45f => $"{device} is a little quiet. Usable, but closer or louder would "
+                       + "transcribe more accurately.",
+            _ => $"{device} sounds good — that is a healthy level for dictation.",
+        };
     }
 
     // ---- Autostart ----
@@ -752,10 +994,18 @@ public partial class SettingsView : UserControl
 
     private void OnQuit(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
 
-    /// <summary>Cancels a running capture when the page is navigated away from.</summary>
+    /// <summary>Releases what this page was holding when it is navigated away from.</summary>
     /// <remarks>
-    /// A capture left active would swallow the next hotkey press, because the source routes
-    /// key events to the capture rather than to dictation while one is running.
+    /// Two things, for two reasons. A hotkey capture left active would swallow the next real
+    /// press, because the source routes key events to the capture rather than to dictation
+    /// while one is running. A level test left running would hold the microphone open behind
+    /// a page nobody is looking at — visible to the user as the recording indicator in the
+    /// system tray, which is not a thing a dictation app should leave lit.
     /// </remarks>
-    public void Leaving() => _capture?.CancelCapture();
+    public void Leaving()
+    {
+        _capture?.CancelCapture();
+        StopPreview();
+        MicTestStatus.Text = string.Empty;
+    }
 }

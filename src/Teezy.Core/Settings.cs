@@ -24,6 +24,25 @@ public sealed record TeezySettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LegacyPushToTalkKey { get; init; }
 
+    /// <summary>
+    /// Which microphone to record from. Null follows whatever Windows has chosen.
+    /// </summary>
+    /// <remarks>
+    /// Null is the right default and stays the right answer for most people: Windows already
+    /// knows which microphone is in use, and it re-decides when a headset is plugged in. This
+    /// exists for the case Windows gets wrong — a laptop that keeps choosing its far-field
+    /// array over the headset you are actually speaking into, which does not fail, it just
+    /// transcribes badly.
+    /// </remarks>
+    public string? InputDeviceId { get; init; }
+
+    /// <summary>The name that device had when it was chosen, so Settings can name it.</summary>
+    /// <remarks>
+    /// Kept only so a device that is currently unplugged can be described as itself rather
+    /// than as an opaque endpoint id. Never used to select anything — the id does that.
+    /// </remarks>
+    public string? InputDeviceName { get; init; }
+
     /// <summary>Run the deterministic cleanup pass. The dictionary runs either way.</summary>
     public bool CleanupEnabled { get; init; } = true;
 

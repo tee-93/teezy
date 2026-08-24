@@ -15,6 +15,15 @@ public enum DictationState
     Error,
 }
 
+/// <summary>Where the wait between releasing the key and seeing text actually went.</summary>
+/// <remarks>
+/// The three stages have completely different causes when they are slow — a slower CPU, a
+/// slower network, a slower target application — and completely different fixes. A single
+/// total cannot tell them apart, which is exactly the position Teezy was in the first time it
+/// ran on a machine that was not the one it was tuned on.
+/// </remarks>
+public sealed record StageTimings(TimeSpan Transcribe, TimeSpan Cleanup, TimeSpan Inject);
+
 public sealed record DictationCompleted(
     string Text,
     TimeSpan AudioDuration,
@@ -23,7 +32,8 @@ public sealed record DictationCompleted(
     IReadOnlyList<AppliedCorrection> Corrections,
     string? App,
     Cost.TokenUsage? Tokens = null,
-    string? Model = null);
+    string? Model = null,
+    StageTimings? Stages = null);
 
 /// <summary>
 /// Owns the push-to-talk lifecycle: hold the key, capture audio, release, transcribe, clean
@@ -183,7 +193,13 @@ public sealed class DictationController : IDisposable
                 return;
             }
 
+            // Each stage is timed separately. One total was enough while the only machine that
+            // mattered did the whole thing in 170 ms; the moment Teezy ran somewhere slower,
+            // "it is slow" could not be attributed to the model, the network, or the typing,
+            // and there was no way to tell from the outside which one to go after.
+            var stage = Stopwatch.GetTimestamp();
             var raw = await _transcriber.TranscribeAsync(samples).ConfigureAwait(false);
+            var transcribe = Stopwatch.GetElapsedTime(stage);
 
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -197,10 +213,12 @@ public sealed class DictationController : IDisposable
             // wherever focus drifted during a second of network round trip.
             var app = _foregroundApp.Current;
 
+            stage = Stopwatch.GetTimestamp();
             var formatter = settings.CleanupEnabled ? _formatter() : null;
             var cleaned = formatter is null
                 ? raw.Trim()
                 : await formatter.FormatAsync(raw, new FormatContext(app)).ConfigureAwait(false);
+            var cleanup = Stopwatch.GetElapsedTime(stage);
 
             // Read straight after the call, before anything else can run one. Only the paid
             // tier reports this; a local formatter simply is not IReportsUsage and the entry
@@ -212,11 +230,14 @@ public sealed class DictationController : IDisposable
             // something the user can switch off by accident along with cleanup.
             var (text, corrections) = _dictionary.Corrector.Apply(cleaned);
 
+            stage = Stopwatch.GetTimestamp();
             var injection = _injector.Insert(text);
+            var inject = Stopwatch.GetElapsedTime(stage);
 
             Completed?.Invoke(new DictationCompleted(
                 text, held, Stopwatch.GetElapsedTime(started), injection, corrections, app,
-                usage?.LastTokens, usage?.LastModel));
+                usage?.LastTokens, usage?.LastModel,
+                new StageTimings(transcribe, cleanup, inject)));
 
             Reset();
         }

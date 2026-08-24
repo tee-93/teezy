@@ -28,6 +28,16 @@ public sealed record HistoryEntry
 
     public int Corrections { get; init; }
 
+    /// <summary>
+    /// How <see cref="ProcessingMs"/> was spent. Null on entries recorded before Teezy split
+    /// it up — which is not zero, and the difference matters when averaging.
+    /// </summary>
+    public double? TranscribeMs { get; init; }
+
+    public double? CleanupMs { get; init; }
+
+    public double? InjectMs { get; init; }
+
     /// <summary>What the cleanup call consumed, or null if Claude did not run for this one.</summary>
     public Cost.TokenUsage? Tokens { get; init; }
 

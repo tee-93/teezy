@@ -58,11 +58,75 @@ public partial class InsightsView : UserControl
 
         BuildAppBars(stats);
         BuildHeatmap(stats, today);
+        BuildSpeed(stats);
         BuildSpend(stats);
 
         StreakNumber.Text = stats.CurrentStreak.ToString(CultureInfo.CurrentCulture);
         LongestStreak.Text = $"LONGEST · {stats.LongestStreak}";
     }
+
+    /// <summary>Where the wait between letting go and seeing text is spent.</summary>
+    /// <remarks>
+    /// Medians, and the bars are scaled against the slowest stage rather than against the
+    /// total — the point is to show which stage dominates, and three slivers next to one long
+    /// bar reads faster than three exact proportions of a whole.
+    /// </remarks>
+    private void BuildSpeed(UsageStats stats)
+    {
+        if (stats.TimedDictations == 0)
+        {
+            SpeedCard.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        SpeedCard.Visibility = Visibility.Visible;
+
+        var total = stats.MedianTranscribeMs + stats.MedianCleanupMs + stats.MedianInjectMs;
+        SpeedHeadline.Text = Duration(total);
+
+        SpeedRealtime.Text = stats.RealtimeFactor > 0
+            ? $"{stats.RealtimeFactor:0.#}× REALTIME · {stats.TimedDictations:N0} TIMED"
+            : $"{stats.TimedDictations:N0} TIMED";
+
+        var widest = Math.Max(1, Math.Max(stats.MedianTranscribeMs,
+            Math.Max(stats.MedianCleanupMs, stats.MedianInjectMs)));
+
+        StageBars.ItemsSource = new[]
+        {
+            Stage("Transcribe", stats.MedianTranscribeMs, widest),
+            Stage("Cleanup", stats.MedianCleanupMs, widest),
+            Stage("Type it in", stats.MedianInjectMs, widest),
+        };
+
+        var note = "Median per dictation, measured on this machine. Transcribe is your CPU, "
+                   + "cleanup is the Claude round trip when that tier is on, and typing it in "
+                   + "is the app receiving the text.";
+
+        // The tail is where a timeout hides. A median of 300 ms next to a worst case of six
+        // seconds is a completely different story from a median of 300 ms and nothing else.
+        if (stats.SlowestCleanupMs > stats.MedianCleanupMs * 3 && stats.SlowestCleanupMs > 1500)
+        {
+            note += $" Slowest cleanup so far was {Duration(stats.SlowestCleanupMs)} — if that "
+                    + "is common, the tier is costing you more than the median suggests.";
+        }
+        else if (stats.SlowestTranscribeMs > stats.MedianTranscribeMs * 3 && stats.SlowestTranscribeMs > 1500)
+        {
+            note += $" Slowest transcription so far was {Duration(stats.SlowestTranscribeMs)}.";
+        }
+
+        SpeedNote.Text = note;
+    }
+
+    private static object Stage(string name, double ms, double widest) => new
+    {
+        Name = name,
+        Label = Duration(ms),
+        BarWidth = Math.Max(2, ms / widest * 260),
+    };
+
+    /// <summary>Milliseconds below a second, seconds above — nobody reads "4200 ms".</summary>
+    private static string Duration(double ms) =>
+        ms >= 1000 ? $"{ms / 1000:0.0} s" : $"{ms:0} ms";
 
     /// <summary>Spend on the Claude tier, counted from the tokens the API reported.</summary>
     /// <remarks>

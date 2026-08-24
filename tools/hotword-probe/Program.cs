@@ -33,8 +33,18 @@ async Task<string> Run(string label, DecodingMethod method, string? hot, float h
     try
     {
         await transcriber.LoadAsync();
+
+        // Warm once, then time. The first decode pays for lazily-initialised ONNX buffers and
+        // would report the setup cost as if it were the per-utterance cost.
+        await transcriber.TranscribeAsync(samples);
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var text = await transcriber.TranscribeAsync(samples);
-        Console.WriteLine($"{label,-22}: {text}");
+        sw.Stop();
+
+        Console.WriteLine(
+            $"{label,-22}: {sw.ElapsedMilliseconds,5} ms  (load {transcriber.LoadTime.TotalMilliseconds:0} ms)");
+        Console.WriteLine($"{"",-22}  {text}");
         return text;
     }
     catch (Exception e)

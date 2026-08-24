@@ -223,6 +223,9 @@ public partial class App : Application
             Corrections = result.Corrections.Count,
             Tokens = result.Tokens,
             Model = result.Model,
+            TranscribeMs = result.Stages?.Transcribe.TotalMilliseconds,
+            CleanupMs = result.Stages?.Cleanup.TotalMilliseconds,
+            InjectMs = result.Stages?.Inject.TotalMilliseconds,
         });
 
         // A window that is open should show the utterance that just landed.

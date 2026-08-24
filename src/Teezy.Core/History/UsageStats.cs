@@ -66,6 +66,36 @@ public sealed record UsageStats
 
     public IReadOnlyList<ModelSpend> Models { get; init; } = [];
 
+    // ---- Where the wait goes ----
+
+    /// <summary>Dictations that recorded a stage breakdown. Older ones did not.</summary>
+    public int TimedDictations { get; init; }
+
+    /// <summary>
+    /// Typical milliseconds per stage — medians, not means.
+    /// </summary>
+    /// <remarks>
+    /// A mean is the wrong summary here. One dictation that hit the cleanup timeout adds six
+    /// seconds and drags the average somewhere no individual dictation ever was, which is
+    /// precisely the number someone would then try to explain. The median says what a normal
+    /// utterance costs; <see cref="SlowestTranscribeMs"/> covers the tail.
+    /// </remarks>
+    public double MedianTranscribeMs { get; init; }
+    public double MedianCleanupMs { get; init; }
+    public double MedianInjectMs { get; init; }
+
+    public double SlowestTranscribeMs { get; init; }
+    public double SlowestCleanupMs { get; init; }
+
+    /// <summary>
+    /// Median transcription speed as a multiple of realtime, or 0 when unknown.
+    /// </summary>
+    /// <remarks>
+    /// The number worth comparing between machines, because it divides out how long you
+    /// happened to talk for. Roughly 19x on the Snapdragon this was tuned on.
+    /// </remarks>
+    public double RealtimeFactor { get; init; }
+
     /// <summary>
     /// Time saved against typing, in minutes.
     /// </summary>
@@ -95,6 +125,11 @@ public sealed record UsageStats
         var byDay = new Dictionary<DateOnly, int>();
         var byApp = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
+        var transcribeMs = new List<double>();
+        var cleanupMs = new List<double>();
+        var injectMs = new List<double>();
+        var realtimeFactors = new List<double>();
+
         var claudeCalls = 0;
         var totalTokens = TokenUsage.None;
         var costUsd = 0m;
@@ -122,6 +157,18 @@ public sealed record UsageStats
 
             var app = string.IsNullOrWhiteSpace(e.App) ? "Other" : e.App;
             byApp[app] = byApp.GetValueOrDefault(app) + 1;
+
+            if (e.TranscribeMs is { } t)
+            {
+                transcribeMs.Add(t);
+
+                // Only utterances long enough for the ratio to mean anything, matching the
+                // rule the words-per-minute average already uses.
+                if (e.AudioSeconds >= 0.5 && t > 0) realtimeFactors.Add(e.AudioSeconds * 1000.0 / t);
+            }
+
+            if (e.CleanupMs is { } c) cleanupMs.Add(c);
+            if (e.InjectMs is { } i) injectMs.Add(i);
 
             if (e.Tokens is not { IsEmpty: false } tokens) continue;
 
@@ -179,7 +226,27 @@ public sealed record UsageStats
                 .Select(kv => new ModelSpend(
                     kv.Key, kv.Value.Calls, kv.Value.Tokens,
                     kv.Value.AllPriced ? kv.Value.Cost : null))],
+            TimedDictations = transcribeMs.Count,
+            MedianTranscribeMs = Median(transcribeMs),
+            MedianCleanupMs = Median(cleanupMs),
+            MedianInjectMs = Median(injectMs),
+            SlowestTranscribeMs = transcribeMs.Count > 0 ? transcribeMs.Max() : 0,
+            SlowestCleanupMs = cleanupMs.Count > 0 ? cleanupMs.Max() : 0,
+            RealtimeFactor = Median(realtimeFactors),
         };
+    }
+
+    /// <summary>Middle value, or the mean of the middle two. Zero for an empty set.</summary>
+    private static double Median(List<double> values)
+    {
+        if (values.Count == 0) return 0;
+
+        values.Sort();
+        var mid = values.Count / 2;
+
+        return values.Count % 2 == 1
+            ? values[mid]
+            : (values[mid - 1] + values[mid]) / 2.0;
     }
 
     /// <summary>Current and longest runs of consecutive active days.</summary>

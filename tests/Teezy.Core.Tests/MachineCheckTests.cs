@@ -29,10 +29,29 @@ public class MachineCheckTests
         ThreadCandidates.For(8).ShouldContain(8);
 
     [Fact]
-    public void DropsTheLowEndRatherThanTheHighEndWhenItHasToChoose() =>
-        // One and two threads are almost never the answer on a bigger machine, and they are
-        // the slowest candidates to measure.
-        ThreadCandidates.For(16).ShouldBe([4, 6, 8, 16]);
+    public void AlwaysOffersTwoThreads() =>
+        // The performance-core count on a hybrid CPU, and usually 2. A Core Ultra 5 135U
+        // reports 14 processors but has two P-cores; the sweep that skipped 2 there was
+        // measuring only the counts that were already too high.
+        ThreadCandidates.For(16).ShouldContain(2);
+
+    [Fact]
+    public void DropsTheLeastInformativeRungWhenItHasToChoose() =>
+        // 6 goes first: it sits between 4 and 8 and tells you least once both are measured.
+        ThreadCandidates.For(16).ShouldBe([2, 4, 8, 16]);
+
+    [Fact]
+    public void CoversAHybridLaptopsRealLadder() =>
+        // The exact machine that exposed this — 12 cores, 14 threads, two of them fast.
+        // Before this, the sweep ran 4, 6, 8 and 14 and never tried the value most likely
+        // to win.
+        ThreadCandidates.For(14).ShouldBe([2, 4, 8, 14]);
+
+    [Fact]
+    public void StillOffersOneThreadWhenThereIsRoom() =>
+        // Rarely the winner, but the only candidate that answers "is threading helping here
+        // at all", so it is last to be dropped rather than first.
+        ThreadCandidates.For(4).ShouldBe([1, 2, 4]);
 
     [Fact]
     public void OffersAnOddCoreCountToo() =>

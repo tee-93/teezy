@@ -268,6 +268,16 @@ The sweep always tries the machine's own core count. The first version trimmed i
 the top and never tested 8 threads on an 8-core machine, which is the one value the table
 above says is worth knowing about.
 
+**It also always tries 2 threads, which is less obvious.** The ladder used to drop 1 and 2
+first, on the reasoning that low counts are never the answer on a machine with more cores.
+That holds on a homogeneous CPU and is wrong on a hybrid one. An Intel Core Ultra 5 135U
+reports 14 processors but has **two** performance cores, the rest being E-cores and low-power
+E-cores — so asking for 4 threads either sets hyperthread siblings fighting over the same
+vector units or spills the graph onto cores several times slower, and a parallel region
+finishes at the speed of its slowest thread. On that machine the sweep ran 4, 6, 8 and 14, and
+never tried the count most likely to win. On any hybrid chip the performance-core count is a
+live candidate, and it is usually 2.
+
 **Thread count is the only part of a slow machine a setting can fix.** A throttled CPU, a
 corporate proxy in front of the Claude tier, and endpoint security sitting on the microphone
 all look identical from inside the app, so the check reports what it cannot help with rather

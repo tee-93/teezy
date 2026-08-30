@@ -45,28 +45,65 @@ public sealed record MachineCheckResult(
 /// <summary>Which thread counts are worth trying on a machine.</summary>
 public static class ThreadCandidates
 {
+    /// <summary>
+    /// Candidates per sweep. Each costs a model reload plus three decodes, so this is what
+    /// keeps a slow machine finishing the check before the user gives up on it.
+    /// </summary>
+    private const int Cap = 4;
+
+    /// <summary>
+    /// Thread counts to try, most informative first.
+    /// </summary>
     /// <remarks>
     /// <para>
-    /// More is not better past a point — the encoder is one graph and oversubscribing makes it
-    /// slower, measurably so on the machine this was written on. Nothing above the processor
-    /// count is offered, and the sweep is capped at four so a slow machine finishes it before
-    /// the user gives up.
+    /// The <b>core count</b> leads because it is the machine's own answer and the one value a
+    /// sweep has no business omitting — an early version trimmed from the top and never tested
+    /// 8 threads on an 8-core machine, which the README records as measurably slower here.
     /// </para>
     /// <para>
-    /// When the cap bites, the <b>low</b> end is dropped rather than the high end. One and two
-    /// threads are almost never the answer on a machine with more, and they are the slowest
-    /// candidates to measure — whereas the processor count itself is the most interesting
-    /// value on the ladder and is always offered. The first version of this trimmed from the
-    /// top and never tested 8 threads on an 8-core machine.
+    /// <b>2 comes next, and that is not obvious.</b> This list previously dropped 1 and 2 first,
+    /// reasoning that low counts are never the answer on a machine with more cores. That holds
+    /// on a homogeneous CPU and is wrong on a hybrid one: an Intel Core Ultra 5 135U reports 14
+    /// processors but has only <i>two</i> performance cores, the rest being E-cores and
+    /// low-power E-cores. Asking for 4 there either pits hyperthread siblings against each
+    /// other over the same vector units or spills the graph onto cores several times slower,
+    /// and a parallel region finishes at the speed of its slowest thread. On any hybrid chip
+    /// the performance-core count is a live candidate, and it is usually 2.
+    /// </para>
+    /// <para>
+    /// 1 sits last rather than being dropped outright: it is rarely the winner, but it is the
+    /// only candidate that answers "is threading helping at all here", and on a single-core
+    /// machine it is the whole ladder.
     /// </para>
     /// </remarks>
+    private static IEnumerable<int> PreferenceOrder(int cores)
+    {
+        yield return cores;
+        yield return 2;
+        yield return 4;
+        yield return 8;
+        yield return 6;
+        yield return 1;
+    }
+
+    /// <summary>The thread counts to sweep on a machine with this many processors, ascending.</summary>
     public static IReadOnlyList<int> For(int processors)
     {
         var cores = Math.Max(1, processors);
+        var chosen = new List<int>();
 
-        var ladder = new List<int> { 1, 2, 4, 6, 8 }.Where(n => n <= cores).ToList();
-        if (!ladder.Contains(cores)) ladder.Add(cores);
+        foreach (var threads in PreferenceOrder(cores))
+        {
+            // Nothing above the processor count: the encoder is one graph, and oversubscribing
+            // it is measurably slower rather than merely wasteful.
+            if (threads > cores || chosen.Contains(threads)) continue;
 
-        return ladder.Count <= 4 ? ladder : [.. ladder.TakeLast(4)];
+            chosen.Add(threads);
+            if (chosen.Count == Cap) break;
+        }
+
+        // Ascending, because the result is read as a table by a person.
+        chosen.Sort();
+        return chosen;
     }
 }

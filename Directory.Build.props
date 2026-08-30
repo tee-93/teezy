@@ -10,7 +10,7 @@
       They did disagree, silently, for four releases: nothing set a version, so every build
       reported 1.0.0 in About while the installer said otherwise.
     -->
-    <Version>1.5.0</Version>
+    <Version>1.5.1</Version>
 
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>

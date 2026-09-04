@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Teezy.Core.Hotkeys;
 
 /// <summary>A push-to-talk combination: every key must be held together.</summary>
@@ -14,6 +16,13 @@ public sealed record Hotkey
 
     public Hotkey(IEnumerable<HotkeyKey> keys) => Keys = Normalise(keys);
 
+    /// <remarks>
+    /// Computed, so it is not written to settings.json. Without this the file carried three
+    /// derived copies of the combination — <c>IsEmpty</c>, <c>Display</c> and
+    /// <c>Warnings</c> — that nothing ever read back, so a hand-edited file could disagree
+    /// with itself and the copy the app actually obeyed was the least prominent one in it.
+    /// </remarks>
+    [JsonIgnore]
     public bool IsEmpty => Keys.Count == 0;
 
     /// <summary>
@@ -33,6 +42,7 @@ public sealed record Hotkey
             .ThenBy(k => k.ToString(), StringComparer.Ordinal)
             .Take(MaxKeys)];
 
+    [JsonIgnore]
     public string Display => IsEmpty
         ? "Not set"
         : string.Join(" + ", Keys.Select(HotkeyKeys.Label));
@@ -54,6 +64,7 @@ public sealed record Hotkey
     /// but it is the user's keyboard — someone who has already turned off Filter Keys should
     /// not be stopped from using Shift.
     /// </remarks>
+    [JsonIgnore]
     public IReadOnlyList<string> Warnings
     {
         get

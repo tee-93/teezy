@@ -98,7 +98,7 @@ public sealed class HotkeyMatcher
         // hold: the user may well type or click while dictating.
         if (!touched) return HotkeyTransition.None;
 
-        DropKeysNoLongerHeld();
+        DropKeysNoLongerHeld(except: key);
 
         var complete = _satisfiedBy.TrueForAll(s => s.Count > 0);
 
@@ -113,6 +113,15 @@ public sealed class HotkeyMatcher
     /// <summary>
     /// Forgets keys we believe are held but which the keyboard says are not.
     /// </summary>
+    /// <param name="except">
+    /// The key this event is about, which is never reconciled. <b>This exemption is the whole
+    /// difference between working and not working.</b> A low-level keyboard hook runs before
+    /// Windows updates the async key state, so during the key-down that completes a
+    /// combination the keyboard still reports that key as up — reconciling it away deletes the
+    /// key that has just arrived and the hotkey never fires. Shipped exactly that way in
+    /// 1.5.2. The event is authoritative for its own key; the keyboard is authoritative for
+    /// every other one, whose events have already been processed.
+    /// </param>
     /// <remarks>
     /// The correction for a key-up that never arrived. Checked on every event that touches the
     /// combination rather than on a timer, because the moment it matters is the moment the
@@ -125,14 +134,14 @@ public sealed class HotkeyMatcher
     /// its own.
     /// </para>
     /// </remarks>
-    private void DropKeysNoLongerHeld()
+    private void DropKeysNoLongerHeld(HotkeyKey except)
     {
         if (_isPhysicallyDown is null) return;
 
         foreach (var slot in _satisfiedBy)
         {
             if (slot.Count == 0) continue;
-            slot.RemoveWhere(k => !_isPhysicallyDown(k));
+            slot.RemoveWhere(k => k != except && !_isPhysicallyDown(k));
         }
     }
 }

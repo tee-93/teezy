@@ -249,6 +249,47 @@ public class HotkeyMatcherTests
     }
 
     [Fact]
+    public void TheKeyThisEventIsAboutIsTrustedOverTheKeyboard()
+    {
+        // Shipped broken in 1.5.2 and reported as "not triggering at all".
+        //
+        // A low-level keyboard hook runs BEFORE Windows updates the async key state, so
+        // during the key-down that completes a combination the keyboard still reports that
+        // key as up. Reconciling it away removes the key that has just arrived, and the
+        // hotkey can never fire. The event is the authority on its own key; the keyboard is
+        // the authority on every other one.
+        var held = new HashSet<HotkeyKey>();
+        var m = new HotkeyMatcher(new Hotkey(HotkeyKey.Control, HotkeyKey.Windows), held.Contains);
+
+        m.Update(HotkeyKey.LeftControl, true).ShouldBe(HotkeyTransition.None);
+
+        // State catches up only once that event has been processed.
+        held.Add(HotkeyKey.LeftControl);
+
+        m.Update(HotkeyKey.LeftWindows, true).ShouldBe(HotkeyTransition.Pressed);
+        m.IsComplete.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AKeyDownStillCannotReviveAStaleSlot()
+    {
+        // The exemption is narrow on purpose: it covers only the key this event carries, so
+        // a slot left stale by a lost key-up is still corrected by the very next event.
+        var held = new HashSet<HotkeyKey> { HotkeyKey.LeftControl, HotkeyKey.LeftWindows };
+        var m = new HotkeyMatcher(new Hotkey(HotkeyKey.Control, HotkeyKey.Windows), held.Contains);
+
+        m.Update(HotkeyKey.LeftControl, true);
+        m.Update(HotkeyKey.LeftWindows, true).ShouldBe(HotkeyTransition.Pressed);
+
+        held.Remove(HotkeyKey.LeftWindows);          // released, key-up never delivered
+        m.Update(HotkeyKey.LeftControl, false).ShouldBe(HotkeyTransition.Released);
+        held.Remove(HotkeyKey.LeftControl);
+
+        held.Add(HotkeyKey.LeftControl);
+        m.Update(HotkeyKey.LeftControl, true).ShouldBe(HotkeyTransition.None);
+    }
+
+    [Fact]
     public void WithoutAProbeBehaviourIsUnchanged()
     {
         // The probe is optional so the matcher stays platform-neutral and every existing

@@ -199,4 +199,62 @@ public class HotkeyMatcherTests
         m.Update(HotkeyKey.RightWindows, true).ShouldBe(HotkeyTransition.Pressed);
         m.Update(HotkeyKey.LeftAlt, false).ShouldBe(HotkeyTransition.Released);
     }
+
+    // ---- missed key-up ----
+
+    [Fact]
+    public void ALostKeyUpDoesNotLeaveTheHotkeyFiringOnOneKey()
+    {
+        // Reported from real use: Settings showed "Ctrl + Win" and dictation began on Ctrl
+        // alone. A key-up can simply never arrive — a low-level hook receives nothing while
+        // an elevated window has focus, and the hook is also evicted if a callback runs long.
+        // The slot stays satisfied forever, so every later Ctrl completes the combination.
+        var held = new HashSet<HotkeyKey> { HotkeyKey.LeftControl, HotkeyKey.LeftWindows };
+        var m = new HotkeyMatcher(new Hotkey(HotkeyKey.Control, HotkeyKey.Windows), held.Contains);
+
+        m.Update(HotkeyKey.LeftControl, true);
+        m.Update(HotkeyKey.LeftWindows, true).ShouldBe(HotkeyTransition.Pressed);
+
+        // Win is physically released, but its key-up never reaches us.
+        held.Remove(HotkeyKey.LeftWindows);
+
+        m.Update(HotkeyKey.LeftControl, false).ShouldBe(HotkeyTransition.Released);
+        held.Remove(HotkeyKey.LeftControl);
+
+        // Ctrl on its own must not dictate.
+        held.Add(HotkeyKey.LeftControl);
+        m.Update(HotkeyKey.LeftControl, true).ShouldBe(HotkeyTransition.None);
+        m.IsComplete.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AKeyStillPhysicallyHeldKeepsSatisfyingItsSlot()
+    {
+        // The other half of the same fix: reconciling against the keyboard must not punish
+        // someone who legitimately keeps Win held down between two dictations.
+        var held = new HashSet<HotkeyKey> { HotkeyKey.LeftWindows };
+        var m = new HotkeyMatcher(new Hotkey(HotkeyKey.Control, HotkeyKey.Windows), held.Contains);
+
+        m.Update(HotkeyKey.LeftWindows, true).ShouldBe(HotkeyTransition.None);
+
+        held.Add(HotkeyKey.LeftControl);
+        m.Update(HotkeyKey.LeftControl, true).ShouldBe(HotkeyTransition.Pressed);
+
+        held.Remove(HotkeyKey.LeftControl);
+        m.Update(HotkeyKey.LeftControl, false).ShouldBe(HotkeyTransition.Released);
+
+        // Win never left the keyboard, so pressing Ctrl again starts a second dictation.
+        held.Add(HotkeyKey.LeftControl);
+        m.Update(HotkeyKey.LeftControl, true).ShouldBe(HotkeyTransition.Pressed);
+    }
+
+    [Fact]
+    public void WithoutAProbeBehaviourIsUnchanged()
+    {
+        // The probe is optional so the matcher stays platform-neutral and every existing
+        // test still describes the same machine.
+        var m = CtrlWin();
+        m.Update(HotkeyKey.LeftControl, true).ShouldBe(HotkeyTransition.None);
+        m.Update(HotkeyKey.LeftWindows, true).ShouldBe(HotkeyTransition.Pressed);
+    }
 }

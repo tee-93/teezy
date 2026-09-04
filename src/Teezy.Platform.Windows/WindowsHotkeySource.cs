@@ -32,7 +32,7 @@ namespace Teezy.Platform.Windows;
 public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
 {
     private readonly LowLevelKeyboardProc _callback;   // see remarks: do not inline
-    private readonly HotkeyMatcher _matcher = new();
+    private readonly HotkeyMatcher _matcher;
 
     private nint _hook;
 
@@ -44,7 +44,49 @@ public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
     public event Action? Pressed;
     public event Action? Released;
 
-    public WindowsHotkeySource() => _callback = HookProc;
+    public WindowsHotkeySource()
+    {
+        _callback = HookProc;
+        _matcher = new HotkeyMatcher(isPhysicallyDown: IsDown);
+    }
+
+    /// <summary>
+    /// Asks the keyboard itself whether a key is down, rather than trusting our event history.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="GetAsyncKeyState"/> reports real hardware state, so it stays correct across
+    /// the gaps a low-level hook has: it receives nothing while an elevated window has focus,
+    /// and Windows silently evicts a hook whose callback overruns. Without this a single lost
+    /// key-up left a slot satisfied forever — reported in real use as "Ctrl + Win" beginning
+    /// dictation on Ctrl alone.
+    /// <para>
+    /// The high bit is the one that means "currently down". The low bit means "pressed since
+    /// last asked" and would report a key that has already been released.
+    /// </para>
+    /// </remarks>
+    private static bool IsDown(HotkeyKey key) =>
+        VirtualKey(key) is { } vk && (GetAsyncKeyState((int)vk) & 0x8000) != 0;
+
+    /// <summary>The virtual-key code to ask about, or null for a key with no single code.</summary>
+    private static uint? VirtualKey(HotkeyKey key) => key switch
+    {
+        HotkeyKey.LeftControl => VK_LCONTROL,
+        HotkeyKey.RightControl => VK_RCONTROL,
+        HotkeyKey.LeftAlt => VK_LMENU,
+        HotkeyKey.RightAlt => VK_RMENU,
+        HotkeyKey.LeftShift => VK_LSHIFT,
+        HotkeyKey.RightShift => VK_RSHIFT,
+        HotkeyKey.LeftWindows => VK_LWIN,
+        HotkeyKey.RightWindows => VK_RWIN,
+        HotkeyKey.CapsLock => VK_CAPITAL,
+        HotkeyKey.ScrollLock => VK_SCROLL,
+        HotkeyKey.Pause => VK_PAUSE,
+        >= HotkeyKey.F13 and <= HotkeyKey.F20 => VK_F13 + (uint)(key - HotkeyKey.F13),
+
+        // Side-agnostic slots are never stored here: the matcher only ever holds the specific
+        // keys the hook reported, so there is nothing to ask about.
+        _ => null,
+    };
 
     public Hotkey Hotkey
     {

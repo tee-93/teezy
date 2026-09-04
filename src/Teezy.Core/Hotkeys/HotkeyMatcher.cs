@@ -29,10 +29,24 @@ public sealed class HotkeyMatcher
 {
     private readonly List<HashSet<HotkeyKey>> _satisfiedBy = [];
 
+    /// <summary>Asks the keyboard whether a key is <i>actually</i> down. Optional.</summary>
+    /// <remarks>
+    /// Held state is inferred from a stream of events, and that stream is not guaranteed to be
+    /// complete: a low-level hook receives nothing while an elevated window has focus, and
+    /// Windows evicts a hook whose callback runs long. Either way a key-up can simply never
+    /// arrive, and a slot then stays satisfied forever — which is exactly the reported bug,
+    /// where "Ctrl + Win" began dictating on Ctrl alone.
+    /// </remarks>
+    private readonly Func<HotkeyKey, bool>? _isPhysicallyDown;
+
     private Hotkey _hotkey = new();
     private bool _isComplete;
 
-    public HotkeyMatcher(Hotkey? hotkey = null) => Hotkey = hotkey ?? new Hotkey();
+    public HotkeyMatcher(Hotkey? hotkey = null, Func<HotkeyKey, bool>? isPhysicallyDown = null)
+    {
+        _isPhysicallyDown = isPhysicallyDown;
+        Hotkey = hotkey ?? new Hotkey();
+    }
 
     public Hotkey Hotkey
     {
@@ -84,6 +98,8 @@ public sealed class HotkeyMatcher
         // hold: the user may well type or click while dictating.
         if (!touched) return HotkeyTransition.None;
 
+        DropKeysNoLongerHeld();
+
         var complete = _satisfiedBy.TrueForAll(s => s.Count > 0);
 
         // Auto-repeat resends key-down while held. Only edges are reported, or the controller
@@ -92,5 +108,31 @@ public sealed class HotkeyMatcher
 
         _isComplete = complete;
         return complete ? HotkeyTransition.Pressed : HotkeyTransition.Released;
+    }
+
+    /// <summary>
+    /// Forgets keys we believe are held but which the keyboard says are not.
+    /// </summary>
+    /// <remarks>
+    /// The correction for a key-up that never arrived. Checked on every event that touches the
+    /// combination rather than on a timer, because the moment it matters is the moment the
+    /// user presses the next key — and doing it here means a stale slot can never survive long
+    /// enough to fire a dictation nobody asked for.
+    /// <para>
+    /// It asks only about keys already believed held, so it costs a handful of calls at most,
+    /// and it removes rather than adds: a key the keyboard reports as down but which raised no
+    /// event is not evidence of intent to dictate, so this never completes a combination on
+    /// its own.
+    /// </para>
+    /// </remarks>
+    private void DropKeysNoLongerHeld()
+    {
+        if (_isPhysicallyDown is null) return;
+
+        foreach (var slot in _satisfiedBy)
+        {
+            if (slot.Count == 0) continue;
+            slot.RemoveWhere(k => !_isPhysicallyDown(k));
+        }
     }
 }

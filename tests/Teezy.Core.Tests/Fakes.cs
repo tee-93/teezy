@@ -5,17 +5,24 @@ namespace Teezy.Core.Tests;
 
 internal sealed class FakeHotkey : IHotkeySource
 {
-    public event Action? Pressed;
-    public event Action? Released;
-    public Hotkey Hotkey { get; set; } = Hotkey.Default;
+    public event Action<HotkeyAction>? Pressed;
+    public event Action<HotkeyAction>? Released;
+
+    public IReadOnlyDictionary<HotkeyAction, Hotkey> Bindings { get; set; } =
+        new Dictionary<HotkeyAction, Hotkey>();
+
     public bool IsStarted { get; private set; }
+
+    /// <summary>What dictation ended up bound to, for tests that care.</summary>
+    public Hotkey Hotkey =>
+        Bindings.TryGetValue(HotkeyAction.Dictate, out var h) ? h : new Hotkey();
 
     public bool Start() { IsStarted = true; return true; }
     public void Stop() => IsStarted = false;
     public void Dispose() { }
 
-    public void Press() => Pressed?.Invoke();
-    public void Release() => Released?.Invoke();
+    public void Press(HotkeyAction action = HotkeyAction.Dictate) => Pressed?.Invoke(action);
+    public void Release(HotkeyAction action = HotkeyAction.Dictate) => Released?.Invoke(action);
 }
 
 internal sealed class FakeCapture : IAudioCapture

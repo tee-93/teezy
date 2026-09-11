@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Dictionary;
 using Teezy.Core.Formatting;
+using Teezy.Core.Hotkeys;
 
 namespace Teezy.Core;
 
@@ -95,15 +96,21 @@ public sealed class DictationController : IDisposable
         _dictionary = dictionary;
         _settings = settings;
 
-        _hotkey.Pressed += OnPressed;
-        _hotkey.Released += OnReleased;
+        _hotkey.Pressed += OnHotkeyPressed;
+        _hotkey.Released += OnHotkeyReleased;
         _capture.ChunkAvailable += OnChunk;
         _capture.LevelChanged += level => LevelChanged?.Invoke(level);
     }
 
     public bool Start()
     {
-        _hotkey.Hotkey = _settings().Hotkey;
+        // Only the dictation binding. Other actions share the hook and are somebody else's
+        // business; this controller is deliberately unaware of them.
+        _hotkey.Bindings = new Dictionary<HotkeyAction, Hotkey>
+        {
+            [HotkeyAction.Dictate] = _settings().Hotkey,
+        };
+
         return _hotkey.Start();
     }
 
@@ -117,6 +124,17 @@ public sealed class DictationController : IDisposable
     }
 
     // ---- Hotkey ----
+
+    /// <summary>Ignores every binding but dictation's.</summary>
+    private void OnHotkeyPressed(HotkeyAction action)
+    {
+        if (action == HotkeyAction.Dictate) OnPressed();
+    }
+
+    private void OnHotkeyReleased(HotkeyAction action)
+    {
+        if (action == HotkeyAction.Dictate) OnReleased();
+    }
 
     private void OnPressed()
     {

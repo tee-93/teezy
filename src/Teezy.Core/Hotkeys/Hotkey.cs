@@ -47,6 +47,17 @@ public sealed record Hotkey
         ? "Not set"
         : string.Join(" + ", Keys.Select(HotkeyKeys.Label));
 
+    /// <summary>
+    /// True when holding this combination also satisfies <paramref name="other"/>.
+    /// </summary>
+    /// <remarks>
+    /// The check Settings needs before letting two actions be bound to overlapping keys.
+    /// Ctrl+Alt+Win contains Ctrl+Win, so pressing the first briefly satisfies the second on
+    /// the way — see <see cref="HotkeyBindings"/> for why that cannot be designed away.
+    /// </remarks>
+    public bool Contains(Hotkey other) =>
+        !other.IsEmpty && other.Keys.All(Keys.Contains);
+
     /// <summary>Records are reference-compared on their list property, so compare contents.</summary>
     public bool Equals(Hotkey? other) =>
         other is not null && Keys.SequenceEqual(other.Keys);

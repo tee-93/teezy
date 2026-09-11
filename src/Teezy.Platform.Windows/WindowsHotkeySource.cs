@@ -25,14 +25,16 @@ namespace Teezy.Platform.Windows;
 /// for a few minutes and then dying.
 /// </para>
 /// <para>
-/// All the combination logic lives in <see cref="HotkeyMatcher"/>, in the testable project.
-/// This class only translates Win32 key events into <see cref="HotkeyKey"/> values.
+/// All the combination logic lives in <see cref="HotkeyBindings"/> and
+/// <see cref="HotkeyMatcher"/>, in the testable project. This class only translates Win32 key
+/// events into <see cref="HotkeyKey"/> values. <b>One hook serves every binding</b> — a second
+/// hook per combination would double the per-keystroke cost of every key the machine types.
 /// </para>
 /// </remarks>
 public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
 {
     private readonly LowLevelKeyboardProc _callback;   // see remarks: do not inline
-    private readonly HotkeyMatcher _matcher;
+    private readonly HotkeyBindings _bindings;
 
     private nint _hook;
 
@@ -41,13 +43,13 @@ public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
     private readonly HashSet<HotkeyKey> _captureHeld = [];
     private Action<Hotkey>? _onCaptured;
 
-    public event Action? Pressed;
-    public event Action? Released;
+    public event Action<HotkeyAction>? Pressed;
+    public event Action<HotkeyAction>? Released;
 
     public WindowsHotkeySource()
     {
         _callback = HookProc;
-        _matcher = new HotkeyMatcher(isPhysicallyDown: IsDown);
+        _bindings = new HotkeyBindings(isPhysicallyDown: IsDown);
     }
 
     /// <summary>
@@ -88,10 +90,10 @@ public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
         _ => null,
     };
 
-    public Hotkey Hotkey
+    public IReadOnlyDictionary<HotkeyAction, Hotkey> Bindings
     {
-        get => _matcher.Hotkey;
-        set => _matcher.Hotkey = value;
+        get => _bindings.Current.ToDictionary(b => b.Action, b => b.Hotkey);
+        set => _bindings.Set(value);
     }
 
     public bool Start()
@@ -104,7 +106,7 @@ public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
 
         // Key-up events that happened while the hook was down are gone. Without this the
         // matcher could believe a key is still held and never fire again.
-        _matcher.Reset();
+        _bindings.Reset();
 
         return _hook != 0;
     }
@@ -114,7 +116,7 @@ public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
         if (_hook == 0) return;
         UnhookWindowsHookEx(_hook);
         _hook = 0;
-        _matcher.Reset();
+        _bindings.Reset();
     }
 
     /// <summary>
@@ -162,11 +164,14 @@ public sealed class WindowsHotkeySource : IHotkeySource, IHotkeyCapture
 
     private void Dispatch(HotkeyKey key, bool isDown)
     {
-        switch (_matcher.Update(key, isDown))
-        {
-            case HotkeyTransition.Pressed: Pressed?.Invoke(); break;
-            case HotkeyTransition.Released: Released?.Invoke(); break;
-        }
+        var change = _bindings.Update(key, isDown);
+        if (change.IsNothing) return;
+
+        // Released before Pressed, always. Adding a key can move the user straight from one
+        // binding to another without letting go, and a consumer told "pressed" first would
+        // believe both were held at once.
+        if (change.Released is { } released) Released?.Invoke(released);
+        if (change.Pressed is { } pressed) Pressed?.Invoke(pressed);
     }
 
     private void Capture(HotkeyKey key, bool isDown)

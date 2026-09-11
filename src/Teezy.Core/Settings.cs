@@ -129,6 +129,20 @@ public sealed record TeezySettings
         return new(WritingStyle, StyleInstruction);
     }
 
+    /// <summary>
+    /// Every combination that is bound to something, keyed by what it does.
+    /// </summary>
+    /// <remarks>
+    /// The single place that knows which setting drives which action. A second voice mode adds
+    /// its hotkey here and nowhere else — <see cref="VoiceSession"/> binds whatever it is given
+    /// and has no opinion about where the keys came from.
+    /// </remarks>
+    public IReadOnlyDictionary<Hotkeys.HotkeyAction, Hotkeys.Hotkey> Bindings() =>
+        new Dictionary<Hotkeys.HotkeyAction, Hotkeys.Hotkey>
+        {
+            [Hotkeys.HotkeyAction.Dictate] = Hotkey,
+        };
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

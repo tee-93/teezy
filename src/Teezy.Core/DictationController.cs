@@ -6,16 +6,6 @@ using Teezy.Core.Hotkeys;
 
 namespace Teezy.Core;
 
-public enum DictationState
-{
-    Idle,
-    Starting,
-    Listening,
-    /// <summary>Key released; transcribing, cleaning up and injecting.</summary>
-    Finishing,
-    Error,
-}
-
 /// <summary>Where the wait between releasing the key and seeing text actually went.</summary>
 /// <remarks>
 /// The three stages have completely different causes when they are slow — a slower CPU, a
@@ -37,19 +27,22 @@ public sealed record DictationCompleted(
     StageTimings? Stages = null);
 
 /// <summary>
-/// Owns the push-to-talk lifecycle: hold the key, capture audio, release, transcribe, clean
-/// up, inject.
+/// Turns a spoken utterance into typed text: clean it up, apply the dictionary, inject it.
 /// </summary>
 /// <remarks>
-/// Platform-neutral by construction — every OS-specific capability arrives as an interface,
-/// which is what lets this logic be tested without a microphone, a keyboard hook, or a
-/// foreground window.
+/// <para>
+/// The hold, the microphone and the recogniser are <see cref="VoiceSession"/>'s business, not
+/// this class's. What is left here is everything specific to <i>dictation</i> as opposed to any
+/// other thing one could do with one's voice — which is the whole reason the split exists.
+/// </para>
+/// <para>
+/// The session stays in <see cref="DictationState.Finishing"/> until this handler returns, so
+/// the HUD is still up while the Claude tier is thinking.
+/// </para>
 /// </remarks>
 public sealed class DictationController : IDisposable
 {
-    private readonly IHotkeySource _hotkey;
-    private readonly IAudioCapture _capture;
-    private readonly ITranscriber _transcriber;
+    private readonly VoiceSession _session;
     private readonly ITextInjector _injector;
     private readonly DictionaryStore _dictionary;
     private readonly Func<TeezySettings> _settings;
@@ -59,23 +52,12 @@ public sealed class DictationController : IDisposable
     /// rather than needing a restart.</summary>
     private readonly Func<ITextFormatter> _formatter;
 
-    /// <summary>Serialises state transitions. Press and release arrive on the hook thread,
-    /// audio on the capture thread, and the tail runs on a pool thread.</summary>
-    private readonly Lock _gate = new();
-
-    private readonly List<float> _buffer = new(AudioChunk.SampleRate * 30);
-    private DictationState _state = DictationState.Idle;
-    private long _holdStartedTicks;
-
     public event Action<DictationState>? StateChanged;
     public event Action<float>? LevelChanged;
     public event Action<DictationCompleted>? Completed;
     public event Action<string>? Failed;
 
-    public DictationState State
-    {
-        get { lock (_gate) return _state; }
-    }
+    public DictationState State => _session.State;
 
     public DictationController(
         IHotkeySource hotkey,
@@ -89,234 +71,68 @@ public sealed class DictationController : IDisposable
     {
         _foregroundApp = foregroundApp ?? new UnknownForegroundApp();
         _formatter = formatter ?? (() => new RuleBasedFormatter());
-        _hotkey = hotkey;
-        _capture = capture;
-        _transcriber = transcriber;
         _injector = injector;
         _dictionary = dictionary;
         _settings = settings;
 
-        _hotkey.Pressed += OnHotkeyPressed;
-        _hotkey.Released += OnHotkeyReleased;
-        _capture.ChunkAvailable += OnChunk;
-        _capture.LevelChanged += level => LevelChanged?.Invoke(level);
+        _session = new VoiceSession(hotkey, capture, transcriber, settings);
+        _session.Handle(HotkeyAction.Dictate, OnDictated);
+
+        _session.StateChanged += state => StateChanged?.Invoke(state);
+        _session.LevelChanged += level => LevelChanged?.Invoke(level);
+        _session.Failed += message => Failed?.Invoke(message);
     }
 
-    public bool Start()
-    {
-        // Only the dictation binding. Other actions share the hook and are somebody else's
-        // business; this controller is deliberately unaware of them.
-        _hotkey.Bindings = new Dictionary<HotkeyAction, Hotkey>
-        {
-            [HotkeyAction.Dictate] = _settings().Hotkey,
-        };
+    public bool Start() => _session.Start();
 
-        return _hotkey.Start();
-    }
-
-    public void Stop() => _hotkey.Stop();
+    public void Stop() => _session.Stop();
 
     /// <summary>Re-arms the hook after the user picks a different key.</summary>
-    public bool ReloadHotkey()
+    public bool ReloadHotkey() => _session.ReloadHotkeys();
+
+    // ---- The dictation tail ----
+
+    private async Task OnDictated(VoiceResult result)
     {
-        _hotkey.Stop();
-        return Start();
-    }
-
-    // ---- Hotkey ----
-
-    /// <summary>Ignores every binding but dictation's.</summary>
-    private void OnHotkeyPressed(HotkeyAction action)
-    {
-        if (action == HotkeyAction.Dictate) OnPressed();
-    }
-
-    private void OnHotkeyReleased(HotkeyAction action)
-    {
-        if (action == HotkeyAction.Dictate) OnReleased();
-    }
-
-    private void OnPressed()
-    {
-        lock (_gate)
-        {
-            // Only Idle may start. Notably this rejects a press during Finishing, which is
-            // the window that matters: transcription plus cleanup can run for a few hundred
-            // milliseconds, and without this guard a quick second press would re-enter the
-            // tail, read the same buffer, and type the utterance twice.
-            if (_state != DictationState.Idle) return;
-            _buffer.Clear();
-            _holdStartedTicks = Stopwatch.GetTimestamp();
-            SetState(DictationState.Starting);
-        }
-
-        try
-        {
-            // Read per utterance, like the formatter and for the same reason: choosing a
-            // different microphone in Settings should apply on the very next hold rather
-            // than at the next restart. Applied here rather than on change so it can never
-            // swap devices during a recording that is already running.
-            _capture.PreferredDeviceId = _settings().InputDeviceId;
-
-            _capture.Start();
-            lock (_gate)
-            {
-                // The user may have already let go while the device was opening.
-                if (_state != DictationState.Starting) return;
-                SetState(DictationState.Listening);
-            }
-        }
-        catch (AudioCaptureException e)
-        {
-            Fail(e.Message);
-        }
-    }
-
-    private void OnReleased()
-    {
-        TimeSpan held;
-        lock (_gate)
-        {
-            if (_state is not (DictationState.Starting or DictationState.Listening)) return;
-            held = Stopwatch.GetElapsedTime(_holdStartedTicks);
-            SetState(DictationState.Finishing);
-        }
-
-        _capture.Stop();
-        LevelChanged?.Invoke(0);
-
-        // Fire-and-forget is deliberate: the hook callback must return promptly or Windows
-        // silently evicts the hook. All completion is reported through events.
-        _ = Task.Run(() => FinishAsync(held));
-    }
-
-    private void OnChunk(AudioChunk chunk)
-    {
-        lock (_gate)
-        {
-            if (_state is not (DictationState.Listening or DictationState.Starting)) return;
-            _buffer.AddRange(chunk.Samples);
-        }
-    }
-
-    // ---- The tail ----
-
-    private async Task FinishAsync(TimeSpan held)
-    {
-        var started = Stopwatch.GetTimestamp();
+        // Read before cleanup, not after. Per-app rules need to know where the text is
+        // going while there is still a decision to make, and this is also the more
+        // truthful moment: it is what had focus when the words were spoken, rather than
+        // wherever focus drifted during a second of network round trip.
+        var app = _foregroundApp.Current;
         var settings = _settings();
 
-        try
-        {
-            float[] samples;
-            lock (_gate) samples = [.. _buffer];
+        var stage = Stopwatch.GetTimestamp();
+        var formatter = settings.CleanupEnabled ? _formatter() : null;
+        var cleaned = formatter is null
+            ? result.Text.Trim()
+            : await formatter.FormatAsync(result.Text, new FormatContext(app)).ConfigureAwait(false);
+        var cleanup = Stopwatch.GetElapsedTime(stage);
 
-            if (held.TotalMilliseconds < settings.MinimumHoldMilliseconds || samples.Length == 0)
-            {
-                Reset();
-                return;
-            }
+        // Read straight after the call, before anything else can run one. Only the paid
+        // tier reports this; a local formatter simply is not IReportsUsage and the entry
+        // records no tokens, which is the truth rather than a zero.
+        var usage = formatter as IReportsUsage;
 
-            // Each stage is timed separately. One total was enough while the only machine that
-            // mattered did the whole thing in 170 ms; the moment Teezy ran somewhere slower,
-            // "it is slow" could not be attributed to the model, the network, or the typing,
-            // and there was no way to tell from the outside which one to go after.
-            var stage = Stopwatch.GetTimestamp();
-            var raw = await _transcriber.TranscribeAsync(samples).ConfigureAwait(false);
-            var transcribe = Stopwatch.GetElapsedTime(stage);
+        // The dictionary runs last and runs unconditionally. Biasing only improves the
+        // odds; this is the pass that guarantees the spelling, so it must not be
+        // something the user can switch off by accident along with cleanup.
+        var (text, corrections) = _dictionary.Corrector.Apply(cleaned);
 
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                Reset();
-                return;
-            }
+        stage = Stopwatch.GetTimestamp();
+        var injection = _injector.Insert(text);
+        var inject = Stopwatch.GetElapsedTime(stage);
 
-            // Read before cleanup, not after. Per-app rules need to know where the text is
-            // going while there is still a decision to make, and this is also the more
-            // truthful moment: it is what had focus when the words were spoken, rather than
-            // wherever focus drifted during a second of network round trip.
-            var app = _foregroundApp.Current;
-
-            stage = Stopwatch.GetTimestamp();
-            var formatter = settings.CleanupEnabled ? _formatter() : null;
-            var cleaned = formatter is null
-                ? raw.Trim()
-                : await formatter.FormatAsync(raw, new FormatContext(app)).ConfigureAwait(false);
-            var cleanup = Stopwatch.GetElapsedTime(stage);
-
-            // Read straight after the call, before anything else can run one. Only the paid
-            // tier reports this; a local formatter simply is not IReportsUsage and the entry
-            // records no tokens, which is the truth rather than a zero.
-            var usage = formatter as IReportsUsage;
-
-            // The dictionary runs last and runs unconditionally. Biasing only improves the
-            // odds; this is the pass that guarantees the spelling, so it must not be
-            // something the user can switch off by accident along with cleanup.
-            var (text, corrections) = _dictionary.Corrector.Apply(cleaned);
-
-            stage = Stopwatch.GetTimestamp();
-            var injection = _injector.Insert(text);
-            var inject = Stopwatch.GetElapsedTime(stage);
-
-            Completed?.Invoke(new DictationCompleted(
-                text, held, Stopwatch.GetElapsedTime(started), injection, corrections, app,
-                usage?.LastTokens, usage?.LastModel,
-                new StageTimings(transcribe, cleanup, inject)));
-
-            Reset();
-        }
-        catch (Exception e) when (e is TranscriberException or InvalidOperationException)
-        {
-            Fail(e.Message);
-        }
+        Completed?.Invoke(new DictationCompleted(
+            text,
+            result.Held,
+            Stopwatch.GetElapsedTime(result.ReleasedAtTicks),
+            injection,
+            corrections,
+            app,
+            usage?.LastTokens,
+            usage?.LastModel,
+            new StageTimings(result.Transcribe, cleanup, inject)));
     }
 
-    // ---- State ----
-
-    /// <summary>Must be called with <see cref="_gate"/> held.</summary>
-    private void SetState(DictationState next)
-    {
-        _state = next;
-        StateChanged?.Invoke(next);
-    }
-
-    private void Reset()
-    {
-        lock (_gate)
-        {
-            _buffer.Clear();
-            SetState(DictationState.Idle);
-        }
-    }
-
-    private void Fail(string message)
-    {
-        try { _capture.Stop(); } catch (AudioCaptureException) { /* already down */ }
-
-        lock (_gate)
-        {
-            _buffer.Clear();
-            SetState(DictationState.Error);
-        }
-
-        Failed?.Invoke(message);
-        LevelChanged?.Invoke(0);
-
-        // Drop back to Idle so one bad utterance doesn't strand the app.
-        _ = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ =>
-        {
-            lock (_gate)
-            {
-                if (_state == DictationState.Error) SetState(DictationState.Idle);
-            }
-        }, TaskScheduler.Default);
-    }
-
-    public void Dispose()
-    {
-        _hotkey.Stop();
-        _hotkey.Dispose();
-        _capture.Dispose();
-        _transcriber.Dispose();
-    }
+    public void Dispose() => _session.Dispose();
 }

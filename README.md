@@ -1,8 +1,9 @@
 # Teezy
 
-Push-to-talk dictation for Windows. Hold a key, talk, release — cleaned-up text is typed
-into whatever had focus. Fully on-device: after the one-time model download, nothing leaves
-the machine.
+Push-to-talk for Windows. Hold a key, talk, release — cleaned-up text is typed into whatever
+had focus. Hold a *different* key and it does what you said instead: opens an app, changes the
+volume, skips a track, locks the PC. Fully on-device: after the one-time model download,
+nothing leaves the machine.
 
 Everything dictated is kept, searchable, in an app window with usage stats — because the
 text goes into *someone else's* app, and when that app eats it, mangles it, or you simply
@@ -147,6 +148,50 @@ History is JSON Lines at `%LOCALAPPDATA%\Teezy\history.jsonl` — appended one l
 utterance, so a crash mid-write can damage at most the last entry, and a torn final line is
 skipped rather than failing the whole file. Stats are always recomputed from it rather than
 accumulated, so deleting an entry corrects them instead of leaving them drifted.
+
+---
+
+## The assistant
+
+A second combination, off until you set one in Settings ▸ Assistant. Hold it, say what you
+want, and Teezy does it rather than typing it.
+
+| | |
+|---|---|
+| Open or focus an app | "open Chrome", "switch to Outlook" |
+| Volume | "volume up", "set the volume to 40", "mute" |
+| Media | "play", "skip", "previous track" |
+| Lock | "lock the computer" |
+
+**It is local, like everything else.** No key, no account, no network, no per-command cost —
+the same promise as dictation, which is why this came before anything cleverer.
+
+**It is deliberately not natural language understanding.** A dozen verbs and one free argument
+is covered completely by an ordered list of patterns: instant, offline, free, and predictable
+about what it will refuse. An utterance that matches nothing produces nothing, and the pill
+says so *and shows you the transcript* — because without that there is no way to tell a
+misrecognition from an unsupported command, and those need opposite responses from you.
+
+**Every command is a typed value, never a string that gets executed.** That is the whole
+security posture in one decision, and it is what makes a smarter tier safe to add later: a
+model would *choose from* this list rather than name a command of its own, so the worst a
+confused one could do is set the volume wrong.
+
+**Nothing irreversible is in the vocabulary.** No closing windows, no killing processes,
+nothing that deletes. Speech recognition is wrong often enough that pairing it with an
+unrecoverable action is a bad trade, and the list stays short until the rest is solid.
+
+**Applications are found through `shell:AppsFolder`, not by reading Start menu shortcuts.**
+Shortcut files miss every Store app — measured here, that meant Notepad, Calculator, Teams and
+the current Outlook all resolved to nothing. Which app you meant is scored in `Teezy.Core`
+where it is tested: exact beats whole word beats prefix, shorter wins ties so "chrome" is
+Chrome rather than Chrome Canary, and nothing is fuzzy. Edit distance would let "teams" reach
+TeamViewer, and opening the wrong application is worse than admitting nothing matched.
+
+**Pick a combination that does not contain your dictation one.** Holding Ctrl+Alt+Win satisfies
+Alt+Win on the way, so dictation briefly starts first — you will hear its tone. Settings warns
+when the two overlap. The alternative was a debounce on every press, which taxes the thing you
+do fifty times a day to fix the thing you chose.
 
 ---
 
@@ -593,11 +638,18 @@ synthesised key events).
 
 ## Not built yet
 
-1. **Command mode.** Select text, hold a second key, "make this more formal."
-2. **Code signing.** `install.ps1` needs no elevation and clears the mark-of-the-web, but the
-   executable itself is unsigned — so SmartScreen warns on first launch, and a machine running
-   WDAC or a publisher-allowlist policy can refuse it outright with nothing we can do locally.
-3. **Elevated-window injection.** A non-elevated process cannot type into an elevated
+1. **A smarter assistant.** The local vocabulary is a dozen verbs; anything outside it is
+   refused. A Claude tier would take what the patterns could not place and choose from the same
+   typed command list, or answer in words. Opt-in and bring-your-own-key, like the cleanup tier.
+2. **Translation.** Dictate in English, type in another language. Cheap once the Claude tier
+   exists — it is one more transform on the text — and a real project without it, since it
+   needs a translation engine and there is no local one here.
+3. **Command mode over selected text.** Select text, hold a key, "make this more formal."
+4. **Code signing.** `install.ps1` needs no elevation and clears the mark-of-the-web, but the
+   executable itself is unsigned — so SmartScreen warns on first launch, Smart App Control can
+   refuse it outright on a freshly installed Windows 11, and a machine running WDAC or a
+   publisher-allowlist policy can block it with nothing we can do locally.
+5. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.
 
 ---

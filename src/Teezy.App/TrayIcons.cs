@@ -36,15 +36,27 @@ internal static class TrayIcons
     private const int Size = 32;
 
     /// <summary>Armed and ready.</summary>
-    public static System.Drawing.Icon Ready => _ready ??= Draw(Brand.Accent);
+    /// <remarks>
+    /// The gradient tile, read from the theme rather than from <see cref="Brand"/>. Brand's copy
+    /// of the accent had already drifted a shade from Theme.xaml's, which is precisely the
+    /// tray-disagrees-with-taskbar problem the tile metrics live in one file to avoid.
+    /// </remarks>
+    public static System.Drawing.Icon Ready => _ready ??= Draw(Tile());
 
     /// <summary>Model loading or not installed — a hold would do nothing yet.</summary>
-    public static System.Drawing.Icon Busy => _busy ??= Draw(Brand.Muted);
+    public static System.Drawing.Icon Busy => _busy ??= Draw(new SolidColorBrush(Brand.Muted));
 
     /// <summary>Microphone open.</summary>
-    public static System.Drawing.Icon Recording => _recording ??= Draw(Brand.Record);
+    public static System.Drawing.Icon Recording => _recording ??= Draw(new SolidColorBrush(Brand.Record));
 
-    private static System.Drawing.Icon Draw(Color background)
+    /// <summary>The two-stop tile, on the same diagonal the pill uses.</summary>
+    private static Brush Tile() => new LinearGradientBrush(
+        (Color)Application.Current.FindResource("MarkTileStart"),
+        (Color)Application.Current.FindResource("MarkTileEnd"),
+        new Point(0, 0),
+        new Point(1, 1));
+
+    private static System.Drawing.Icon Draw(Brush background)
     {
         var glyph = (Geometry)Application.Current.FindResource("MarkGeometry");
         var inset = (double)Application.Current.FindResource("MarkTileInset");
@@ -58,7 +70,7 @@ internal static class TrayIcons
         using (var dc = visual.RenderOpen())
         {
             var tile = new Rect(inset * s, inset * s, Size - 2 * inset * s, Size - 2 * inset * s);
-            dc.DrawGeometry(new SolidColorBrush(background), null,
+            dc.DrawGeometry(background, null,
                 new RectangleGeometry(tile, radius * s, radius * s));
 
             // Centred from the geometry's own bounds rather than from remembered numbers, so

@@ -25,6 +25,7 @@ public partial class ModelDownloadWindow : Window
     public ModelDownloadWindow(string directory)
     {
         InitializeComponent();
+        DarkTitleBar.Apply(this);
         _directory = directory;
         Loaded += async (_, _) => await RunAsync();
     }

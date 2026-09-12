@@ -51,13 +51,25 @@ $stream = [IO.File]::OpenRead($themePath)
 try { $theme = [Windows.Markup.XamlReader]::Load($stream) } finally { $stream.Dispose() }
 
 $glyph  = $theme['MarkGeometry']
-$accent = $theme['Accent']
 $inset  = $theme['MarkTileInset']
 $radius = $theme['MarkTileRadius']
 $fill   = $theme['MarkGlyphFill']
 $white  = [Windows.Media.Brushes]::White
 
-if (-not $glyph -or -not $accent) { throw "Theme.xaml did not yield MarkGeometry and Accent." }
+# The tile is the pill's two-stop gradient, on the same diagonal, read from the same two
+# resources TrayIcons reads. A flat accent here and a gradient in the tray would be the exact
+# drift this script exists to prevent.
+$tileStart = $theme['MarkTileStart']
+$tileEnd   = $theme['MarkTileEnd']
+
+if (-not $glyph -or -not $tileStart -or -not $tileEnd) {
+    throw "Theme.xaml did not yield MarkGeometry and the two MarkTile stops."
+}
+
+$accent = New-Object Windows.Media.LinearGradientBrush(
+    $tileStart, $tileEnd,
+    (New-Object Windows.Point(0, 0)),
+    (New-Object Windows.Point(1, 1)))
 
 function New-MarkBitmap([int]$size) {
     # Everything in the resource dictionary is authored on a 100x100 grid.

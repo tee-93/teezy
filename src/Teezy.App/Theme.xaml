@@ -19,31 +19,62 @@
       is a blue: any warm accent would compete with the one signal that must read instantly.
     -->
 
-    <!-- Surfaces -->
-    <SolidColorBrush x:Key="Paper"      Color="#FCFAF7"/>
-    <SolidColorBrush x:Key="Card"       Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="Rail"       Color="#F5F1EA"/>
-    <SolidColorBrush x:Key="Sunken"     Color="#F7F4EF"/>
-    <SolidColorBrush x:Key="Hairline"   Color="#E9E4DC"/>
-    <SolidColorBrush x:Key="Hover"      Color="#F2EEE7"/>
+    <!--
+      Surfaces. Dark glass, taken from the HUD rather than invented beside it: the pill was
+      already #1F1D1A at 95% with a white hairline, and the window now uses the same recipe at
+      window scale. Before this the app and its own floating pill looked like two products.
+
+      The warmth survives the move — the ground is a warm near-black rather than a blue-grey
+      one, and the ink is the HUD's own #EFEBE4. Everything above the ground is white at a low
+      alpha, so one ground colour tints the whole stack and nothing has to be re-derived.
+    -->
+    <SolidColorBrush x:Key="Paper"      Color="#141311"/>
+    <SolidColorBrush x:Key="Card"       Color="#0EFFFFFF"/>
+    <SolidColorBrush x:Key="Rail"       Color="#47000000"/>
+    <SolidColorBrush x:Key="Sunken"     Color="#42000000"/>
+    <SolidColorBrush x:Key="Hairline"   Color="#16FFFFFF"/>
+    <SolidColorBrush x:Key="Hover"      Color="#14FFFFFF"/>
 
     <!-- Type -->
-    <SolidColorBrush x:Key="Ink"        Color="#1B1A18"/>
-    <SolidColorBrush x:Key="Body"       Color="#45423D"/>
-    <SolidColorBrush x:Key="Muted"      Color="#7A756E"/>
-    <SolidColorBrush x:Key="Faint"      Color="#A8A29A"/>
+    <SolidColorBrush x:Key="Ink"        Color="#EFEBE4"/>
+    <SolidColorBrush x:Key="Body"       Color="#B9B3AA"/>
+    <SolidColorBrush x:Key="Muted"      Color="#8A847B"/>
+    <SolidColorBrush x:Key="Faint"      Color="#6A645C"/>
 
     <!--
       Accent, taken from the mark rather than chosen beside it. Accent is the blue the sound
       waves start in and AccentInk is the navy of the speech bubble; the other two are derived.
 
-      Accent carries white text at 6.4:1 and AccentInk sits on AccentSoft at 14.3:1, so both
-      pairings clear AA for body text rather than only for the large type they mostly carry.
+      On the dark ground the old #2147F5 goes muddy — it was picked to carry white text on
+      white paper. The accent is now the pill's own electric blue, which is the same hue family
+      one stop brighter, and the soft/ink pair inverts: AccentSoft becomes a translucent wash of
+      the accent and AccentInk the light text that sits on it.
+
+      Accent carries white text at 4.7:1, and AccentInk on AccentSoft clears AA comfortably.
     -->
-    <SolidColorBrush x:Key="Accent"     Color="#2147F5"/>
-    <SolidColorBrush x:Key="AccentDeep" Color="#1633C4"/>
-    <SolidColorBrush x:Key="AccentSoft" Color="#E9EEFF"/>
-    <SolidColorBrush x:Key="AccentInk"  Color="#081A4E"/>
+    <SolidColorBrush x:Key="Accent"     Color="#3E90FF"/>
+    <SolidColorBrush x:Key="AccentDeep" Color="#57D0FF"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#242E7BFF"/>
+    <SolidColorBrush x:Key="AccentInk"  Color="#BFDCFF"/>
+
+    <!--
+      The pill's gradient, promoted out of the assistant window so the icon tile, the rail
+      badge and the pill are one brush rather than three that agree today.
+    -->
+    <LinearGradientBrush x:Key="AccentWash" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2E7BFF" Offset="0"/>
+        <GradientStop Color="#57D0FF" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!--
+      What a card is made of. A flat fill on a dark ground reads as a hole; the faint top-down
+      gradient plus a light top edge is what makes it read as a pane above the surface, and it
+      is the same construction the pill already uses.
+    -->
+    <LinearGradientBrush x:Key="CardGlass" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#0EFFFFFF" Offset="0"/>
+        <GradientStop Color="#06FFFFFF" Offset="1"/>
+    </LinearGradientBrush>
 
     <!--
       Mark-only colours. None of these may become UI colours, for two separate reasons.
@@ -132,9 +163,14 @@
     <SolidColorBrush x:Key="AssistantGood" Color="#4ADE80"/>
 
     <!-- Caution, for hotkey and dictionary warnings. -->
-    <SolidColorBrush x:Key="CautionBg"     Color="#FDF6E7"/>
-    <SolidColorBrush x:Key="CautionBorder" Color="#EFE0BC"/>
-    <SolidColorBrush x:Key="CautionInk"    Color="#7A5A17"/>
+    <!--
+      The caution panel inverts for the dark ground: a wash of the warning hue rather than a
+      cream card, and the ink becomes the light end of the same hue instead of the dark end.
+      MarkSparkle's amber is the hue, which is the one warm note the brand already owns.
+    -->
+    <SolidColorBrush x:Key="CautionBg"     Color="#17F6B32B"/>
+    <SolidColorBrush x:Key="CautionBorder" Color="#33F6B32B"/>
+    <SolidColorBrush x:Key="CautionInk"    Color="#E0B160"/>
 
     <!--
       ============================== The mark ==============================
@@ -276,6 +312,17 @@
     <sys:Double x:Key="MarkTileRadius">30</sys:Double>
     <sys:Double x:Key="MarkGlyphFill">0.66</sys:Double>
 
+    <!--
+      The tile is a gradient rather than a flat fill, and it is the pill's gradient, so the
+      taskbar icon, the tray and the floating assistant are one object seen three ways.
+
+      Both renderers read these two stops — TrayIcons and tools\make-icon.ps1 — for the same
+      reason they already share the geometry: a tray that disagreed with the taskbar is the
+      kind of drift nobody notices for months.
+    -->
+    <Color x:Key="MarkTileStart">#2E7BFF</Color>
+    <Color x:Key="MarkTileEnd">#57D0FF</Color>
+
     <FontFamily x:Key="DisplayFont">Georgia, Cambria, Segoe UI Variable Display, serif</FontFamily>
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, monospace</FontFamily>
@@ -337,7 +384,7 @@
     <!-- ============================== Surfaces ============================== -->
 
     <Style x:Key="CardPanel" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource Card}"/>
+        <Setter Property="Background" Value="{StaticResource CardGlass}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="14"/>

@@ -1,0 +1,25 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1160, "h": 840, "title": "Dashboard" },
+    { "file": "Settings.dc.html", "x": 1280, "y": 0, "w": 1160, "h": 840, "title": "Settings — tabbed" },
+    { "file": "Icon.dc.html", "x": 0, "y": 980, "w": 900, "h": 660, "title": "App icon" },
+    { "file": "Pill.dc.html", "x": 1020, "y": 980, "w": 900, "h": 330, "title": "Assistant pill" }
+  ],
+  "annotations": [
+    {
+      "id": "thesis",
+      "x": 0,
+      "y": -190,
+      "w": 560,
+      "text": "The window currently looks like a different product from the pill — warm paper and a serif, against dark glass and electric blue.\n\nThis redesign is the app becoming the pill, grown large. Every value is lifted from Theme.xaml: Georgia at 30/27/17, 14px cards with 22px padding, 9px buttons, the HUD's own glass tokens."
+    },
+    {
+      "id": "not-built",
+      "x": 0,
+      "y": 1700,
+      "w": 620,
+      "text": "Sample data, and two cards designed ahead of the code.\n\nCalendar and mail are real and working. 'Due this week' and 'This month' are not built — bills would come from the email detection we discussed, and the money figures from Cashew. Designed now so the layout does not have to be redone later."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

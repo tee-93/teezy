@@ -59,6 +59,7 @@ public partial class MainWindow : Window
         ConnectedAccounts? calendars = null)
     {
         InitializeComponent();
+        DarkTitleBar.Apply(this);
         _history = history;
         _dictionary = dictionary;
         _settings = settings;

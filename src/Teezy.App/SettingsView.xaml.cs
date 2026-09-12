@@ -127,6 +127,27 @@ public partial class SettingsView : UserControl
         _loading = false;
     }
 
+    /// <summary>Shows the chosen tab and hides the rest.</summary>
+    /// <remarks>
+    /// The panels are siblings in one Grid rather than a TabControl's items, because every
+    /// control in them is reached by name from this file — a TabControl would put them behind
+    /// lazily realised templates, and half of <c>Refresh</c> would start finding nulls.
+    /// </remarks>
+    private void OnTabChosen(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton tab || tab.Tag is not string chosen) return;
+        if (TabHost is null) return;
+
+        foreach (var panel in TabHost.Children.OfType<FrameworkElement>())
+        {
+            panel.Visibility = panel.Name == chosen ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Otherwise a tab opens at whatever depth the last one was scrolled to, which reads as
+        // a page that has lost its top.
+        TabScroll?.ScrollToTop();
+    }
+
     public void Refresh()
     {
         var wasLoading = _loading;

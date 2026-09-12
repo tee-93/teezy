@@ -55,6 +55,8 @@ public partial class App : Application
     private ClaudeAssistant? _claudeAssistant;
     private ClaudeNarrator? _narrator;
     private ConnectedAccounts? _calendars;
+    private CombinedCalendar? _diary;
+    private CombinedMailbox? _mail;
     private SwitchingSpeaker? _speaker;
     private VoiceUsage? _voiceUsage;
     private ParakeetTranscriber? _transcriber;
@@ -184,21 +186,19 @@ public partial class App : Application
             () => _settings.AssistantModel,
             TimeSpan.FromSeconds(Math.Clamp(_settings.AssistantTimeoutSeconds, 2, 30)));
 
+        // Asked per question rather than built once, so connecting an account in Settings works
+        // immediately instead of at the next launch. Held as fields because the dashboard reads
+        // the same two — one calendar and one mailbox for the whole app, so the window and the
+        // pill cannot end up describing different days.
+        _diary = new CombinedCalendar(() => _calendars.Calendars(_settings.ConnectedAccounts));
+
+        // Reading mail is a separate switch from connecting the account. An empty list means
+        // the mail gate never claims anything, so a question falls through to the general tier
+        // exactly as it did before.
+        _mail = new CombinedMailbox(() => _settings.ReadMailEnabled ? Mailboxes() : []);
+
         _assistant = new AssistantController(
-            _session,
-            new WindowsCommandRunner(),
-            _claudeAssistant,
-
-            // Asked per question rather than built once, so connecting an account in Settings
-            // works immediately instead of at the next launch.
-            new CombinedCalendar(() => _calendars.Calendars(_settings.ConnectedAccounts)),
-
-            // Reading mail is a separate switch from connecting the account. An empty list
-            // means the mail gate never claims anything, so the question falls through to the
-            // general tier exactly as it did before.
-            new CombinedMailbox(() => _settings.ReadMailEnabled ? Mailboxes() : []),
-
-            _narrator);
+            _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator);
 
         _voiceUsage = new VoiceUsage();
 
@@ -452,7 +452,9 @@ public partial class App : Application
             microphone: () => new WindowsAudioCapture(),
             speaker: _speaker,
             usage: _voiceUsage,
-            calendars: _calendars);
+            calendars: _calendars,
+            diary: _diary,
+            mail: _mail);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;

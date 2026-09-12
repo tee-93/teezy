@@ -11,6 +11,8 @@ using Teezy.Core.Dictionary;
 using Teezy.Core.History;
 using Teezy.Core.Voice;
 using Teezy.Connectors;
+using Teezy.Core.Calendar;
+using Teezy.Core.Mail;
 using Teezy.Speech;
 
 namespace Teezy.App;
@@ -37,6 +39,8 @@ public partial class MainWindow : Window
     private readonly ISpeaker? _speaker;
     private readonly VoiceUsage? _usage;
     private readonly ConnectedAccounts? _calendars;
+    private readonly CombinedCalendar? _diary;
+    private readonly CombinedMailbox? _mail;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -56,7 +60,9 @@ public partial class MainWindow : Window
         Func<IAudioCapture>? microphone = null,
         ISpeaker? speaker = null,
         VoiceUsage? usage = null,
-        ConnectedAccounts? calendars = null)
+        ConnectedAccounts? calendars = null,
+        CombinedCalendar? diary = null,
+        CombinedMailbox? mail = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -73,6 +79,8 @@ public partial class MainWindow : Window
         _speaker = speaker;
         _usage = usage;
         _calendars = calendars;
+        _diary = diary;
+        _mail = mail;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -124,7 +132,7 @@ public partial class MainWindow : Window
 
     private void ShowHome()
     {
-        _home ??= new HomeView(_history);
+        _home ??= new HomeView(_history, _diary, _mail);
         _home.Refresh();
         PageHost.Content = _home;
     }

@@ -100,7 +100,21 @@ public static class OAuthFlow
         using var patience = CancellationTokenSource.CreateLinkedTokenSource(ct);
         patience.CancelAfter(Patience);
 
-        var response = await listener.WaitAsync(patience.Token).ConfigureAwait(false);
+        AuthResponse response;
+        try
+        {
+            response = await listener.WaitAsync(patience.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Running out of patience is an ordinary outcome, not a fault: a wrong client id
+            // leaves Microsoft showing an error page that never redirects, so nothing ever
+            // arrives. Left as a raw cancellation it escaped every catch at the call site —
+            // and an unhandled exception in an async void event handler takes the app with it.
+            throw new OAuthException(
+                "Teezy gave up waiting for the sign-in. If the browser showed an error rather "
+                + "than a sign-in page, check the application id and the redirect URI.");
+        }
 
         if (!string.Equals(response.State, state, StringComparison.Ordinal))
         {

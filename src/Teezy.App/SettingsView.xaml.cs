@@ -531,9 +531,11 @@ public partial class SettingsView : UserControl
 
     private void PopulateCalendar(TeezySettings settings)
     {
-        // The whole card is inert without somewhere to sign in to, so the setup box appears
-        // only until there is one and then gets out of the way for good.
-        CalendarSetup.Visibility = string.IsNullOrWhiteSpace(settings.MicrosoftClientId)
+        // Shown until an account is actually connected, not merely until an id is saved. A
+        // wrong id fails at sign-in, and hiding the only field that can fix it the moment it
+        // is first saved would leave editing settings.json as the only way out. Once something
+        // has connected the id is proven, and the box goes away.
+        CalendarSetup.Visibility = settings.CalendarAccounts.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -608,8 +610,11 @@ public partial class SettingsView : UserControl
         {
             Warn(failure.Message);
         }
-        catch (Exception failure) when (failure is HttpRequestException or TaskCanceledException)
+        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException)
         {
+            // OperationCanceledException rather than TaskCanceledException: the latter is the
+            // subclass, and a plain cancellation would have sailed past it. This is an async
+            // void handler, so anything that escapes here ends the process.
             Warn("Couldn’t reach Microsoft to finish signing in.");
         }
         finally

@@ -41,6 +41,14 @@ internal static partial class Native
     /// <summary>For the Ctrl+V paste fallback in the injector.</summary>
     internal const ushort VK_V = 0x56;
 
+    /// <summary>Transport keys. Whatever is playing decides what they mean, which is the
+    /// point — Teezy has no idea which media app is in front and does not need to.</summary>
+    internal const ushort VK_MEDIA_NEXT_TRACK = 0xB0;
+    internal const ushort VK_MEDIA_PREV_TRACK = 0xB1;
+    internal const ushort VK_MEDIA_PLAY_PAUSE = 0xB3;
+
+    internal const int SW_RESTORE = 9;
+
     /// <summary>Set on the extended-key half of a pair — the flag that separates Right Ctrl
     /// from Left Ctrl when the virtual-key code alone does not.</summary>
     internal const uint LLKHF_EXTENDED = 0x01;
@@ -114,4 +122,20 @@ internal static partial class Native
 
     [LibraryImport("user32.dll", SetLastError = true)]
     internal static partial uint GetWindowThreadProcessId(nint hWnd, out uint lpdwProcessId);
+
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool LockWorkStation();
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool SetForegroundWindow(nint hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool ShowWindow(nint hWnd, int nCmdShow);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool IsIconic(nint hWnd);
 }

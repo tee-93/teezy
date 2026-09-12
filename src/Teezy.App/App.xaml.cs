@@ -133,9 +133,7 @@ public partial class App : Application
             new WindowsForegroundApp(),
             () => _settings.LlmCleanupEnabled ? _claude! : new RuleBasedFormatter());
 
-        // No runner yet: it understands and reports, and touches nothing. Wiring the actions
-        // is the next step, and "does nothing" is the right default for the one before it.
-        _assistant = new AssistantController(_session);
+        _assistant = new AssistantController(_session, new WindowsCommandRunner());
 
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.

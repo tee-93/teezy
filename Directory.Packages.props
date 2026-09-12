@@ -20,6 +20,11 @@
     <!-- Optional LLM cleanup tier. The app runs fully without it. -->
     <PackageVersion Include="Anthropic" Version="12.42.0" />
 
+    <!-- Gmail over IMAP. Google classes its Gmail read scope as *restricted*, so the API
+         route needs verification; an app password over IMAP needs no Cloud project at all.
+         MailKit is MIT. -->
+    <PackageVersion Include="MailKit" Version="4.14.0" />
+
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 

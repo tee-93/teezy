@@ -1,11 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Platform-neutral: OAuth and two REST APIs. Kept out of Teezy.Core so the offline path
-         still has no network dependency at all. -->
+    <!-- Platform-neutral: OAuth, two REST APIs and an IMAP client. Kept out of Teezy.Core so
+         the offline path still has no network dependency at all. -->
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Teezy.Core\Teezy.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MailKit" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Teezy.Core.Tests" />

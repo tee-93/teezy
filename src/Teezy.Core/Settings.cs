@@ -297,6 +297,22 @@ public sealed record TeezySettings
     /// </remarks>
     public bool ReadMailEnabled { get; init; }
 
+    /// <summary>The Gmail address to read over IMAP, if any.</summary>
+    /// <remarks>
+    /// <para>
+    /// Gmail arrives over IMAP with an app password rather than through OAuth, because Google
+    /// classes its read scope as <i>restricted</i> and the API route therefore needs
+    /// verification. The app password lives in the encrypted store; only the address is here.
+    /// </para>
+    /// <para>
+    /// Which means a Gmail account does not appear in <see cref="ConnectedAccounts"/> — that
+    /// list is accounts signed in through a provider's own page, and this one was not.
+    /// Pretending otherwise would put a row next to the others with a Disconnect button that
+    /// meant something different.
+    /// </para>
+    /// </remarks>
+    public string? GmailAddress { get; init; }
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

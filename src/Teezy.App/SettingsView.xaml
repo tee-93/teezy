@@ -316,6 +316,49 @@
                         </Grid>
 
                         <TextBlock x:Name="MailHint" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+
+                        <TextBlock Text="GMAIL" Style="{StaticResource SectionLabel}"
+                                   Margin="0,18,0,6"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
+                                   Text="Gmail is read over IMAP with an app password, not through Google sign-in — Google treats reading mail as a restricted permission that needs its app review, and an app password needs no Cloud project at all. Turn on 2-Step Verification, then create an app password at myaccount.google.com → Security → App passwords."/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
+                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
+                                <TextBox x:Name="GmailAddressBox" BorderThickness="0"
+                                         Background="Transparent" VerticalContentAlignment="Center"
+                                         Margin="12,0" FontSize="13" TextChanged="OnGmailTyped"/>
+                            </Border>
+                            <Button x:Name="SaveGmailButton" Grid.Column="1" Content="Save"
+                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
+                                    IsEnabled="False" Click="OnSaveGmail"/>
+                        </Grid>
+
+                        <Border Background="{StaticResource Sunken}" CornerRadius="9" Margin="0,8,0,0"
+                                BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
+                            <PasswordBox x:Name="GmailPasswordBox" BorderThickness="0"
+                                         Background="Transparent" VerticalContentAlignment="Center"
+                                         Margin="12,0" PasswordChar="•" FontSize="13"
+                                         PasswordChanged="OnGmailTyped"/>
+                        </Border>
+
+                        <Grid Margin="0,10,0,0">
+                            <TextBlock x:Name="GmailStatus" Style="{StaticResource Hint}" Margin="0"
+                                       HorizontalAlignment="Left"/>
+                            <Button x:Name="ForgetGmailButton" Content="Forget"
+                                    Style="{StaticResource Quiet}" HorizontalAlignment="Right"
+                                    Visibility="Collapsed" Click="OnForgetGmail"/>
+                        </Grid>
+
+                        <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
+                                       FontSize="12"
+                                       Text="An app password is not read-only — Google does not offer a narrower one, so it is full access to the mailbox. Teezy opens the inbox read-only, never marks anything as read and never deletes anything, but here that is this app's own restraint rather than a limit Google enforces. Revoke it any time on the same Google page, without touching Teezy."/>
+                        </Border>
                     </StackPanel>
 
                     <Border x:Name="CalendarWarning" Style="{StaticResource CautionPanel}"

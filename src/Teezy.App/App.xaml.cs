@@ -40,6 +40,14 @@ public partial class App : Application
     /// </remarks>
     internal const string GoogleSecretName = "google-client-secret";
 
+    /// <summary>Name the Gmail app password is filed under.</summary>
+    /// <remarks>
+    /// Not an OAuth token and not scoped: an app password is full IMAP access to the mailbox,
+    /// because Google does not issue a narrower one. All the more reason it is encrypted here
+    /// rather than sitting in settings.json.
+    /// </remarks>
+    internal const string GmailPasswordName = "gmail-app-password";
+
     private VoiceSession? _session;
     private DictationController? _controller;
     private AssistantController? _assistant;
@@ -188,9 +196,7 @@ public partial class App : Application
             // Reading mail is a separate switch from connecting the account. An empty list
             // means the mail gate never claims anything, so the question falls through to the
             // general tier exactly as it did before.
-            new CombinedMailbox(() => _settings.ReadMailEnabled
-                ? _calendars.Mailboxes(_settings.ConnectedAccounts)
-                : []),
+            new CombinedMailbox(() => _settings.ReadMailEnabled ? Mailboxes() : []),
 
             _narrator);
 
@@ -456,6 +462,25 @@ public partial class App : Application
     }
 
     /// <summary>Applies and persists a settings change from any window.</summary>
+    /// <summary>Every mailbox that is set up, whichever way it was set up.</summary>
+    /// <remarks>
+    /// The two arrive completely differently — Microsoft through OAuth as a connected account,
+    /// Gmail through IMAP with an app password and no account row at all — and everything above
+    /// this deals in <see cref="IMailbox"/> and never learns the difference.
+    /// </remarks>
+    private IReadOnlyList<IMailbox> Mailboxes()
+    {
+        List<IMailbox> boxes = [.. _calendars!.Mailboxes(_settings.ConnectedAccounts)];
+
+        var gmail = new ImapMailbox(
+            () => _settings.GmailAddress,
+            () => _secrets!.Read(GmailPasswordName));
+
+        if (gmail.IsConnected) boxes.Add(gmail);
+
+        return boxes;
+    }
+
     private void ApplySettings(TeezySettings updated)
     {
         var keyChanged = updated.Hotkey != _settings.Hotkey

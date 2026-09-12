@@ -579,6 +579,8 @@ public partial class SettingsView : UserControl
             : Visibility.Visible;
 
         ReadMailBox.IsChecked = settings.ReadMailEnabled;
+        GmailAddressBox.Text = settings.GmailAddress ?? string.Empty;
+        ShowGmailReady();
 
         // The switch alone cannot grant anything: Microsoft hands over what the sign-in asked
         // for, and an account connected before this was on was never asked about mail. Saying
@@ -589,6 +591,57 @@ public partial class SettingsView : UserControl
               + "already have never mentioned mail. Disconnect and connect again, and the "
               + "sign-in page will ask about your mail as well as your diary."
             : string.Empty;
+    }
+
+    // ---- Gmail over IMAP ----
+
+    private void OnGmailTyped(object sender, RoutedEventArgs e) => ShowGmailReady();
+
+    private void ShowGmailReady()
+    {
+        var address = GmailAddressBox.Text.Trim();
+        var typed = GmailPasswordBox.Password.Trim().Length > 0;
+        var stored = _secrets?.Describe(App.GmailPasswordName);
+
+        SaveGmailButton.IsEnabled = address.Length > 0 && (typed || stored is not null);
+
+        ForgetGmailButton.Visibility = stored is null ? Visibility.Collapsed : Visibility.Visible;
+
+        GmailStatus.Text = (address.Length > 0, stored) switch
+        {
+            (false, _) => "Not set up. Nothing from Gmail is read.",
+
+            // The mistake this catches early: an app password is sixteen letters in four
+            // groups, and an ordinary account password is simply refused by Google.
+            (true, null) => "Paste the app password too — sixteen letters, shown once when you "
+                            + "create it. Your normal Google password will not work.",
+
+            _ => $"App password saved ({stored}). Encrypted for your Windows account.",
+        };
+    }
+
+    private void OnSaveGmail(object sender, RoutedEventArgs e)
+    {
+        var address = GmailAddressBox.Text.Trim();
+        if (address.Length == 0) return;
+
+        if (GmailPasswordBox.Password.Trim() is { Length: > 0 } password)
+        {
+            // Google prints app passwords in four spaced groups, and they are pasted that way
+            // constantly. The spaces are presentation; IMAP wants the sixteen letters.
+            _secrets?.Write(App.GmailPasswordName, password.Replace(" ", ""));
+            GmailPasswordBox.Clear();
+        }
+
+        _write(_read() with { GmailAddress = address });
+        Refresh();
+    }
+
+    private void OnForgetGmail(object sender, RoutedEventArgs e)
+    {
+        _secrets?.Delete(App.GmailPasswordName);
+        _write(_read() with { GmailAddress = null });
+        Refresh();
     }
 
     private void OnReadMailToggled(object sender, RoutedEventArgs e)

@@ -237,9 +237,13 @@ public partial class AssistantWindow : Window
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
         });
 
+        // Read from the theme rather than repeated here: the shared height is the whole reason
+        // the two pills cannot drift apart.
+        var resting = (double)FindResource("PillHeight");
+        var wanted = HeardText.Visibility == Visibility.Visible ? resting + 12 : resting;
+
         Pill.BeginAnimation(HeightProperty,
-            new DoubleAnimation(Pill.ActualHeight > 0 ? Pill.ActualHeight : 50,
-                HeardText.Visibility == Visibility.Visible ? 62 : 50, Ms(260))
+            new DoubleAnimation(Pill.ActualHeight > 0 ? Pill.ActualHeight : resting, wanted, Ms(260))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
             });

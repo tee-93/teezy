@@ -97,9 +97,12 @@ public partial class HudWindow : Window
     {
         if (ActualWidth <= 0 || ActualHeight <= 0) return;
 
+        // The 34 subtracts the bottom margin that gives the shadow room, so the visible pill —
+        // not the window around it — lands 72 px up. AssistantWindow does the same arithmetic,
+        // which is what puts the two in exactly the same place.
         var area = SystemParameters.WorkArea;
         Left = area.Left + (area.Width - ActualWidth) / 2;
-        Top = area.Bottom - ActualHeight - 72;
+        Top = area.Bottom - ActualHeight - (72 - 34);
     }
 
     public void ShowState(DictationState state, string? message = null)

@@ -17,10 +17,10 @@
          exactly where the dictation HUD does. -->
     <Grid Margin="40,28,40,34">
         <Border x:Name="Pill"
-                CornerRadius="24"
-                Height="50"
+                CornerRadius="{StaticResource PillRadius}"
+                Height="{StaticResource PillHeight}"
                 HorizontalAlignment="Center"
-                Background="{StaticResource AssistantGlass}"
+                Background="{StaticResource PillGlass}"
                 RenderTransformOrigin="0.5,0.5">
 
             <Border.RenderTransform>
@@ -35,11 +35,11 @@
             </Border.Effect>
 
             <Grid>
-                <Border CornerRadius="24" BorderThickness="1"
-                        BorderBrush="{StaticResource AssistantEdge}"/>
+                <Border CornerRadius="{StaticResource PillRadius}" BorderThickness="1"
+                        BorderBrush="{StaticResource PillEdge}"/>
 
-                <Border CornerRadius="24" Margin="1"
-                        Background="{StaticResource AssistantSheen}"/>
+                <Border CornerRadius="{StaticResource PillRadius}" Margin="1"
+                        Background="{StaticResource PillSheen}"/>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                             Margin="19,0,21,0">

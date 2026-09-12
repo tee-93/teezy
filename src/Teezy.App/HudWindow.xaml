@@ -12,34 +12,47 @@
         Focusable="False"
         IsHitTestVisible="False">
 
-    <Border x:Name="Pill"
-            CornerRadius="22"
-            Padding="18,11"
-            MinWidth="180"
-            Background="{StaticResource HudPill}"
-            BorderBrush="{StaticResource HudEdge}"
-            BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
-        </Border.Effect>
+    <!-- Margin leaves room for the shadow to fall outside the pill without being clipped by
+         the window edge. PositionAtBottomCenter subtracts it back. -->
+    <Grid Margin="40,28,40,34">
+        <Border x:Name="Pill"
+                CornerRadius="{StaticResource PillRadius}"
+                Height="{StaticResource PillHeight}"
+                MinWidth="180"
+                HorizontalAlignment="Center"
+                Background="{StaticResource PillGlass}">
 
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="34" ShadowDepth="7" Opacity="0.62" Color="#000000"/>
+            </Border.Effect>
 
-            <!-- Red means recording. Nothing else in this app is red. -->
-            <Ellipse x:Name="RecordDot" Width="10" Height="10" Fill="{StaticResource Record}"
-                     VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <Grid>
+                <Border CornerRadius="{StaticResource PillRadius}" BorderThickness="1"
+                        BorderBrush="{StaticResource PillEdge}"/>
 
-            <!-- Level meter. Bars are sized in code-behind from the RMS level. -->
-            <StackPanel x:Name="Meter" Orientation="Horizontal" VerticalAlignment="Center"
-                        Height="26" Margin="0,0,12,0"/>
+                <Border CornerRadius="{StaticResource PillRadius}" Margin="1"
+                        Background="{StaticResource PillSheen}"/>
 
-            <TextBlock x:Name="StatusText"
-                       Text="Listening"
-                       Foreground="{StaticResource HudText}"
-                       FontFamily="Segoe UI Variable Display, Segoe UI"
-                       FontSize="13"
-                       FontWeight="SemiBold"
-                       VerticalAlignment="Center"/>
-        </StackPanel>
-    </Border>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="19,0,21,0">
+
+                    <!-- Red means recording. Nothing else in this app is red. -->
+                    <Ellipse x:Name="RecordDot" Width="10" Height="10" Fill="{StaticResource Record}"
+                             VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                    <!-- Level meter. Bars are sized in code-behind from the RMS level. -->
+                    <StackPanel x:Name="Meter" Orientation="Horizontal" VerticalAlignment="Center"
+                                Height="26" Margin="0,0,12,0"/>
+
+                    <TextBlock x:Name="StatusText"
+                               Text="Listening"
+                               Foreground="{StaticResource HudText}"
+                               FontFamily="Segoe UI Variable Display, Segoe UI"
+                               FontSize="13.5"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

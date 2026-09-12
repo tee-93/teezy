@@ -17,7 +17,7 @@ using Teezy.Core.Hotkeys;
 using Teezy.Core.Speech;
 using Teezy.Core.Voice;
 using Teezy.Speech;
-using Teezy.Calendar;
+using Teezy.Connectors;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -69,7 +69,7 @@ public partial class SettingsView : UserControl
     private readonly Func<IAudioCapture>? _microphone;
     private readonly ISpeaker? _speaker;
     private readonly VoiceUsage? _usage;
-    private readonly CalendarAccounts? _calendars;
+    private readonly ConnectedAccounts? _calendars;
 
     /// <summary>The capture opened by the level test, or null when no test is running.</summary>
     private IAudioCapture? _preview;
@@ -95,7 +95,7 @@ public partial class SettingsView : UserControl
         ISpeaker? speaker = null,
         VoiceUsage? usage = null,
         Func<IAudioCapture>? microphone = null,
-        CalendarAccounts? calendars = null)
+        ConnectedAccounts? calendars = null)
     {
         InitializeComponent();
 
@@ -529,20 +529,20 @@ public partial class SettingsView : UserControl
         // wrong id fails at sign-in, and hiding the only field that can fix it the moment it
         // is first saved would leave editing settings.json as the only way out. Once something
         // has connected the id is proven, and the box goes away.
-        CalendarSetup.Visibility = settings.CalendarAccounts.Count == 0
+        CalendarSetup.Visibility = settings.ConnectedAccounts.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
 
         MicrosoftClientIdBox.Text = settings.MicrosoftClientId ?? string.Empty;
 
-        CalendarAccountList.ItemsSource = settings.CalendarAccounts
+        CalendarAccountList.ItemsSource = settings.ConnectedAccounts
             .Select(a => new CalendarRow(a))
             .ToList();
 
         ConnectMicrosoftButton.IsEnabled =
             _calendars is not null && !string.IsNullOrWhiteSpace(settings.MicrosoftClientId);
 
-        CalendarStatus.Text = (settings.MicrosoftClientId, settings.CalendarAccounts.Count) switch
+        CalendarStatus.Text = (settings.MicrosoftClientId, settings.ConnectedAccounts.Count) switch
         {
             (null or "", _) => "Add an application id above to connect an account.",
             (_, 0) => "No accounts connected. Nothing about your diary leaves this machine "
@@ -552,6 +552,28 @@ public partial class SettingsView : UserControl
             // integrations people are right to be wary of.
             _ => "Read-only. Teezy can see what is in your diary and cannot change any of it.",
         };
+
+        // Offered only once there is an account to read, since the switch would otherwise be a
+        // promise about a mailbox that does not exist yet.
+        MailDetail.Visibility = settings.ConnectedAccounts.Count == 0
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        ReadMailBox.IsChecked = settings.ReadMailEnabled;
+
+        MailHint.Text = settings.ReadMailEnabled
+            ? "If this says it isn’t allowed to read the mailbox, the app registration is "
+              + "missing the Mail.Read permission — add it, then disconnect and reconnect the "
+              + "account, because the token you have was issued without it."
+            : string.Empty;
+    }
+
+    private void OnReadMailToggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        _write(_read() with { ReadMailEnabled = ReadMailBox.IsChecked == true });
+        Refresh();
     }
 
     /// <summary>The user moving an account between work and personal.</summary>
@@ -577,7 +599,7 @@ public partial class SettingsView : UserControl
 
         _write(settings with
         {
-            CalendarAccounts = [.. settings.CalendarAccounts.Select(
+            ConnectedAccounts = [.. settings.ConnectedAccounts.Select(
                 a => a.Id == account.Id ? a with { Profile = profile } : a)],
         });
     }
@@ -612,7 +634,7 @@ public partial class SettingsView : UserControl
             var settings = _read();
             _write(settings with
             {
-                CalendarAccounts = [.. settings.CalendarAccounts, connected],
+                ConnectedAccounts = [.. settings.ConnectedAccounts, connected],
             });
 
             Refresh();
@@ -652,7 +674,7 @@ public partial class SettingsView : UserControl
         var settings = _read();
         _write(settings with
         {
-            CalendarAccounts = [.. settings.CalendarAccounts.Where(a => a.Id != row.Account.Id)],
+            ConnectedAccounts = [.. settings.ConnectedAccounts.Where(a => a.Id != row.Account.Id)],
         });
 
         Refresh();

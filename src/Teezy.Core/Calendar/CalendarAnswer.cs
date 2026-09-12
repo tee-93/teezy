@@ -141,22 +141,7 @@ public static class CalendarAnswer
             ? $"{occurrence.Subject} all day"
             : $"{occurrence.Subject} at {Clock(occurrence.Start)}";
 
-    /// <summary>A time the way it is said rather than the way it is stored.</summary>
-    /// <remarks>
-    /// Invariant culture on purpose. This is spoken English either way, and a machine set to a
-    /// 24-hour locale would otherwise have the pill say "at 14:00", which no one says.
-    /// </remarks>
-    private static string Clock(DateTimeOffset when)
-    {
-        var local = when.ToLocalTime();
-
-        // "%h" rather than "h": a single-character format string is read as a standard
-        // specifier, and there is no standard "h", so the bare form throws at runtime.
-        var face = local.ToString(
-            local.Minute == 0 ? "%h" : "h:mm", CultureInfo.InvariantCulture);
-
-        return face + (local.Hour < 12 ? "am" : "pm");
-    }
+    private static string Clock(DateTimeOffset when) => Spoken.Clock(when);
 
     /// <summary>The end of today, where tomorrow begins.</summary>
     /// <remarks>
@@ -169,21 +154,55 @@ public static class CalendarAnswer
         return new DateTimeOffset(tomorrow, TimeZoneInfo.Local.GetUtcOffset(tomorrow));
     }
 
-    /// <summary>Which day, when it is not this one.</summary>
-    private static string Day(DateTimeOffset when, DateTimeOffset now)
+    private static string Day(DateTimeOffset when, DateTimeOffset now) => Spoken.Day(when, now);
+
+    /// <summary>The diary, written out for a model rather than for speech.</summary>
+    /// <remarks>
+    /// <para>
+    /// Lives here rather than in the narrator so that what gets sent is decided in the tested,
+    /// platform-neutral half — and so the narrator itself has no idea what a calendar is.
+    /// </para>
+    /// <para>
+    /// Times are spelled out rather than left as timestamps. A model asked "am I free before
+    /// lunch" reasons about "9:30am to 10am on Monday" far more reliably than about an ISO
+    /// string, and a window of diary is small enough that the extra characters cost nothing.
+    /// </para>
+    /// </remarks>
+    public static UntrustedMaterial Material(
+        IReadOnlyList<CalendarEvent> events, DateTimeOffset now)
     {
-        var days = (when.ToLocalTime().Date - now.ToLocalTime().Date).Days;
+        var text = new StringBuilder();
 
-        return days switch
+        if (events.Count == 0)
         {
-            <= 0 => "",
-            1 => " tomorrow",
+            text.AppendLine("Their diary has nothing in it over the period in question.");
+            return new UntrustedMaterial(MaterialKind.Calendar, text.ToString());
+        }
 
-            // Inside the week a day name places it instantly; beyond that "on Tuesday" is
-            // ambiguous about which Tuesday.
-            < 7 => $" on {when.ToLocalTime():dddd}",
-            _ => $" on {when.ToLocalTime().ToString("d MMMM", CultureInfo.InvariantCulture)}",
-        };
+        text.AppendLine("Their diary:");
+
+        foreach (var occurrence in events)
+        {
+            text.Append("- ").AppendLine(Entry(occurrence, now));
+        }
+
+        return new UntrustedMaterial(MaterialKind.Calendar, text.ToString());
+    }
+
+    private static string Entry(CalendarEvent occurrence, DateTimeOffset now)
+    {
+        var line = new StringBuilder();
+
+        line.Append(occurrence.IsAllDay
+            ? $"All day {Spoken.LongDate(occurrence.Start, now)}: "
+            : $"{Spoken.LongDate(occurrence.Start, now)} {Clock(occurrence.Start)}"
+              + $" to {Clock(occurrence.End)}: ");
+
+        line.Append(occurrence.Subject);
+
+        if (occurrence.Location is { Length: > 0 } where) line.Append($" ({where})");
+
+        return line.ToString();
     }
 
     private static string Minutes(int minutes) => minutes switch

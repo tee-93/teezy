@@ -115,6 +115,67 @@ public static class MailAnswer
         return line.ToString();
     }
 
+    /// <summary>The messages, written out for a model rather than for speech.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Subjects and previews go in, and they are the hostile part.</b> They have to: "has the
+    /// electricity bill arrived" cannot be answered from sender names alone. This is exactly why
+    /// the request they travel in carries no tools.
+    /// </para>
+    /// <para>
+    /// The sender's address goes in alongside the display name, because the whole question of
+    /// whether a message is really from the electricity company turns on the domain and never
+    /// on the name.
+    /// </para>
+    /// </remarks>
+    public static UntrustedMaterial Material(
+        IReadOnlyList<MailMessage> messages, DateTimeOffset now)
+    {
+        var text = new StringBuilder();
+
+        if (messages.Count == 0)
+        {
+            text.AppendLine("Their inbox has nothing in it over the period in question.");
+            return new UntrustedMaterial(MaterialKind.Mail, text.ToString());
+        }
+
+        text.AppendLine("Their inbox, newest first:");
+
+        foreach (var message in messages)
+        {
+            text.Append("- ")
+                .Append(Spoken.LongDate(message.Received, now))
+                .Append(' ')
+                .Append(Spoken.Clock(message.Received))
+                .Append(message.IsUnread ? " (unread)" : "")
+                .Append(" from ")
+                .Append(message.Who)
+                .Append(" <")
+                .Append(message.FromAddress)
+                .Append(">: ")
+                .AppendLine(message.Subject);
+
+            if (message.Preview is { Length: > 0 } preview)
+            {
+                text.Append("  ").AppendLine(Flatten(preview));
+            }
+        }
+
+        return new UntrustedMaterial(MaterialKind.Mail, text.ToString());
+    }
+
+    /// <summary>One line, trimmed.</summary>
+    /// <remarks>
+    /// Newlines are stripped so a preview cannot pose as new entries in the list above it — the
+    /// cheapest form of the trick, and worth closing even though the request has no tools to
+    /// reach.
+    /// </remarks>
+    private static string Flatten(string preview)
+    {
+        var flat = preview.ReplaceLineEndings(" ").Trim();
+        return flat.Length <= 200 ? flat : flat[..200] + "…";
+    }
+
     private static DateTimeOffset Midnight(DateTimeOffset now)
     {
         var today = now.ToLocalTime().Date;

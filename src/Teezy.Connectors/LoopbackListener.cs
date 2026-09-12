@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace Teezy.Calendar;
+namespace Teezy.Connectors;
 
 /// <summary>What the provider sent back to the redirect.</summary>
 internal sealed record AuthResponse(string? Code, string? State, string? Error);

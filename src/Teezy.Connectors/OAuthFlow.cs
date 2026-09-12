@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Teezy.Calendar;
+namespace Teezy.Connectors;
 
 /// <summary>Where a provider's OAuth endpoints live, and what to ask it for.</summary>
 /// <param name="Authorize">The page the user is sent to.</param>

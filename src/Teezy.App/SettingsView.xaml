@@ -251,6 +251,25 @@
 
                     <TextBlock x:Name="CalendarStatus" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
 
+                    <!-- Its own switch, not a consequence of connecting. Reading someone's mail
+                         is a bigger step than reading their diary. -->
+                    <StackPanel x:Name="MailDetail" Visibility="Collapsed">
+                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                <TextBlock Text="Read my email too" Foreground="{StaticResource Ink}"/>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Lets the assistant answer “any new email” and “what came in today”. Read-only: it cannot send, delete or even mark anything as read. Teezy never opens a link or loads an image from a message, and anything it can’t answer itself goes to Claude with no ability to act — only to reply."/>
+                            </StackPanel>
+                            <CheckBox x:Name="ReadMailBox" Style="{StaticResource Switch}"
+                                      HorizontalAlignment="Right" VerticalAlignment="Center"
+                                      Click="OnReadMailToggled"/>
+                        </Grid>
+
+                        <TextBlock x:Name="MailHint" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                    </StackPanel>
+
                     <Border x:Name="CalendarWarning" Style="{StaticResource CautionPanel}"
                             Visibility="Collapsed" Margin="0,12,0,0">
                         <TextBlock x:Name="CalendarWarningText" TextWrapping="Wrap"

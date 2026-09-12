@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Teezy.Core.Mail;
 
-namespace Teezy.Calendar;
+namespace Teezy.Connectors;
 
 /// <summary>Reads an Outlook or Microsoft 365 inbox through Microsoft Graph.</summary>
 /// <remarks>

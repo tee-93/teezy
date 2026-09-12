@@ -257,13 +257,36 @@ public sealed record TeezySettings
     /// </remarks>
     public string? MicrosoftClientId { get; init; }
 
-    /// <summary>The calendar accounts that have been signed in to.</summary>
+    /// <summary>The accounts that have been signed in to.</summary>
     /// <remarks>
+    /// <para>
     /// Only which accounts exist and what to call them. Every credential lives in the secret
     /// store, filed under each account's id — so this file can be read, copied or pasted into a
-    /// bug report without handing anyone a calendar.
+    /// bug report without handing anyone a calendar or a mailbox.
+    /// </para>
+    /// <para>
+    /// Still written as <c>CalendarAccounts</c> in the file. The name was accurate when only
+    /// the diary used it and is no longer, but renaming the stored key would silently disconnect
+    /// anyone who had already signed in — a worse outcome than an out-of-date word on disk.
+    /// </para>
     /// </remarks>
-    public IReadOnlyList<Calendar.ConnectedAccount> CalendarAccounts { get; init; } = [];
+    [System.Text.Json.Serialization.JsonPropertyName("CalendarAccounts")]
+    public IReadOnlyList<Calendar.ConnectedAccount> ConnectedAccounts { get; init; } = [];
+
+    /// <summary>Whether the assistant may read mail as well as the diary.</summary>
+    /// <remarks>
+    /// <para>
+    /// Off by default, and a separate switch from connecting the account, because reading
+    /// someone's mail is a materially bigger step than reading their diary and should not be a
+    /// side effect of wanting to know what is on this afternoon.
+    /// </para>
+    /// <para>
+    /// This does not replace the permission — Microsoft still has to have granted
+    /// <c>Mail.Read</c>. It is the local half: a switch the user can see and turn off without
+    /// revoking anything.
+    /// </para>
+    /// </remarks>
+    public bool ReadMailEnabled { get; init; }
 
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }

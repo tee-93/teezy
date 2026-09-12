@@ -3,7 +3,7 @@
     <Project Path="src/Teezy.App/Teezy.App.csproj">
       <Platform Project="ARM64" />
     </Project>
-    <Project Path="src/Teezy.Calendar/Teezy.Calendar.csproj">
+    <Project Path="src/Teezy.Connectors/Teezy.Connectors.csproj">
       <Platform Project="ARM64" />
     </Project>
     <Project Path="src/Teezy.Assistant/Teezy.Assistant.csproj">

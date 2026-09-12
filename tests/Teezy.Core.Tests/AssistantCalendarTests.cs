@@ -46,21 +46,21 @@ public class AssistantCalendarTests
         }
     }
 
-    private sealed class FakeNarrator : ICalendarNarrator
+    private sealed class FakeNarrator : IUntrustedNarrator
     {
         public bool IsAvailable { get; set; } = true;
         public string? Reply { get; set; } = "You’re free until two.";
         public string? Asked { get; private set; }
-        public IReadOnlyList<CalendarEvent>? Shown { get; private set; }
+        public UntrustedMaterial? Shown { get; private set; }
 
         public Task<string?> AnswerAsync(
             string spoken,
-            IReadOnlyList<CalendarEvent> events,
+            UntrustedMaterial material,
             DateTimeOffset now,
             CancellationToken ct = default)
         {
             Asked = spoken;
-            Shown = events;
+            Shown = material;
             return Task.FromResult(Reply);
         }
     }
@@ -82,7 +82,7 @@ public class AssistantCalendarTests
     private static async Task<AssistantOutcome> Speak(
         string said,
         ICalendar? calendar = null,
-        ICalendarNarrator? narrator = null,
+        IUntrustedNarrator? narrator = null,
         IAssistantFallback? fallback = null)
     {
         var hotkey = new FakeHotkey();
@@ -177,7 +177,8 @@ public class AssistantCalendarTests
         outcome.Result.ShouldBe(AssistantResult.Answered);
         outcome.Message.ShouldBe("You’re free until two.");
 
-        narrator.Shown!.Select(e => e.Subject).ShouldBe(["Review"]);
+        narrator.Shown!.Kind.ShouldBe(MaterialKind.Calendar);
+        narrator.Shown!.Text.ShouldContain("Review");
 
         // And never to the tier that carries tools, which is the whole reason the narrator is
         // a separate interface.

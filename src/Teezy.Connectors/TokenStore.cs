@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Teezy.Core.Abstractions;
 
-namespace Teezy.Calendar;
+namespace Teezy.Connectors;
 
 /// <summary>Keeps each connected account's tokens where the API key already lives.</summary>
 /// <remarks>

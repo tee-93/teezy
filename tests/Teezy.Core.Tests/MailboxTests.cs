@@ -1,5 +1,5 @@
 using Shouldly;
-using Teezy.Calendar;
+using Teezy.Connectors;
 using Teezy.Core.Mail;
 using Xunit;
 

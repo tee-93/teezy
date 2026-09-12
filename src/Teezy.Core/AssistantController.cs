@@ -1,4 +1,5 @@
 using Teezy.Core.Calendar;
+using Teezy.Core.Mail;
 using Teezy.Core.Commands;
 using Teezy.Core.Hotkeys;
 
@@ -47,7 +48,8 @@ public sealed class AssistantController
     private readonly ICommandRunner? _runner;
     private readonly IAssistantFallback? _fallback;
     private readonly CombinedCalendar? _calendar;
-    private readonly ICalendarNarrator? _narrator;
+    private readonly CombinedMailbox? _mailbox;
+    private readonly IUntrustedNarrator? _narrator;
     private readonly Func<DateTimeOffset> _now;
 
     /// <summary>Raised when a command has been dealt with, however it turned out.</summary>
@@ -70,12 +72,14 @@ public sealed class AssistantController
         ICommandRunner? runner = null,
         IAssistantFallback? fallback = null,
         CombinedCalendar? calendar = null,
-        ICalendarNarrator? narrator = null,
+        CombinedMailbox? mailbox = null,
+        IUntrustedNarrator? narrator = null,
         Func<DateTimeOffset>? now = null)
     {
         _runner = runner;
         _fallback = fallback;
         _calendar = calendar;
+        _mailbox = mailbox;
         _narrator = narrator;
         _now = now ?? (() => DateTimeOffset.Now);
         session.Handle(HotkeyAction.Assistant, OnSpoken);
@@ -99,6 +103,16 @@ public sealed class AssistantController
             && CalendarQuestion.Classify(heard) is var ask and not CalendarAsk.None)
         {
             await AnswerFromDiary(heard, ask).ConfigureAwait(false);
+            return;
+        }
+
+        // The two gates are disjoint in practice — "what's on today" names no mailbox and "any
+        // new email" names no diary — so the order between them settles nothing and is simply
+        // the order they were built in.
+        if (_mailbox is { IsConnected: true }
+            && MailQuestion.Classify(heard) is var post and not MailAsk.None)
+        {
+            await AnswerFromMail(heard, post).ConfigureAwait(false);
             return;
         }
 
@@ -142,7 +156,7 @@ public sealed class AssistantController
     /// <remarks>
     /// <b>No tools are reachable from anywhere in here.</b> The everyday phrasings are composed
     /// by <see cref="CalendarAnswer"/> without asking anyone; the rest go to
-    /// <see cref="ICalendarNarrator"/>, which can return prose and nothing else. That is the
+    /// <see cref="IUntrustedNarrator"/>, which can return prose and nothing else. That is the
     /// structural answer to meeting subjects being written by strangers — see
     /// <see cref="ICalendar"/>.
     /// </remarks>
@@ -187,7 +201,67 @@ public sealed class AssistantController
         string? answer;
         try
         {
-            answer = await _narrator.AnswerAsync(heard, reading.Events, now).ConfigureAwait(false);
+            answer = await _narrator
+                .AnswerAsync(heard, CalendarAnswer.Material(reading.Events, now), now)
+                .ConfigureAwait(false);
+        }
+        catch (AssistantUnavailableException e)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, e.Message, AssistantResult.Failed));
+            return;
+        }
+
+        Finished?.Invoke(string.IsNullOrWhiteSpace(answer)
+            ? new AssistantOutcome(heard, null, "I can’t do that yet", AssistantResult.NotUnderstood)
+            : new AssistantOutcome(heard, null, answer.Trim(), AssistantResult.Answered));
+    }
+
+    /// <summary>Answers a mail question from the mailbox.</summary>
+    /// <remarks>
+    /// The same two tiers and the same rule as the diary, and the rule matters more here — see
+    /// <see cref="IMailbox"/>. The everyday phrasings never leave the machine; the rest go to
+    /// <see cref="IUntrustedNarrator"/>, which carries no tools.
+    /// </remarks>
+    private async Task AnswerFromMail(string heard, MailAsk ask)
+    {
+        var now = _now();
+        var (since, atMost) = MailAnswer.Window(ask, now);
+
+        Thinking?.Invoke();
+
+        MailReading reading;
+        try
+        {
+            reading = await _mailbox!.RecentAsync(since, atMost).ConfigureAwait(false);
+        }
+        catch (MailUnavailableException e)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, e.Message, AssistantResult.Failed));
+            return;
+        }
+
+        if (MailAnswer.For(ask, reading, now) is { } composed)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, composed, AssistantResult.Answered));
+            return;
+        }
+
+        if (_narrator is not { IsAvailable: true })
+        {
+            Finished?.Invoke(new AssistantOutcome(
+                heard,
+                null,
+                "I can tell you what’s unread, or what came in today.",
+                AssistantResult.NotUnderstood));
+            return;
+        }
+
+        string? answer;
+        try
+        {
+            answer = await _narrator
+                .AnswerAsync(heard, MailAnswer.Material(reading.Messages, now), now)
+                .ConfigureAwait(false);
         }
         catch (AssistantUnavailableException e)
         {

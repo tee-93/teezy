@@ -10,7 +10,7 @@ using Teezy.Core;
 using Teezy.Core.Dictionary;
 using Teezy.Core.History;
 using Teezy.Core.Voice;
-using Teezy.Calendar;
+using Teezy.Connectors;
 using Teezy.Speech;
 
 namespace Teezy.App;
@@ -36,7 +36,7 @@ public partial class MainWindow : Window
     private readonly Func<IAudioCapture>? _microphone;
     private readonly ISpeaker? _speaker;
     private readonly VoiceUsage? _usage;
-    private readonly CalendarAccounts? _calendars;
+    private readonly ConnectedAccounts? _calendars;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -56,7 +56,7 @@ public partial class MainWindow : Window
         Func<IAudioCapture>? microphone = null,
         ISpeaker? speaker = null,
         VoiceUsage? usage = null,
-        CalendarAccounts? calendars = null)
+        ConnectedAccounts? calendars = null)
     {
         InitializeComponent();
         _history = history;

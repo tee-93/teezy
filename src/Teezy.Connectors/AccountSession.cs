@@ -1,6 +1,6 @@
 using Teezy.Core.Calendar;
 
-namespace Teezy.Calendar;
+namespace Teezy.Connectors;
 
 /// <summary>Holds one connected account's tokens, and renews them when they lapse.</summary>
 /// <remarks>

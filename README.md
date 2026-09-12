@@ -2,9 +2,10 @@
 
 Push-to-talk for Windows. Hold a key, talk, release — cleaned-up text is typed into whatever
 had focus. Hold a *different* key and it does what you said instead: opens an app, changes the
-volume, skips a track, locks the PC. **Local by default** — after the one-time model download,
-dictation, commands and your dictionary all run on-device and stay there. Two optional Claude
-tiers are the exception, both off until you switch them on and both on your own API key.
+volume, skips a track, locks the PC, and can answer you out loud. **Local by default** — after
+the one-time model download, dictation, commands, your dictionary and the built-in voice all run
+on-device and stay there. Three optional cloud tiers are the exception — two Claude, one
+ElevenLabs — every one of them off until you switch it on, and every one on your own API key.
 
 Everything dictated is kept, searchable, in an app window with usage stats — because the
 text goes into *someone else's* app, and when that app eats it, mangles it, or you simply
@@ -210,6 +211,32 @@ property to defend as this grows rather than a happy accident of it being small.
 
 Answers appear in a taller pill, sized from the wrapped text and left up longer the more there
 is to read — it cannot be summoned back, so a missed answer is a lost one.
+
+### Reading answers out loud
+
+Optional, off by default, and **answers only** — never the confirmations. "Volume set to forty
+percent" takes two seconds to say for something the pill shows instantly, and you would hear it
+twenty times a day. It stops the moment you press the key again, because anyone starting a new
+utterance has stopped listening to the last answer.
+
+**Windows' own voices are the default tier: free, offline, instant.** Teezy picks the best one
+installed rather than the system default, which is usually the *worst* — measured here, the
+default was "Microsoft Hazel Desktop" while four newer voices sat unused beside it. The ones
+Windows marks "Desktop" are the old SAPI5 set and are labelled as older in the picker. Accent is
+matched to your own where a voice exists for it.
+
+**ElevenLabs is the paid tier**, and it costs three things: a subscription, a third API key, and
+a round trip before the first word — which lands *on top of* the wait for Claude that has already
+happened. Worth knowing before paying, because it is not obvious from the demos.
+
+It is sold as a monthly allowance of characters rather than per use, so Settings counts what you
+actually speak, by calendar month, and leads with last month's figure — this month is always
+partial. Answers are capped at two short sentences, so one is roughly 100–150 characters;
+whether that lands in a free tier or a paid one depends entirely on how often you ask questions
+rather than give commands, which is exactly what the counter is there to tell you. Failed
+requests are not counted, since they are not billed.
+
+An ElevenLabs key needs only **Text to Speech** and **Voices: read**. Nothing else is touched.
 
 **Pick a combination that does not contain your dictation one.** Holding Ctrl+Alt+Win satisfies
 Alt+Win on the way, so dictation briefly starts first — you will hear its tone. Settings warns
@@ -661,17 +688,15 @@ synthesised key events).
 
 ## Not built yet
 
-1. **Spoken replies.** Answers are read, not heard. Windows' own voice would be free, offline
-   and instant; a better one costs money and a third API key.
-2. **Translation.** Dictate in English, type in another language. Cheap now the Claude tier
+1. **Translation.** Dictate in English, type in another language. Cheap now the Claude tier
    exists — it is one more transform on the text — but it still needs a translation engine, so
    an *offline* version remains a real project.
-3. **Command mode over selected text.** Select text, hold a key, "make this more formal."
-4. **Code signing.** `install.ps1` needs no elevation and clears the mark-of-the-web, but the
+2. **Command mode over selected text.** Select text, hold a key, "make this more formal."
+3. **Code signing.** `install.ps1` needs no elevation and clears the mark-of-the-web, but the
    executable itself is unsigned — so SmartScreen warns on first launch, Smart App Control can
    refuse it outright on a freshly installed Windows 11, and a machine running WDAC or a
    publisher-allowlist policy can block it with nothing we can do locally.
-5. **Elevated-window injection.** A non-elevated process cannot type into an elevated
+4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.
 
 ---

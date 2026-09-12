@@ -7,7 +7,7 @@
 
             <TextBlock Text="Settings" Style="{StaticResource H1}"/>
             <TextBlock Style="{StaticResource Lede}" Margin="0,6,0,0"
-                       Text="Local by default. Dictation, commands and your dictionary never leave this machine — only the two Claude tiers below do, and only once you switch them on."/>
+                       Text="Local by default. Dictation, commands, the dictionary and the Windows voice never leave this machine — only the three optional tiers below do, and only once you switch them on."/>
 
             <!-- Hero: the hotkey, because it is the only setting most people ever change. -->
             <Border Style="{StaticResource CardPanel}" Margin="0,24,0,0" Padding="26">

@@ -32,6 +32,14 @@ public partial class App : Application
     /// <summary>Name the ElevenLabs key is filed under. Separate account, separate secret.</summary>
     internal const string ElevenLabsKeyName = "elevenlabs-api-key";
 
+    /// <summary>Name the Google OAuth client secret is filed under.</summary>
+    /// <remarks>
+    /// Google issues one even for desktop clients, where it cannot actually be kept secret —
+    /// the binary is on the user's machine. Encrypted anyway, because "not confidential" is
+    /// not the same as "belongs in a plain-text settings file".
+    /// </remarks>
+    internal const string GoogleSecretName = "google-client-secret";
+
     private VoiceSession? _session;
     private DictationController? _controller;
     private AssistantController? _assistant;
@@ -156,7 +164,9 @@ public partial class App : Application
         _calendars = new ConnectedAccounts(
             new TokenStore(_secrets),
             () => _settings.MicrosoftClientId,
-            () => _settings.ReadMailEnabled);
+            () => _settings.ReadMailEnabled,
+            () => _settings.GoogleClientId,
+            () => _secrets.Read(GoogleSecretName));
 
         // Deliberately a second Claude client rather than a flag on the first. This one is
         // given no tools because it is handed meeting subjects and message previews other

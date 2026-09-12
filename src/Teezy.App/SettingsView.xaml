@@ -245,9 +245,49 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button x:Name="ConnectMicrosoftButton" Content="Connect a Microsoft account"
-                            Style="{StaticResource Secondary}" HorizontalAlignment="Left"
-                            Height="38" Margin="0,6,0,0" Click="OnConnectMicrosoft"/>
+                    <StackPanel x:Name="GoogleSetup" Visibility="Collapsed">
+                        <TextBlock Text="GOOGLE CLIENT ID AND SECRET" Style="{StaticResource SectionLabel}"
+                                   Margin="0,16,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
+                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
+                                <TextBox x:Name="GoogleClientIdBox" BorderThickness="0"
+                                         Background="Transparent" VerticalContentAlignment="Center"
+                                         Margin="12,0" FontSize="13"
+                                         TextChanged="OnGoogleClientTyped"/>
+                            </Border>
+                            <Button x:Name="SaveGoogleClientButton" Grid.Column="1" Content="Save"
+                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
+                                    IsEnabled="False" Click="OnSaveGoogleClient"/>
+                        </Grid>
+
+                        <Border Background="{StaticResource Sunken}" CornerRadius="9" Margin="0,8,0,0"
+                                BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
+                            <PasswordBox x:Name="GoogleSecretBox" BorderThickness="0" Background="Transparent"
+                                         VerticalContentAlignment="Center" Margin="12,0"
+                                         PasswordChar="•" FontSize="13"
+                                         PasswordChanged="OnGoogleClientTyped"/>
+                        </Border>
+
+                        <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
+                                       FontSize="12"
+                                       Text="In the Google Cloud console: create a project, enable the Google Calendar API, then create an OAuth client of type Desktop app. Paste the client ID above and its secret below. Then publish the consent screen — an app left in Testing gets sign-ins that expire after seven days, and you would be reconnecting every week."/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button x:Name="ConnectMicrosoftButton" Content="Connect a Microsoft account"
+                                Style="{StaticResource Secondary}" Height="38"
+                                Click="OnConnectMicrosoft"/>
+                        <Button x:Name="ConnectGoogleButton" Content="Connect a Google account"
+                                Style="{StaticResource Secondary}" Height="38" Margin="10,0,0,0"
+                                Click="OnConnectGoogle"/>
+                    </StackPanel>
 
                     <TextBlock x:Name="CalendarStatus" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
 

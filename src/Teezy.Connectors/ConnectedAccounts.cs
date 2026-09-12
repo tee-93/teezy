@@ -24,7 +24,11 @@ namespace Teezy.Connectors;
 /// token issued without the mail scope cannot later acquire it.
 /// </param>
 public sealed class ConnectedAccounts(
-    TokenStore tokens, Func<string?> microsoftClientId, Func<bool>? readMail = null)
+    TokenStore tokens,
+    Func<string?> microsoftClientId,
+    Func<bool>? readMail = null,
+    Func<string?>? googleClientId = null,
+    Func<string?>? googleClientSecret = null)
 {
     private readonly ConcurrentDictionary<string, AccountSession> _sessions = new();
     private readonly ConcurrentDictionary<string, ICalendar> _calendars = new();
@@ -41,7 +45,7 @@ public sealed class ConnectedAccounts(
     public IReadOnlyList<ICalendar> Calendars(IReadOnlyList<ConnectedAccount> accounts)
     {
         Forget(accounts);
-        return [.. accounts.Select(a => Session(a)).OfType<AccountSession>().Select(Calendar)];
+        return [.. accounts.Select(Calendar).OfType<ICalendar>()];
     }
 
     /// <summary>Live mailboxes for the accounts given, in that order.</summary>
@@ -52,7 +56,7 @@ public sealed class ConnectedAccounts(
     public IReadOnlyList<IMailbox> Mailboxes(IReadOnlyList<ConnectedAccount> accounts)
     {
         Forget(accounts);
-        return [.. accounts.Select(a => Session(a)).OfType<AccountSession>().Select(Mailbox)];
+        return [.. accounts.Select(Mailbox).OfType<IMailbox>()];
     }
 
     /// <summary>Drops anything no longer in settings.</summary>
@@ -80,22 +84,49 @@ public sealed class ConnectedAccounts(
     /// </remarks>
     private AccountSession? Session(ConnectedAccount account)
     {
-        if (account.Source is not CalendarSource.Microsoft) return null;
+        // Returning null rather than throwing means a settings file naming a provider this
+        // build cannot serve — hand-edited, or written by a later version — still starts.
+        if (ProviderFor(account.Source) is not { } provider) return null;
 
-        // Google is not built yet. Returning null rather than throwing means a settings file
-        // that mentions one — hand-edited, or written by a later version — still starts.
-        if (microsoftClientId() is not { Length: > 0 } clientId) return null;
-
-        return _sessions.GetOrAdd(
-            account.Id,
-            id => new AccountSession(GraphCalendar.Provider(clientId), id, tokens));
+        return _sessions.GetOrAdd(account.Id, id => new AccountSession(provider, id, tokens));
     }
 
-    private ICalendar Calendar(AccountSession session) =>
-        _calendars.GetOrAdd(session.AccountId, _ => new GraphCalendar(session));
+    private OAuthProvider? ProviderFor(CalendarSource source) => source switch
+    {
+        CalendarSource.Microsoft when microsoftClientId() is { Length: > 0 } id =>
+            GraphCalendar.Provider(id, readMail?.Invoke() == true),
 
-    private IMailbox Mailbox(AccountSession session) =>
-        _mailboxes.GetOrAdd(session.AccountId, _ => new GraphMailbox(session));
+        CalendarSource.Google when googleClientId?.Invoke() is { Length: > 0 } id =>
+            GoogleCalendar.Provider(id, googleClientSecret?.Invoke()),
+
+        _ => null,
+    };
+
+    private ICalendar? Calendar(ConnectedAccount account)
+    {
+        if (Session(account) is not { } session) return null;
+
+        return _calendars.GetOrAdd(account.Id, _ => account.Source switch
+        {
+            CalendarSource.Google => new GoogleCalendar(session),
+            _ => new GraphCalendar(session),
+        });
+    }
+
+    /// <summary>A mailbox, for the providers that have one here.</summary>
+    /// <remarks>
+    /// Microsoft only. Gmail's read scope is <i>restricted</i> rather than merely sensitive:
+    /// using it beyond a seven-day test token means going through Google's verification
+    /// process. Gmail will therefore arrive over IMAP with an app password rather than through
+    /// this flow, which is why a Google account here yields a calendar and no inbox.
+    /// </remarks>
+    private IMailbox? Mailbox(ConnectedAccount account)
+    {
+        if (account.Source is CalendarSource.Google) return null;
+        if (Session(account) is not { } session) return null;
+
+        return _mailboxes.GetOrAdd(account.Id, _ => new GraphMailbox(session));
+    }
 
     /// <summary>Signs in to a Microsoft account and returns what to save.</summary>
     /// <exception cref="OAuthException">Declined, timed out, or the registration is wrong.</exception>
@@ -110,6 +141,20 @@ public sealed class ConnectedAccounts(
 
         return GraphCalendar.ConnectAsync(
             clientId, profile, tokens, includeMail: readMail?.Invoke() == true, ct: ct);
+    }
+
+    /// <summary>Signs in to a Google account and returns what to save.</summary>
+    /// <exception cref="OAuthException">Declined, timed out, or the client is wrong.</exception>
+    public Task<ConnectedAccount> ConnectGoogleAsync(
+        CalendarProfile profile, CancellationToken ct = default)
+    {
+        if (googleClientId?.Invoke() is not { Length: > 0 } clientId)
+        {
+            throw new OAuthException("Teezy needs a Google client ID before it can sign in.");
+        }
+
+        return GoogleCalendar.ConnectAsync(
+            clientId, googleClientSecret?.Invoke(), profile, tokens, ct: ct);
     }
 
     /// <summary>Forgets an account's credentials. The caller drops it from settings.</summary>

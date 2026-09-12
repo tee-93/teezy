@@ -535,6 +535,17 @@ public partial class SettingsView : UserControl
 
         MicrosoftClientIdBox.Text = settings.MicrosoftClientId ?? string.Empty;
 
+        // Same rule as the Microsoft box: visible until an account has actually connected, so a
+        // wrong id can still be corrected after it fails at sign-in.
+        GoogleSetup.Visibility = settings.ConnectedAccounts.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        GoogleClientIdBox.Text = settings.GoogleClientId ?? string.Empty;
+
+        ConnectGoogleButton.IsEnabled =
+            _calendars is not null && !string.IsNullOrWhiteSpace(settings.GoogleClientId);
+
         CalendarAccountList.ItemsSource = settings.ConnectedAccounts
             .Select(a => new CalendarRow(a))
             .ToList();
@@ -620,11 +631,49 @@ public partial class SettingsView : UserControl
         Refresh();
     }
 
-    private async void OnConnectMicrosoft(object sender, RoutedEventArgs e)
+    private void OnGoogleClientTyped(object sender, RoutedEventArgs e) =>
+        SaveGoogleClientButton.IsEnabled = GoogleClientIdBox.Text.Trim().Length > 0;
+
+    private void OnSaveGoogleClient(object sender, RoutedEventArgs e)
+    {
+        var id = GoogleClientIdBox.Text.Trim();
+        if (id.Length == 0) return;
+
+        // The secret is optional here only because the box may be left alone on a second save;
+        // Google's desktop flow does want one.
+        if (GoogleSecretBox.Password.Trim() is { Length: > 0 } secret)
+        {
+            _secrets?.Write(App.GoogleSecretName, secret);
+            GoogleSecretBox.Clear();
+        }
+
+        _write(_read() with { GoogleClientId = id });
+        Refresh();
+    }
+
+    // async void because a WPF Click handler cannot be anything else. Both delegate straight
+    // to a method that handles its own failures, so nothing escapes into the dispatcher.
+    private async void OnConnectMicrosoft(object sender, RoutedEventArgs e) =>
+        await ConnectAsync(ConnectMicrosoftButton, "Microsoft", () =>
+            _calendars!.ConnectMicrosoftAsync(CalendarProfile.Personal));
+
+    private async void OnConnectGoogle(object sender, RoutedEventArgs e) =>
+        await ConnectAsync(ConnectGoogleButton, "Google", () =>
+            _calendars!.ConnectGoogleAsync(CalendarProfile.Personal));
+
+    /// <summary>Runs one sign-in, whoever it is with.</summary>
+    /// <remarks>
+    /// Shared because the interesting parts — the five-minute wait, the failure wording, the
+    /// button that must come back enabled — are identical, and two copies would drift. Returns
+    /// a Task rather than being async void so that nothing can escape into the dispatcher and
+    /// take the process with it.
+    /// </remarks>
+    private async Task ConnectAsync(
+        Button button, string provider, Func<Task<ConnectedAccount>> connect)
     {
         if (_calendars is null) return;
 
-        ConnectMicrosoftButton.IsEnabled = false;
+        button.IsEnabled = false;
         CalendarWarning.Visibility = Visibility.Collapsed;
         CalendarStatus.Text = "Waiting for you to sign in, in your browser…";
 
@@ -633,7 +682,7 @@ public partial class SettingsView : UserControl
             // Personal to begin with. Which side of life an account belongs to is a judgement
             // only the user can make, and the picker on the row is where they make it —
             // guessing from the address would be wrong often enough to be annoying.
-            var connected = await _calendars.ConnectMicrosoftAsync(CalendarProfile.Personal);
+            var connected = await connect();
 
             var settings = _read();
             _write(settings with
@@ -650,13 +699,13 @@ public partial class SettingsView : UserControl
         catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException)
         {
             // OperationCanceledException rather than TaskCanceledException: the latter is the
-            // subclass, and a plain cancellation would have sailed past it. This is an async
-            // void handler, so anything that escapes here ends the process.
-            Warn("Couldn’t reach Microsoft to finish signing in.");
+            // subclass, so a plain cancellation — which is how running out of patience arrives
+            // — would sail past a catch naming only the subclass.
+            Warn($"Couldn’t reach {provider} to finish signing in.");
         }
         finally
         {
-            ConnectMicrosoftButton.IsEnabled = true;
+            button.IsEnabled = true;
         }
 
         void Warn(string why)

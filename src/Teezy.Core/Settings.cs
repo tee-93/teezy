@@ -257,6 +257,15 @@ public sealed record TeezySettings
     /// </remarks>
     public string? MicrosoftClientId { get; init; }
 
+    /// <summary>The Google Cloud OAuth client Teezy signs in to Google with.</summary>
+    /// <remarks>
+    /// A Desktop client. Not a secret, for the same reason as the Microsoft one — it identifies
+    /// the application and authorises nothing. Its companion secret is not kept here: Google
+    /// issues one even for desktop clients, where it cannot actually be kept secret, but it
+    /// still does not belong in a plain-text file, so it lives in the encrypted store.
+    /// </remarks>
+    public string? GoogleClientId { get; init; }
+
     /// <summary>The accounts that have been signed in to.</summary>
     /// <remarks>
     /// <para>

@@ -100,6 +100,17 @@
                             <ComboBox x:Name="AssistantModelPicker" Width="180" HorizontalAlignment="Right"
                                       VerticalAlignment="Center" SelectionChanged="OnAssistantModelChanged"/>
                         </Grid>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                <TextBlock Text="Read answers out loud" Foreground="{StaticResource Ink}"/>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Answers only — never the confirmations, which you can read faster than they can be said. Uses the voice already on this machine, so it is free and works offline. It is not a lovely voice."/>
+                            </StackPanel>
+                            <CheckBox x:Name="SpeakBox" Style="{StaticResource Switch}"
+                                      HorizontalAlignment="Right" VerticalAlignment="Center"
+                                      Click="OnSpeakToggled"/>
+                        </Grid>
                     </StackPanel>
                 </StackPanel>
             </Border>

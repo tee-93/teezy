@@ -11,5 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NAudio" />
+    <PackageReference Include="System.Speech" />
   </ItemGroup>
 </Project>

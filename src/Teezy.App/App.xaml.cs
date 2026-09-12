@@ -30,6 +30,7 @@ public partial class App : Application
     private AssistantController? _assistant;
     private AssistantWindow? _assistantHud;
     private ClaudeAssistant? _claudeAssistant;
+    private WindowsSpeaker? _speaker;
     private ParakeetTranscriber? _transcriber;
     private WindowsAutostart? _autostart;
     private WindowsHotkeySource? _hotkeySource;
@@ -144,6 +145,8 @@ public partial class App : Application
 
         _assistant = new AssistantController(
             _session, new WindowsCommandRunner(), _claudeAssistant);
+
+        _speaker = new WindowsSpeaker();
 
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.
@@ -293,6 +296,7 @@ public partial class App : Application
 
             case AssistantResult.Answered:
                 _assistantHud!.ShowAnswer(outcome.Message);
+                if (_settings.SpeakAnswers) _ = _speaker?.SpeakAsync(outcome.Message);
                 break;
 
             case AssistantResult.Failed:
@@ -434,6 +438,7 @@ public partial class App : Application
         _dictWatcher?.Dispose();
         _instance?.Dispose();
         _session?.Dispose();
+        _speaker?.Dispose();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
         TrayIcons.Dispose();
         base.OnExit(e);

@@ -13,6 +13,10 @@
     <!-- Audio. PINNED TO 2.3.0: NAudio 3.x will not restore here. -->
     <PackageVersion Include="NAudio" Version="2.3.0" />
 
+    <!-- Text to speech for assistant answers. SAPI: free, offline, installed everywhere,
+         and it sounds like it. The better voice is what a paid tier would be for. -->
+    <PackageVersion Include="System.Speech" Version="10.0.12" />
+
     <!-- Optional LLM cleanup tier. The app runs fully without it. -->
     <PackageVersion Include="Anthropic" Version="12.42.0" />
 

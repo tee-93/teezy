@@ -272,6 +272,7 @@ public partial class SettingsView : UserControl
         }
 
         AssistantLlmBox.IsChecked = settings.AssistantLlmEnabled;
+        SpeakBox.IsChecked = settings.SpeakAnswers;
         AssistantLlmDetail.Visibility = settings.AssistantLlmEnabled ? Visibility.Visible : Visibility.Collapsed;
 
         var index = Array.FindIndex(AssistantModels, m => m.Id == settings.AssistantModel);
@@ -285,6 +286,13 @@ public partial class SettingsView : UserControl
 
         _write(_read() with { AssistantLlmEnabled = AssistantLlmBox.IsChecked == true });
         Refresh();
+    }
+
+    private void OnSpeakToggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        _write(_read() with { SpeakAnswers = SpeakBox.IsChecked == true });
     }
 
     private void OnAssistantModelChanged(object sender, RoutedEventArgs e)

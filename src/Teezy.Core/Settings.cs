@@ -196,6 +196,21 @@ public sealed record TeezySettings
     /// </remarks>
     public int AssistantTimeoutSeconds { get; init; } = 8;
 
+    /// <summary>
+    /// Read answers out loud as well as showing them.
+    /// </summary>
+    /// <remarks>
+    /// Answers only, never confirmations. "Volume set to forty percent" takes two seconds to
+    /// say for something the pill shows instantly and silently, and you would hear it twenty
+    /// times a day; an answer to a question is genuinely better heard than read.
+    /// <para>
+    /// Off by default, because a computer that starts talking without being asked is a
+    /// surprise, and because speech is the kind of thing that is delightful once and
+    /// intolerable in an open-plan office.
+    /// </para>
+    /// </remarks>
+    public bool SpeakAnswers { get; init; }
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

@@ -19,6 +19,10 @@ public partial class App
         else if (_settings.ShowHud) _hud!.ShowState(state);
         else _hud!.Hide();
 
+        // Anyone who has pressed the key again has stopped listening to the last answer, and
+        // talking over them is the rudest thing this could do.
+        if (state is DictationState.Starting) _speaker?.Stop();
+
         if (state == DictationState.Listening) WarnIfMicrophoneMissing();
 
         if (!_settings.SoundEnabled) return;

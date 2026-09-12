@@ -260,7 +260,7 @@
                             <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
                                 <TextBlock Text="Read my email too" Foreground="{StaticResource Ink}"/>
                                 <TextBlock Style="{StaticResource Hint}"
-                                           Text="Lets the assistant answer “any new email” and “what came in today”. Read-only: it cannot send, delete or even mark anything as read. Teezy never opens a link or loads an image from a message, and anything it can’t answer itself goes to Claude with no ability to act — only to reply."/>
+                                           Text="Lets the assistant answer “any new email” and “what came in today”. Read-only: it cannot send, delete or even mark anything as read. Teezy never opens a link or loads an image from a message, and anything it can’t answer itself goes to Claude with no ability to act — only to reply. Asked for at sign-in, so it is never granted quietly."/>
                             </StackPanel>
                             <CheckBox x:Name="ReadMailBox" Style="{StaticResource Switch}"
                                       HorizontalAlignment="Right" VerticalAlignment="Center"

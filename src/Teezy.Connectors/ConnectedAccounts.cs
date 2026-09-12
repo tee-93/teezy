@@ -18,7 +18,13 @@ namespace Teezy.Connectors;
 /// pattern that disconnects an account.
 /// </para>
 /// </remarks>
-public sealed class ConnectedAccounts(TokenStore tokens, Func<string?> microsoftClientId)
+/// <param name="readMail">
+/// Whether the user has switched mail reading on. Consulted at sign-in, because that is the
+/// only moment the scope can be asked for — Microsoft grants what the request asked for, and a
+/// token issued without the mail scope cannot later acquire it.
+/// </param>
+public sealed class ConnectedAccounts(
+    TokenStore tokens, Func<string?> microsoftClientId, Func<bool>? readMail = null)
 {
     private readonly ConcurrentDictionary<string, AccountSession> _sessions = new();
     private readonly ConcurrentDictionary<string, ICalendar> _calendars = new();
@@ -102,7 +108,8 @@ public sealed class ConnectedAccounts(TokenStore tokens, Func<string?> microsoft
                 "Teezy needs a Microsoft application id before it can sign in.");
         }
 
-        return GraphCalendar.ConnectAsync(clientId, profile, tokens, ct: ct);
+        return GraphCalendar.ConnectAsync(
+            clientId, profile, tokens, includeMail: readMail?.Invoke() == true, ct: ct);
     }
 
     /// <summary>Forgets an account's credentials. The caller drops it from settings.</summary>

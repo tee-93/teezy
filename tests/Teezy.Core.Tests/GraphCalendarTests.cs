@@ -147,4 +147,27 @@ public class GraphCalendarTests
         // Microsoft ignores the port only for a registered http://localhost.
         provider.RedirectHost.ShouldBe("localhost");
     }
+
+    [Fact]
+    public void MailIsNotAskedForUnlessItWasSwitchedOn()
+    {
+        // Someone who wants a diary should not have to approve access to their mail to get
+        // one, so the scope is absent by default.
+        GraphCalendar.Provider("client-id").Scopes.ShouldNotContain("Mail.Read");
+    }
+
+    [Fact]
+    public void MailIsAskedForWhenItWasSwitchedOn()
+    {
+        var provider = GraphCalendar.Provider("client-id", includeMail: true);
+
+        // This list, not the portal's, is what actually gets granted: on the v2 endpoint a
+        // delegated scope is consented to at sign-in whether or not it appears under Configured
+        // permissions — and, the part that caught me out, adding one in the portal grants
+        // nothing if the sign-in never asks for it.
+        provider.Scopes.ShouldContain("Mail.Read");
+
+        provider.Scopes.ShouldNotContain(s => s.Contains("ReadWrite", StringComparison.Ordinal));
+        provider.Scopes.ShouldNotContain("Mail.Send");
+    }
 }

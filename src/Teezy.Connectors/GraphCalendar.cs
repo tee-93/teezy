@@ -41,11 +41,30 @@ public sealed class GraphCalendar(AccountSession session, HttpClient? http = nul
     private static readonly HttpClient Shared = new() { Timeout = TimeSpan.FromSeconds(20) };
 
     /// <summary>Where to send the user, and what to ask for.</summary>
+    /// <param name="clientId">The registered application.</param>
+    /// <param name="includeMail">
+    /// Whether to ask for the mailbox as well as the diary.
+    /// </param>
     /// <remarks>
+    /// <para>
     /// A public client, so no secret: a desktop binary cannot keep one, and Microsoft correctly
     /// declines to issue one. PKCE is what proves the exchange is ours instead.
+    /// </para>
+    /// <para>
+    /// <b>This list is what is actually granted, not the portal's.</b> On the v2 endpoint a
+    /// delegated scope asked for here is consented to at sign-in whether or not it appears
+    /// under Configured permissions — which is why a registration listing only
+    /// <c>User.Read</c> can still read a calendar. The corollary caught me out: adding a
+    /// permission in the portal grants nothing if the sign-in never asks for it.
+    /// </para>
+    /// <para>
+    /// <b>Mail is asked for only when the user has switched it on</b>, so someone who wants a
+    /// diary is not made to approve access to their mail to get one. Turning it on later means
+    /// signing in again — Microsoft grants what was asked for at the time, and a token issued
+    /// before cannot grow.
+    /// </para>
     /// </remarks>
-    public static OAuthProvider Provider(string clientId) => new(
+    public static OAuthProvider Provider(string clientId, bool includeMail = false) => new(
         $"{Authority}/authorize",
         $"{Authority}/token",
         clientId,
@@ -54,7 +73,9 @@ public sealed class GraphCalendar(AccountSession session, HttpClient? http = nul
         // Calendars.Read is the whole point; offline_access is what makes the connection last
         // beyond an hour; User.Read is only so Settings can show which account this is, and is
         // the permission every new registration already has.
-        Scopes: ["offline_access", "Calendars.Read", "User.Read"],
+        Scopes: includeMail
+            ? ["offline_access", "Calendars.Read", "User.Read", "Mail.Read"]
+            : ["offline_access", "Calendars.Read", "User.Read"],
 
         // Microsoft matches a registered http://localhost while ignoring the port, which is the
         // only arrangement an OS-assigned port can satisfy.
@@ -121,11 +142,12 @@ public sealed class GraphCalendar(AccountSession session, HttpClient? http = nul
         string clientId,
         CalendarProfile profile,
         TokenStore tokens,
+        bool includeMail = false,
         Func<string, Task>? openBrowser = null,
         CancellationToken ct = default)
     {
         var granted = await OAuthFlow
-            .ConnectAsync(Provider(clientId), openBrowser, ct)
+            .ConnectAsync(Provider(clientId, includeMail), openBrowser, ct)
             .ConfigureAwait(false);
 
         // Without this the connection works for an hour and then fails at some unrelated

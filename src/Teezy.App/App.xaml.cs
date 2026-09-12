@@ -154,7 +154,9 @@ public partial class App : Application
             TimeSpan.FromSeconds(Math.Clamp(_settings.AssistantTimeoutSeconds, 2, 30)));
 
         _calendars = new ConnectedAccounts(
-            new TokenStore(_secrets), () => _settings.MicrosoftClientId);
+            new TokenStore(_secrets),
+            () => _settings.MicrosoftClientId,
+            () => _settings.ReadMailEnabled);
 
         // Deliberately a second Claude client rather than a flag on the first. This one is
         // given no tools because it is handed meeting subjects and message previews other

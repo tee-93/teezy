@@ -561,10 +561,14 @@ public partial class SettingsView : UserControl
 
         ReadMailBox.IsChecked = settings.ReadMailEnabled;
 
+        // The switch alone cannot grant anything: Microsoft hands over what the sign-in asked
+        // for, and an account connected before this was on was never asked about mail. Saying
+        // so here is the difference between a working feature and a puzzling 403.
         MailHint.Text = settings.ReadMailEnabled
-            ? "If this says it isn’t allowed to read the mailbox, the app registration is "
-              + "missing the Mail.Read permission — add it, then disconnect and reconnect the "
-              + "account, because the token you have was issued without it."
+            ? "Accounts connected before you switched this on will need reconnecting — "
+              + "Microsoft only grants what it was asked for at sign-in, and the token you "
+              + "already have never mentioned mail. Disconnect and connect again, and the "
+              + "sign-in page will ask about your mail as well as your diary."
             : string.Empty;
     }
 

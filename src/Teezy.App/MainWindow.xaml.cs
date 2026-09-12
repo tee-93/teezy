@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private readonly ISecretStore? _secrets;
     private readonly ClaudeFormatter? _claude;
     private readonly Func<IAudioCapture>? _microphone;
+    private readonly ISpeaker? _speaker;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -48,7 +49,8 @@ public partial class MainWindow : Window
         IHotkeyCapture? capture = null,
         ISecretStore? secrets = null,
         ClaudeFormatter? claude = null,
-        Func<IAudioCapture>? microphone = null)
+        Func<IAudioCapture>? microphone = null,
+        ISpeaker? speaker = null)
     {
         InitializeComponent();
         _history = history;
@@ -61,6 +63,7 @@ public partial class MainWindow : Window
         _secrets = secrets;
         _claude = claude;
         _microphone = microphone;
+        _speaker = speaker;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -153,7 +156,8 @@ public partial class MainWindow : Window
             knownApps: () => [.. UsageStats
                 .From(_history.Load(), DateOnly.FromDateTime(DateTime.Today))
                 .Apps.Select(a => a.App)],
-            microphone: _microphone);
+            microphone: _microphone,
+            speaker: _speaker);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

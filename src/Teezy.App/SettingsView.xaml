@@ -111,6 +111,22 @@
                                       HorizontalAlignment="Right" VerticalAlignment="Center"
                                       Click="OnSpeakToggled"/>
                         </Grid>
+
+                        <StackPanel x:Name="VoiceDetail" Visibility="Collapsed">
+                            <Grid Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="VoicePicker" Grid.Column="0"
+                                          SelectionChanged="OnVoiceChanged"/>
+                                <Button x:Name="VoiceTestButton" Grid.Column="1" Content="Hear it"
+                                        Style="{StaticResource Secondary}" Margin="10,0,0,0"
+                                        Height="38" Click="OnHearVoice"/>
+                            </Grid>
+
+                            <TextBlock x:Name="VoiceHint" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </Border>

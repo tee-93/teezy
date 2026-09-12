@@ -211,6 +211,14 @@ public sealed record TeezySettings
     /// </remarks>
     public bool SpeakAnswers { get; init; }
 
+    /// <summary>Which installed voice reads them. Null picks the best available.</summary>
+    /// <remarks>
+    /// Automatic is the default because the <i>system</i> default is usually the oldest voice
+    /// on the machine — choosing beats inheriting that. This is for when you disagree, which is
+    /// a matter of taste and not something to argue with.
+    /// </remarks>
+    public string? SpeechVoice { get; init; }
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

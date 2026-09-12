@@ -384,7 +384,8 @@ public partial class App : Application
             // the microphone to show a level meter, and borrowing the instance dictation
             // depends on would let a forgotten test leave it in a state a hotkey press then
             // inherits.
-            microphone: () => new WindowsAudioCapture());
+            microphone: () => new WindowsAudioCapture(),
+            speaker: _speaker);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -406,6 +407,10 @@ public partial class App : Application
         // A newly chosen microphone deserves to be reported on its own merits, even if the
         // previous one had already been warned about.
         if (micChanged) _warnedAboutMicrophone = false;
+
+        // The picker sets this directly for an immediate preview; this is for the other ways
+        // settings can change, and for a voice restored at startup.
+        if (_speaker is not null) _speaker.PreferredVoice = _settings.SpeechVoice;
 
         SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
     }

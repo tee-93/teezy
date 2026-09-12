@@ -62,6 +62,7 @@ public partial class SettingsView : UserControl
     private readonly ClaudeFormatter? _claude;
     private readonly Func<IReadOnlyList<string>>? _knownApps;
     private readonly Func<IAudioCapture>? _microphone;
+    private readonly ISpeaker? _speaker;
 
     /// <summary>The capture opened by the level test, or null when no test is running.</summary>
     private IAudioCapture? _preview;
@@ -84,6 +85,7 @@ public partial class SettingsView : UserControl
         ISecretStore? secrets = null,
         ClaudeFormatter? claude = null,
         Func<IReadOnlyList<string>>? knownApps = null,
+        ISpeaker? speaker = null,
         Func<IAudioCapture>? microphone = null)
     {
         InitializeComponent();
@@ -97,6 +99,7 @@ public partial class SettingsView : UserControl
         _claude = claude;
         _knownApps = knownApps;
         _microphone = microphone;
+        _speaker = speaker;
 
         RecordButton.IsEnabled = _capture is not null;
         MicTestButton.IsEnabled = _microphone is not null;
@@ -293,7 +296,74 @@ public partial class SettingsView : UserControl
         if (_loading) return;
 
         _write(_read() with { SpeakAnswers = SpeakBox.IsChecked == true });
+        Refresh();
     }
+
+    /// <summary>One row of the voice picker. Null name means "pick the best available".</summary>
+    private sealed record VoiceChoice(string? Name, string Label);
+
+    private void PopulateVoices(TeezySettings settings)
+    {
+        VoiceDetail.Visibility = settings.SpeakAnswers ? Visibility.Visible : Visibility.Collapsed;
+        if (!settings.SpeakAnswers || _speaker is null) return;
+
+        var voices = _speaker.Voices();
+
+        // Newer voices first, then by language, because the older SAPI5 set is worse in a way
+        // nobody has ever wanted and it should not be what the eye lands on.
+        var rows = new List<VoiceChoice>
+        {
+            new(null, _speaker.VoiceName is { } current ? $"Automatic — {current}" : "Automatic"),
+        };
+
+        rows.AddRange(voices
+            .OrderByDescending(v => v.IsModern)
+            .ThenBy(v => v.Culture, StringComparer.CurrentCulture)
+            .ThenBy(v => v.Name, StringComparer.CurrentCulture)
+            .Select(v => new VoiceChoice(
+                v.Name,
+                v.IsModern
+                    ? $"{Shorten(v.Name)} — {v.Culture}"
+                    : $"{Shorten(v.Name)} — {v.Culture} (older)")));
+
+        VoicePicker.Items.Clear();
+        foreach (var row in rows) VoicePicker.Items.Add(row.Label);
+        VoicePicker.Tag = rows;
+
+        var index = rows.FindIndex(r => r.Name == settings.SpeechVoice);
+        VoicePicker.SelectedIndex = index >= 0 ? index : 0;
+
+        VoicePicker.IsEnabled = voices.Count > 0;
+        VoiceTestButton.IsEnabled = voices.Count > 0;
+
+        VoiceHint.Text = voices.Count == 0
+            ? "No voices are installed on this machine."
+            : "These are the voices Windows ships. None will be mistaken for a person — "
+              + "the ones marked older are the 2009 set, and worth avoiding.";
+    }
+
+    /// <summary>"Microsoft Catherine" reads better in a list as "Catherine".</summary>
+    private static string Shorten(string voice) =>
+        voice.StartsWith("Microsoft ", StringComparison.OrdinalIgnoreCase) ? voice[10..] : voice;
+
+    private void OnVoiceChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading || _speaker is null || VoicePicker.Tag is not List<VoiceChoice> rows) return;
+        if (VoicePicker.SelectedIndex < 0 || VoicePicker.SelectedIndex >= rows.Count) return;
+
+        var chosen = rows[VoicePicker.SelectedIndex];
+        _write(_read() with { SpeechVoice = chosen.Name });
+
+        // Applied and demonstrated at once. Choosing a voice from a list of names without
+        // hearing it is guessing, and the whole point of the row is what it sounds like.
+        _speaker.PreferredVoice = chosen.Name;
+        Speak();
+    }
+
+    private void OnHearVoice(object sender, RoutedEventArgs e) => Speak();
+
+    private void Speak() =>
+        _speaker?.SpeakAsync("Teezy will read your answers in this voice.");
 
     private void OnAssistantModelChanged(object sender, RoutedEventArgs e)
     {
@@ -307,6 +377,7 @@ public partial class SettingsView : UserControl
     private void ShowAssistantState(TeezySettings settings)
     {
         ShowAssistantLlm(settings);
+        PopulateVoices(settings);
 
         var assistant = settings.AssistantHotkey;
 

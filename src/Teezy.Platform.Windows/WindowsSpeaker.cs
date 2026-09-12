@@ -24,9 +24,13 @@ namespace Teezy.Platform.Windows;
 /// </remarks>
 public sealed class WindowsSpeaker : ISpeaker
 {
-    private readonly Lazy<SpeechSynthesizer?> _synth = new(Create);
+    private readonly Lazy<SpeechSynthesizer?> _synth;
 
-    private static SpeechSynthesizer? Create()
+    private string? _preferred;
+
+    public WindowsSpeaker() => _synth = new Lazy<SpeechSynthesizer?>(Create);
+
+    private SpeechSynthesizer? Create()
     {
         try
         {
@@ -37,8 +41,7 @@ public sealed class WindowsSpeaker : ISpeaker
             // next to a pill that appeared instantly.
             synth.Rate = 1;
 
-            if (BestVoice(synth) is { } voice) synth.SelectVoice(voice);
-
+            Choose(synth);
             return synth;
         }
         catch (Exception e) when (e is PlatformNotSupportedException or InvalidOperationException)
@@ -46,6 +49,78 @@ public sealed class WindowsSpeaker : ISpeaker
             // A machine with no voices installed is rare but real, and it must not take the
             // assistant down with it — the answer is still on screen.
             return null;
+        }
+    }
+
+    public IReadOnlyList<SpeechVoice> Voices()
+    {
+        if (_synth.Value is not { } synth) return [];
+
+        try
+        {
+            return
+            [
+                .. synth.GetInstalledVoices()
+                    .Where(v => v.Enabled)
+                    .Select(v => v.VoiceInfo)
+                    .Select(v => new SpeechVoice(
+                        v.Name,
+                        v.Culture.DisplayName,
+                        v.Gender.ToString(),
+                        !v.Name.EndsWith(" Desktop", StringComparison.OrdinalIgnoreCase))),
+            ];
+        }
+        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException)
+        {
+            return [];
+        }
+    }
+
+    public string? PreferredVoice
+    {
+        get => _preferred;
+        set
+        {
+            _preferred = value;
+
+            // Applied at once rather than at the next answer: this is set from a settings page
+            // whose whole purpose is letting someone hear the difference immediately.
+            if (_synth.IsValueCreated && _synth.Value is { } synth) Choose(synth);
+        }
+    }
+
+    public string? VoiceName => _synth.Value?.Voice?.Name;
+
+    /// <summary>Selects the wanted voice, or the best one if that is unavailable.</summary>
+    /// <remarks>
+    /// A voice named in settings can disappear — uninstalled, or the settings file carried to
+    /// another machine. Falling back to the best available beats falling silent, and the
+    /// picker shows what is actually in use rather than what was asked for.
+    /// </remarks>
+    private void Choose(SpeechSynthesizer synth)
+    {
+        var wanted = _preferred;
+
+        try
+        {
+            if (wanted is { Length: > 0 })
+            {
+                synth.SelectVoice(wanted);
+                return;
+            }
+        }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+        {
+            // Named a voice this machine does not have.
+        }
+
+        try
+        {
+            if (BestVoice(synth) is { } best) synth.SelectVoice(best);
+        }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+        {
+            // Leave whatever the default was; it is better than nothing.
         }
     }
 

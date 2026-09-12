@@ -114,56 +114,52 @@
                     <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="11.5"
                                Foreground="{StaticResource Faint}"/>
                 </Grid>
-                <ItemsControl x:Name="InboxList" PreviewMouseLeftButtonDown="OnMessageOpened">
-                    <ItemsControl.ItemTemplate>
+                <!--
+                  A ListBox rather than an ItemsControl with a click handler on the rows. The
+                  rows are a list of things you pick one of, which is what a ListBox is for,
+                  and using it brings keyboard focus and arrow-key movement along with the
+                  mouse — the hand-rolled version was mouse-only.
+                -->
+                <ListBox x:Name="InboxList" Style="{StaticResource PlainList}"
+                         ItemContainerStyle="{StaticResource InboxRowItem}"
+                         SelectionChanged="OnMessageOpened">
+                    <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <!-- The whole row opens the message, so the hit target is the row
-                                 rather than a link somewhere inside it. -->
-                            <Border x:Name="Row" Background="Transparent" Cursor="Hand" CornerRadius="9"
-                                    Padding="6,7" Margin="-6,0,-6,4"
-
-                                    >
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Border Width="28" Height="28" CornerRadius="9"
-                                            Background="{StaticResource Hover}" VerticalAlignment="Top">
-                                        <TextBlock Text="{Binding Initials}" FontSize="11"
-                                                   FontWeight="SemiBold" Foreground="{StaticResource Body}"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Margin="11,0,0,0">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Who}" FontSize="13"
-                                                       Foreground="{StaticResource Ink}"
-                                                       TextTrimming="CharacterEllipsis"/>
-
-                                            <!-- Which mailbox it landed in. Two accounts merge
-                                                 into one list, and "who is this from" is a
-                                                 different question from "where do I reply". -->
-                                            <Border Background="{StaticResource Hover}" CornerRadius="5"
-                                                    Padding="5,1" Margin="7,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Mailbox}" FontSize="9.5"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{StaticResource Faint}"/>
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
-                                                   Foreground="{StaticResource Muted}"
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="9"
+                                        Background="{StaticResource Hover}" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding Initials}" FontSize="11"
+                                               FontWeight="SemiBold" Foreground="{StaticResource Body}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="11,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Who}" FontSize="13"
+                                                   Foreground="{StaticResource Ink}"
                                                    TextTrimming="CharacterEllipsis"/>
+
+                                        <!-- Which mailbox it landed in. Two accounts merge
+                                             into one list, and "who is this from" is a
+                                             different question from "where do I reply". -->
+                                        <Border Background="{StaticResource Hover}" CornerRadius="5"
+                                                Padding="5,1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Mailbox}" FontSize="9.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource Faint}"/>
+                                        </Border>
                                     </StackPanel>
-                                </Grid>
-                            </Border>
-                            <DataTemplate.Triggers>
-                                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
-                                </Trigger>
-                            </DataTemplate.Triggers>
+                                    <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
+                                               Foreground="{StaticResource Muted}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ListBox.ItemTemplate>
+                </ListBox>
                 <TextBlock x:Name="InboxEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
                            Visibility="Collapsed" Text="Nothing unread."/>
             </StackPanel>

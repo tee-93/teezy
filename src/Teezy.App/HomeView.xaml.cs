@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
 using System.Threading.Tasks;
 using Teezy.Core;
@@ -186,26 +185,26 @@ public partial class HomeView : UserControl
 
     // ---- one message, read in place ----
 
-    /// <summary>Opens one message in its own dialog.</summary>
+    /// <summary>Opens the picked message in its own window.</summary>
     /// <remarks>
-    /// A real window, not a panel laid over the page. The in-page version rendered, laid out
-    /// and hovered correctly, and simply never appeared when clicked — and a modal that cannot
-    /// be found in the visual tree is not worth debugging when a dialog cannot be lost.
+    /// <para>
+    /// A real window rather than a panel laid over the page. A message is a thing you read and
+    /// then dismiss, not a mode the dashboard enters, and a dialog gets the Escape key, the
+    /// title bar and the focus trap for nothing.
+    /// </para>
+    /// <para>
+    /// Selection, not a click, because the list is a <see cref="ListBox"/> — see the comment on
+    /// it for why. The selection is cleared straight afterwards: it exists only to carry which
+    /// row was picked, and a row still highlighted when the reader closes would be describing a
+    /// state the page is no longer in. Clearing re-enters this handler with nothing selected,
+    /// which the first line returns on.
+    /// </para>
     /// </remarks>
-    /// <summary>
-    /// One handler on the list, resolving which row was hit from the element under the mouse.
-    /// </summary>
-    /// <remarks>
-    /// Per-item wiring was tried twice and failed both times, silently: a Border with
-    /// MouseLeftButtonUp never raised, and a templated Button would not even take a hover.
-    /// Rather than keep guessing at why a generated item container behaves that way, the
-    /// handler moved to the one named element that certainly exists — the ItemsControl —
-    /// and PreviewMouseLeftButtonDown tunnels from the root, so nothing downstream can eat it.
-    /// The deepest element hit carries the row as its DataContext.
-    /// </remarks>
-    private void OnMessageOpened(object sender, MouseButtonEventArgs e)
+    private void OnMessageOpened(object sender, SelectionChangedEventArgs e)
     {
-        if ((e.OriginalSource as FrameworkElement)?.DataContext is not InboxRow row) return;
+        if (InboxList.SelectedItem is not InboxRow row) return;
+
+        InboxList.SelectedItem = null;
 
         new MessageWindow(row.Message, row.Mailbox)
         {

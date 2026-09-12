@@ -10,8 +10,8 @@
       no reply, no forward and no mark-as-read, because the permissions to do any of those were
       never asked for.
 
-      A real window rather than a panel over the page. The in-page version rendered and hovered
-      correctly and simply never appeared on click; a dialog cannot be lost behind anything.
+      A real window rather than a panel over the page: a message is something you read and then
+      dismiss, not a mode the dashboard enters.
     -->
     <Border Padding="26">
         <StackPanel>
@@ -43,8 +43,8 @@
                 <TextBlock Style="{StaticResource Hint}" Margin="0" MaxWidth="340"
                            HorizontalAlignment="Left"
                            Text="A preview only, and read-only — Teezy cannot reply, delete, or mark this as read."/>
-                <Button Content="Close" Style="{StaticResource Secondary}"
-                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnClose"/>
+                <Button Content="Close" Style="{StaticResource Secondary}" Click="OnClose"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
             </Grid>
         </StackPanel>
     </Border>

@@ -3,77 +3,135 @@ using Teezy.Core.Hotkeys;
 
 namespace Teezy.Core;
 
+/// <summary>How an utterance was dealt with, and therefore how to show it.</summary>
+public enum AssistantResult
+{
+    /// <summary>A command ran. <see cref="AssistantOutcome.Message"/> says what it did.</summary>
+    Did,
+
+    /// <summary>A question was answered. The message is prose to read.</summary>
+    Answered,
+
+    /// <summary>Nothing matched. The transcript is the useful part.</summary>
+    NotUnderstood,
+
+    /// <summary>Understood, but it could not be carried out.</summary>
+    Failed,
+}
+
 /// <summary>What happened to one spoken command.</summary>
 public sealed record AssistantOutcome(
-    /// <summary>What was heard, verbatim. Shown when the news is bad.</summary>
     string Heard,
-    /// <summary>The command, or null when nothing matched.</summary>
     VoiceCommand? Command,
-    /// <summary>What to tell the user.</summary>
     string Message,
-    /// <summary>False when nothing matched, or the command could not be carried out.</summary>
-    bool Succeeded);
+    AssistantResult Result);
 
 /// <summary>
-/// Turns a spoken utterance into an action on this machine.
+/// Turns a spoken utterance into an action on this machine, or an answer.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The assistant half of <see cref="VoiceSession"/>, sitting exactly where
-/// <see cref="DictationController"/> sits for dictation: the words arrive, and what happens to
-/// them is this class's business.
+/// The assistant half of <see cref="VoiceSession"/>, sitting where
+/// <see cref="DictationController"/> sits for dictation.
 /// </para>
 /// <para>
-/// <b>Nothing here interprets freely.</b> <see cref="CommandMatcher"/> either returns one of a
-/// closed set of typed commands or returns nothing, and nothing is a perfectly good answer —
-/// reported back with the transcript, so the user can tell "you misheard me" from "you can't do
-/// that", which need completely different responses from them.
+/// <b>Local patterns first, always.</b> <see cref="CommandMatcher"/> handles the everyday
+/// vocabulary instantly, offline and free; only what it declines costs a network round trip,
+/// and only when the user has switched that on. Someone with the smarter tier off gets exactly
+/// the behaviour they had before, including the honest "I can't do that yet".
 /// </para>
 /// </remarks>
 public sealed class AssistantController
 {
     private readonly ICommandRunner? _runner;
+    private readonly IAssistantFallback? _fallback;
 
-    /// <summary>Raised when a command has been dealt with, successfully or not.</summary>
+    /// <summary>Raised when a command has been dealt with, however it turned out.</summary>
     public event Action<AssistantOutcome>? Finished;
 
-    /// <param name="runner">
-    /// Null means understand but do nothing — useful while the wiring is being built, and the
-    /// safest possible default for a feature that presses keys on someone's machine.
-    /// </param>
-    public AssistantController(VoiceSession session, ICommandRunner? runner = null)
+    /// <summary>Raised when the local patterns declined and the smarter tier is being asked.</summary>
+    /// <remarks>
+    /// Exists so the pill can say "Thinking" for the second or so that costs. Local matching is
+    /// instant and needs no such warning, which is why this is not simply part of Finished.
+    /// </remarks>
+    public event Action? Thinking;
+
+    /// <param name="runner">Null means understand but do nothing.</param>
+    /// <param name="fallback">Null, or switched off, means the local vocabulary is all there is.</param>
+    public AssistantController(
+        VoiceSession session,
+        ICommandRunner? runner = null,
+        IAssistantFallback? fallback = null)
     {
         _runner = runner;
+        _fallback = fallback;
         session.Handle(HotkeyAction.Assistant, OnSpoken);
     }
 
     private async Task OnSpoken(VoiceResult result)
     {
         var heard = result.Text.Trim();
-        var command = CommandMatcher.Match(heard);
 
-        if (command is null)
+        if (CommandMatcher.Match(heard) is { } local)
         {
-            Finished?.Invoke(new AssistantOutcome(heard, null, "I can’t do that yet", false));
+            await Perform(heard, local).ConfigureAwait(false);
             return;
         }
 
+        if (_fallback is not { IsAvailable: true })
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, "I can’t do that yet", AssistantResult.NotUnderstood));
+            return;
+        }
+
+        Thinking?.Invoke();
+
+        AssistantReply reply;
+        try
+        {
+            reply = await _fallback.AskAsync(heard).ConfigureAwait(false);
+        }
+        catch (AssistantUnavailableException e)
+        {
+            // Not the same as "I don't know", and said differently: someone whose wifi is down
+            // should not go away rephrasing themselves.
+            Finished?.Invoke(new AssistantOutcome(heard, null, e.Message, AssistantResult.Failed));
+            return;
+        }
+
+        if (reply.Command is { } chosen)
+        {
+            await Perform(heard, chosen).ConfigureAwait(false);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(reply.Answer))
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, reply.Answer.Trim(), AssistantResult.Answered));
+            return;
+        }
+
+        Finished?.Invoke(new AssistantOutcome(heard, null, "I can’t do that yet", AssistantResult.NotUnderstood));
+    }
+
+    private async Task Perform(string heard, VoiceCommand command)
+    {
         if (_runner is null)
         {
-            Finished?.Invoke(new AssistantOutcome(heard, command, Describe(command), true));
+            Finished?.Invoke(new AssistantOutcome(heard, command, Describe(command), AssistantResult.Did));
             return;
         }
 
         try
         {
             var message = await _runner.RunAsync(command).ConfigureAwait(false);
-            Finished?.Invoke(new AssistantOutcome(heard, command, message, true));
+            Finished?.Invoke(new AssistantOutcome(heard, command, message, AssistantResult.Did));
         }
         catch (CommandFailedException e)
         {
             // Understood, but could not be done. A different thing to say than "I can't do
             // that", and the transcript goes along too so the user can see it was heard right.
-            Finished?.Invoke(new AssistantOutcome(heard, command, e.Message, false));
+            Finished?.Invoke(new AssistantOutcome(heard, command, e.Message, AssistantResult.Failed));
         }
     }
 

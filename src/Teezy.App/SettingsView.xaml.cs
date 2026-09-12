@@ -249,8 +249,57 @@ public partial class SettingsView : UserControl
         ShowAssistantState(settings);
     }
 
+    /// <summary>
+    /// What the assistant tier costs, said in the terms someone decides with.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately per-command rather than per-month, unlike the cleanup tier's. Cleanup runs
+    /// on every utterance, so a monthly figure is meaningful; this runs only when the local
+    /// patterns miss, and nobody can predict how often that will be for them.
+    /// </remarks>
+    private static readonly (string Id, string Label, string Cost)[] AssistantModels =
+    [
+        ("claude-haiku-4-5", "Haiku 4.5 — fastest", "A fraction of a cent per question, and the least waiting."),
+        ("claude-sonnet-5", "Sonnet 5 — balanced", "Roughly three times Haiku, and better at odd phrasing."),
+        ("claude-opus-5", "Opus 5 — best quality", "The dearest and the slowest. Rarely worth it for one-line commands."),
+    ];
+
+    private void ShowAssistantLlm(TeezySettings settings)
+    {
+        if (AssistantModelPicker.Items.Count == 0)
+        {
+            foreach (var (_, label, _) in AssistantModels) AssistantModelPicker.Items.Add(label);
+        }
+
+        AssistantLlmBox.IsChecked = settings.AssistantLlmEnabled;
+        AssistantLlmDetail.Visibility = settings.AssistantLlmEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+        var index = Array.FindIndex(AssistantModels, m => m.Id == settings.AssistantModel);
+        AssistantModelPicker.SelectedIndex = index >= 0 ? index : 0;
+        AssistantModelCost.Text = AssistantModels[AssistantModelPicker.SelectedIndex].Cost;
+    }
+
+    private void OnAssistantLlmToggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        _write(_read() with { AssistantLlmEnabled = AssistantLlmBox.IsChecked == true });
+        Refresh();
+    }
+
+    private void OnAssistantModelChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading || AssistantModelPicker.SelectedIndex < 0) return;
+
+        var chosen = AssistantModels[AssistantModelPicker.SelectedIndex];
+        _write(_read() with { AssistantModel = chosen.Id });
+        AssistantModelCost.Text = chosen.Cost;
+    }
+
     private void ShowAssistantState(TeezySettings settings)
     {
+        ShowAssistantLlm(settings);
+
         var assistant = settings.AssistantHotkey;
 
         AssistantHint.Text = assistant.IsEmpty

@@ -126,6 +126,28 @@ public partial class AssistantWindow : Window
         DismissIn(3200);
     }
 
+    /// <summary>
+    /// It answered a question. Prose, so the pill grows to hold it.
+    /// </summary>
+    /// <remarks>
+    /// Given longer to be read than an action confirmation, and scaled to the length: "Volume
+    /// 40%" is taken in at a glance, two sentences are not. The floor is generous because the
+    /// pill cannot be summoned back — once it has gone, the answer is gone with it.
+    /// </remarks>
+    public void ShowAnswer(string answer)
+    {
+        if (_phase == Phase.Hidden) Appear();
+        _phase = Phase.Settled;
+
+        Glow.BeginAnimation(OpacityProperty, new DoubleAnimation(0, Ms(200)));
+        RestoreBars();
+        Say("Teezy", answer: answer);
+
+        // Roughly a comfortable reading pace, floored and capped.
+        var words = answer.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        DismissIn(Math.Clamp(2200 + words * 320, 3500, 14000));
+    }
+
     public void ShowError(string message)
     {
         if (_phase == Phase.Hidden) Appear();
@@ -215,21 +237,24 @@ public partial class AssistantWindow : Window
     /// the single thing that most makes a floating panel feel like a dialog box: the content
     /// changed, so the box jumped.
     /// </remarks>
-    private void Say(string status, string? heard = null)
+    private void Say(string status, string? heard = null, string? answer = null)
     {
         StatusText.Text = status;
 
-        if (heard is { Length: > 0 })
-        {
-            HeardText.Text = $"“{heard}”";
-            HeardText.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            HeardText.Visibility = Visibility.Collapsed;
-        }
+        HeardText.Text = heard is { Length: > 0 } ? $"“{heard}”" : string.Empty;
+        HeardText.Visibility = heard is { Length: > 0 } ? Visibility.Visible : Visibility.Collapsed;
 
-        var target = 30 + 13 + Math.Max(Measure(StatusText), MeasureHeard()) + 19 + 21;
+        AnswerText.Text = answer ?? string.Empty;
+        AnswerText.Visibility = answer is { Length: > 0 } ? Visibility.Visible : Visibility.Collapsed;
+
+        // An answer fixes the width — it wraps to a set measure rather than stretching the pill
+        // across the screen — so only the other two states are measured.
+        var answerWidth = (double)FindResource("AnswerWidth");
+        var content = AnswerText.Visibility == Visibility.Visible
+            ? answerWidth
+            : Math.Max(Measure(StatusText), MeasureHeard());
+
+        var target = 30 + 13 + content + 19 + 21;
         var from = Pill.ActualWidth > 0 ? Pill.ActualWidth : target;
 
         Pill.BeginAnimation(WidthProperty, new DoubleAnimation(from, target, Ms(260))
@@ -240,7 +265,19 @@ public partial class AssistantWindow : Window
         // Read from the theme rather than repeated here: the shared height is the whole reason
         // the two pills cannot drift apart.
         var resting = (double)FindResource("PillHeight");
-        var wanted = HeardText.Visibility == Visibility.Visible ? resting + 12 : resting;
+        var wanted = resting;
+
+        if (AnswerText.Visibility == Visibility.Visible)
+        {
+            // Measure the wrapped text rather than guessing a line count, so a three-line
+            // answer is not clipped and a one-line answer is not padded out.
+            AnswerText.Measure(new Size(answerWidth, double.PositiveInfinity));
+            wanted = Math.Max(resting, 34 + AnswerText.DesiredSize.Height);
+        }
+        else if (HeardText.Visibility == Visibility.Visible)
+        {
+            wanted = resting + 12;
+        }
 
         Pill.BeginAnimation(HeightProperty,
             new DoubleAnimation(Pill.ActualHeight > 0 ? Pill.ActualHeight : resting, wanted, Ms(260))

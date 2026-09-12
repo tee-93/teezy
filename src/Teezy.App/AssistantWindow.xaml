@@ -110,6 +110,18 @@
                                    Margin="0,1,0,0"
                                    MaxWidth="420"
                                    TextTrimming="CharacterEllipsis"/>
+
+                        <!-- An answer, which is prose rather than a status line: it wraps, and
+                             the pill grows to hold it. StatusText carries the heading above. -->
+                        <TextBlock x:Name="AnswerText"
+                                   Visibility="Collapsed"
+                                   Foreground="{StaticResource HudText}"
+                                   FontFamily="Segoe UI Variable Text, Segoe UI"
+                                   FontSize="13"
+                                   LineHeight="19"
+                                   Margin="0,3,0,0"
+                                   Width="{StaticResource AnswerWidth}"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>

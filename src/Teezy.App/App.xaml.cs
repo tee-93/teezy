@@ -1,3 +1,4 @@
+using Teezy.Assistant;
 using Teezy.Cleanup;
 using Teezy.Core.Formatting;
 using Teezy.Core.History;
@@ -28,6 +29,7 @@ public partial class App : Application
     private DictationController? _controller;
     private AssistantController? _assistant;
     private AssistantWindow? _assistantHud;
+    private ClaudeAssistant? _claudeAssistant;
     private ParakeetTranscriber? _transcriber;
     private WindowsAutostart? _autostart;
     private WindowsHotkeySource? _hotkeySource;
@@ -133,7 +135,15 @@ public partial class App : Application
             new WindowsForegroundApp(),
             () => _settings.LlmCleanupEnabled ? _claude! : new RuleBasedFormatter());
 
-        _assistant = new AssistantController(_session, new WindowsCommandRunner());
+        // Reuses the cleanup tier's key: it is the same Anthropic account, and asking someone
+        // to paste the same key twice would be a small insult.
+        _claudeAssistant = new ClaudeAssistant(
+            () => _settings.AssistantLlmEnabled ? _secrets.Read(ApiKeyName) : null,
+            () => _settings.AssistantModel,
+            TimeSpan.FromSeconds(Math.Clamp(_settings.AssistantTimeoutSeconds, 2, 30)));
+
+        _assistant = new AssistantController(
+            _session, new WindowsCommandRunner(), _claudeAssistant);
 
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.
@@ -142,6 +152,7 @@ public partial class App : Application
         _session.Failed += (action, m) => Dispatch(() => OnFailed(action, m));
         _controller.Completed += OnCompleted;
         _assistant.Finished += o => Dispatch(() => OnAssistantFinished(o));
+        _assistant.Thinking += () => Dispatch(() => _assistantHud!.ShowWorking());
 
         // The hook must be installed from a thread with a message pump; OnStartup is on the
         // UI thread, which has one. From a pool thread the callback silently never fires.
@@ -274,8 +285,40 @@ public partial class App : Application
 
     private void OnAssistantFinished(AssistantOutcome outcome)
     {
-        if (outcome.Succeeded) _assistantHud!.ShowDone(outcome.Message);
-        else _assistantHud!.ShowUnknown(outcome.Heard);
+        switch (outcome.Result)
+        {
+            case AssistantResult.Did:
+                _assistantHud!.ShowDone(outcome.Message);
+                break;
+
+            case AssistantResult.Answered:
+                _assistantHud!.ShowAnswer(outcome.Message);
+                break;
+
+            case AssistantResult.Failed:
+                // Understood but not done, so the message is the useful part rather than the
+                // transcript — it already knows it heard correctly.
+                _assistantHud!.ShowError(outcome.Message);
+                break;
+
+            default:
+                _assistantHud!.ShowUnknown(outcome.Heard);
+                break;
+        }
+
+        // Answering costs money. Recorded the same way cleanup is, so Insights can show what
+        // the assistant tier actually spends rather than leaving it to be discovered on a bill.
+        if (outcome.Result == AssistantResult.Answered && _claudeAssistant?.LastTokens is { } tokens)
+        {
+            _history?.Add(new HistoryEntry
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                At = DateTimeOffset.Now,
+                Text = outcome.Message,
+                Tokens = tokens,
+                Model = _claudeAssistant.LastModel,
+            });
+        }
     }
 
     private void Dispatch(Action action) => Dispatcher.BeginInvoke(action, DispatcherPriority.Normal);

@@ -169,6 +169,33 @@ public sealed record TeezySettings
     /// </remarks>
     public Hotkeys.Hotkey AssistantHotkey { get; init; } = new();
 
+    /// <summary>
+    /// Let Claude interpret commands the local patterns did not recognise.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, and off is the honest default for the same reasons as the cleanup tier:
+    /// switching it on ends the guarantee that nothing leaves the machine, needs a paid API
+    /// account, and adds a network round trip. The everyday vocabulary stays local either way —
+    /// only what the patterns decline is ever sent.
+    /// </remarks>
+    public bool AssistantLlmEnabled { get; init; }
+
+    /// <summary>Which Claude model interprets what the patterns could not place.</summary>
+    /// <remarks>
+    /// Haiku by default, unlike the cleanup tier's Sonnet. The job is picking one item off a
+    /// list of six or answering in a sentence, which the cheapest model does well — and this
+    /// one runs on a key press rather than on every utterance, so latency shows.
+    /// </remarks>
+    public string AssistantModel { get; init; } = "claude-haiku-4-5";
+
+    /// <summary>How long to wait before giving up and saying so.</summary>
+    /// <remarks>
+    /// Shorter than the cleanup tier's. Cleanup has offline text to fall back on, so waiting
+    /// costs only time; here there is nothing behind it, and someone standing in front of a
+    /// pill that says "Thinking" runs out of patience a good deal sooner.
+    /// </remarks>
+    public int AssistantTimeoutSeconds { get; init; } = 8;
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

@@ -112,6 +112,13 @@
     <sys:Double x:Key="PillHeight">50</sys:Double>
 
     <!--
+      How wide an answer is allowed to be. Wide enough that two sentences rarely run past three
+      lines, narrow enough to stay a floating panel rather than becoming a document — the pill
+      is read at a glance above the taskbar, not scrolled.
+    -->
+    <sys:Double x:Key="AnswerWidth">380</sys:Double>
+
+    <!--
       A cooler, more electric treatment of the accent, so assistant mode is distinguishable
       from dictation at a glance. Deliberately still blue: red means recording and appears
       nowhere else, and a warm accent here would compete with the one signal that must read

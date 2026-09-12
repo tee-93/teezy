@@ -71,6 +71,36 @@
                         <TextBlock x:Name="AssistantWarningText" TextWrapping="Wrap"
                                    Foreground="{StaticResource CautionInk}" FontSize="12"/>
                     </Border>
+
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+
+                    <Grid Margin="0,16,0,0">
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                            <TextBlock Text="Ask Claude what it didn’t understand"
+                                       Foreground="{StaticResource Ink}"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="The commands above stay on this machine and cost nothing. Only what they cannot place is sent to Claude, which can then still only choose from the same list — or answer you in a sentence."/>
+                        </StackPanel>
+                        <CheckBox x:Name="AssistantLlmBox" Style="{StaticResource Switch}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Click="OnAssistantLlmToggled"/>
+                    </Grid>
+
+                    <StackPanel x:Name="AssistantLlmDetail" Visibility="Collapsed">
+                        <Border Style="{StaticResource CautionPanel}" Margin="0,14,0,0">
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
+                                       Text="Unrecognised commands are sent to the Anthropic API, billed to your own account, using the same key as the cleanup tier. It never sees your screen, your clipboard or your documents — only the words you just spoke."/>
+                        </Border>
+
+                        <Grid Margin="0,16,0,0">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                <TextBlock Text="Model" Foreground="{StaticResource Ink}"/>
+                                <TextBlock x:Name="AssistantModelCost" Style="{StaticResource Hint}"/>
+                            </StackPanel>
+                            <ComboBox x:Name="AssistantModelPicker" Width="180" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center" SelectionChanged="OnAssistantModelChanged"/>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

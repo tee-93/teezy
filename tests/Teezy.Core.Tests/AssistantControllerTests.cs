@@ -62,7 +62,7 @@ public class AssistantControllerTests
         var outcome = await Speak("set the volume to 40", runner);
 
         runner.Ran.ShouldBe(new VoiceCommand.SetVolume(40));
-        outcome.Succeeded.ShouldBeTrue();
+        outcome.Result.ShouldBe(AssistantResult.Did);
         outcome.Message.ShouldBe("Volume 40%");
     }
 
@@ -74,7 +74,7 @@ public class AssistantControllerTests
         // from the user — say it again, versus stop asking for that.
         var outcome = await Speak("book me a table for two", new FakeRunner());
 
-        outcome.Succeeded.ShouldBeFalse();
+        outcome.Result.ShouldBe(AssistantResult.NotUnderstood);
         outcome.Command.ShouldBeNull();
         outcome.Heard.ShouldBe("book me a table for two");
     }
@@ -88,7 +88,7 @@ public class AssistantControllerTests
 
         var outcome = await Speak("open chrome", runner);
 
-        outcome.Succeeded.ShouldBeFalse();
+        outcome.Result.ShouldBe(AssistantResult.Failed);
         outcome.Command.ShouldBe(new VoiceCommand.LaunchApp("chrome"));
         outcome.Message.ShouldBe("Couldn’t find Chrome");
     }
@@ -100,9 +100,123 @@ public class AssistantControllerTests
         // nothing happens to the machine.
         var outcome = await Speak("lock the computer");
 
-        outcome.Succeeded.ShouldBeTrue();
+        outcome.Result.ShouldBe(AssistantResult.Did);
         outcome.Command.ShouldBe(new VoiceCommand.LockScreen());
         outcome.Message.ShouldBe("Would lock the PC");
+    }
+
+    // ---- the smarter tier ----
+
+    private sealed class FakeFallback : IAssistantFallback
+    {
+        public bool IsAvailable { get; set; } = true;
+        public AssistantReply Reply { get; set; } = AssistantReply.Nothing;
+        public string? Asked { get; private set; }
+        public string? Throw { get; set; }
+
+        public Task<AssistantReply> AskAsync(string spoken, CancellationToken ct = default)
+        {
+            if (Throw is { } why) throw new AssistantUnavailableException(why);
+            Asked = spoken;
+            return Task.FromResult(Reply);
+        }
+    }
+
+    private static async Task<AssistantOutcome> Speak(
+        string said, ICommandRunner? runner, IAssistantFallback? fallback)
+    {
+        var (session, hotkey, capture, transcriber) = Build();
+        transcriber.Result = said;
+
+        AssistantOutcome? outcome = null;
+        var assistant = new AssistantController(session, runner, fallback);
+        assistant.Finished += o => outcome = o;
+        session.Start();
+
+        hotkey.Press(HotkeyAction.Assistant);
+        capture.Emit();
+        hotkey.Release(HotkeyAction.Assistant);
+
+        var deadline = Environment.TickCount64 + 5000;
+        while (outcome is null && Environment.TickCount64 < deadline) await Task.Delay(5);
+
+        outcome.ShouldNotBeNull();
+        return outcome!;
+    }
+
+    [Fact]
+    public async Task WhatThePatternsAlreadyHandleNeverReachesTheModel()
+    {
+        // The whole economic and privacy argument for the local layer. If "volume up" went to
+        // Claude, every command would cost money and leave the machine.
+        var fallback = new FakeFallback();
+
+        await Speak("volume up", new FakeRunner(), fallback);
+
+        fallback.Asked.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task WhatThePatternsDeclineIsHandedOver()
+    {
+        var fallback = new FakeFallback
+        {
+            Reply = new AssistantReply(Command: new VoiceCommand.SetVolume(25)),
+        };
+        var runner = new FakeRunner();
+
+        var outcome = await Speak("make it quite a bit quieter please", runner, fallback);
+
+        fallback.Asked.ShouldBe("make it quite a bit quieter please");
+        runner.Ran.ShouldBe(new VoiceCommand.SetVolume(25));
+        outcome.Result.ShouldBe(AssistantResult.Did);
+    }
+
+    [Fact]
+    public async Task AnAnswerIsShownRatherThanRun()
+    {
+        var fallback = new FakeFallback { Reply = new AssistantReply(Answer: "It is half past four.") };
+
+        var outcome = await Speak("what time is it", new FakeRunner(), fallback);
+
+        outcome.Result.ShouldBe(AssistantResult.Answered);
+        outcome.Message.ShouldBe("It is half past four.");
+        outcome.Command.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ATierThatIsOffChangesNothing()
+    {
+        // Someone who has not switched it on must get exactly the behaviour they had before,
+        // including the honest refusal.
+        var fallback = new FakeFallback { IsAvailable = false };
+
+        var outcome = await Speak("book me a table for two", new FakeRunner(), fallback);
+
+        fallback.Asked.ShouldBeNull();
+        outcome.Result.ShouldBe(AssistantResult.NotUnderstood);
+    }
+
+    [Fact]
+    public async Task BeingUnreachableIsNotTheSameAsNotUnderstanding()
+    {
+        // Someone whose wifi is down should not go away rephrasing themselves.
+        var fallback = new FakeFallback { Throw = "Couldn’t reach Claude." };
+
+        var outcome = await Speak("what is the capital of Peru", new FakeRunner(), fallback);
+
+        outcome.Result.ShouldBe(AssistantResult.Failed);
+        outcome.Message.ShouldBe("Couldn’t reach Claude.");
+    }
+
+    [Fact]
+    public async Task AModelThatOffersNothingUsefulIsARefusalNotAnEmptyAnswer()
+    {
+        var fallback = new FakeFallback { Reply = AssistantReply.Nothing };
+
+        var outcome = await Speak("mumble mumble", new FakeRunner(), fallback);
+
+        outcome.Result.ShouldBe(AssistantResult.NotUnderstood);
     }
 
     [Fact]

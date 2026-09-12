@@ -449,9 +449,19 @@ public partial class SettingsView : UserControl
     {
         var saved = _secrets?.Describe(App.ElevenLabsKeyName);
 
-        ElevenKeyStatus.Text = saved is null
-            ? "No key saved. Create one at elevenlabs.io, under your profile."
-            : $"Key saved ({saved}). Encrypted for your Windows account.";
+        // The mistake worth catching before a network round trip: the dashboard shows a key
+        // *ID* next to each key, and it is the more obvious thing to copy. The key itself is
+        // shown once, at creation. Saying so here beats a 400 several clicks later.
+        var looksLikeAnId = _secrets?.Read(App.ElevenLabsKeyName) is { Length: > 0 } key
+                            && !key.StartsWith("sk_", StringComparison.Ordinal);
+
+        ElevenKeyStatus.Text = (saved, looksLikeAnId) switch
+        {
+            (null, _) => "No key saved. Create one at elevenlabs.io, under your profile.",
+            (_, true) => $"Saved ({saved}), but that looks like a key ID rather than a key — "
+                         + "keys begin with “sk_” and are shown only when you create or rotate one.",
+            _ => $"Key saved ({saved}). Encrypted for your Windows account.",
+        };
 
         ForgetElevenKeyButton.Visibility = saved is null ? Visibility.Collapsed : Visibility.Visible;
 

@@ -83,9 +83,10 @@ public sealed class ElevenLabsSpeaker : ISpeaker
             using var response = _http.Send(request);
             if (!response.IsSuccessStatusCode)
             {
-                VoiceListError = response.StatusCode == System.Net.HttpStatusCode.Unauthorized
-                    ? "ElevenLabs rejected that key."
-                    : $"ElevenLabs returned {(int)response.StatusCode}.";
+                // The body says what is wrong, in words. Reporting only the status code throws
+                // away the one part of the answer that is actually diagnostic.
+                VoiceListError = $"ElevenLabs returned {(int)response.StatusCode}"
+                                 + (Explain(response) is { Length: > 0 } why ? $": {why}" : ".");
                 return [];
             }
 
@@ -115,6 +116,45 @@ public sealed class ElevenLabsSpeaker : ISpeaker
         }
     }
 
+    /// <summary>
+    /// The human-readable half of an error response.
+    /// </summary>
+    /// <remarks>
+    /// ElevenLabs answers a failure with <c>{"detail":{"message":"…"}}</c>, sometimes with
+    /// <c>detail</c> as a plain string instead. Both shapes are worth reading: without them a
+    /// 400 is just a number, and the number is the least useful part of what was said.
+    /// </remarks>
+    private static string? Explain(HttpResponseMessage response)
+    {
+        try
+        {
+            var body = new StreamReader(response.Content.ReadAsStream()).ReadToEnd();
+            if (string.IsNullOrWhiteSpace(body)) return null;
+
+            using var json = JsonDocument.Parse(body);
+            if (!json.RootElement.TryGetProperty("detail", out var detail))
+            {
+                return Shorten(body);
+            }
+
+            return detail.ValueKind switch
+            {
+                JsonValueKind.String => detail.GetString(),
+                JsonValueKind.Object when detail.TryGetProperty("message", out var m)
+                    => m.GetString(),
+                _ => Shorten(body),
+            };
+        }
+        catch (Exception e) when (e is JsonException or IOException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Enough to diagnose, little enough to fit in a settings hint.</summary>
+    private static string Shorten(string body) =>
+        body.Length <= 200 ? body.Trim() : body[..200].Trim() + "…";
+
     public async Task SpeakAsync(string text, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
@@ -130,14 +170,18 @@ public sealed class ElevenLabsSpeaker : ISpeaker
             cts = _playing;
         }
 
-        // Counted here rather than after playback: the provider has billed for the synthesis
-        // by this point whether or not the user lets it finish.
-        _usage.Add(text.Length);
-
         try
         {
             var audio = await Synthesise(key, voice, text, cts.Token).ConfigureAwait(false);
-            if (audio is null || cts.IsCancellationRequested) return;
+            if (audio is null) return;
+
+            // Counted once audio has actually come back: after that the provider has billed
+            // for it whether or not the user lets it finish playing, but a request that failed
+            // — a rejected key, a rate limit — costs nothing and must not appear in a figure
+            // someone is about to choose a subscription tier with.
+            _usage.Add(text.Length);
+
+            if (cts.IsCancellationRequested) return;
 
             Play(audio, cts.Token);
         }

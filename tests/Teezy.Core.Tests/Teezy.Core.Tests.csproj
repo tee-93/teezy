@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Teezy.Core\Teezy.Core.csproj" />
     <ProjectReference Include="..\..\src\Teezy.Cleanup\Teezy.Cleanup.csproj" />
+    <ProjectReference Include="..\..\src\Teezy.Calendar\Teezy.Calendar.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit" />

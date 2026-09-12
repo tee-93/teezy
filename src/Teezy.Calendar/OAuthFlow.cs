@@ -20,12 +20,18 @@ namespace Teezy.Calendar;
 /// <b>Read-only, always.</b> The guarantee that Teezy cannot move a meeting is a permission
 /// that was never granted, not a code path that promises not to.
 /// </param>
+/// <param name="RedirectHost">
+/// Which spelling of loopback this provider's redirect matching expects. See
+/// <see cref="LoopbackListener"/>: the two providers want different ones, and guessing costs a
+/// redirect mismatch at the far end of a sign-in.
+/// </param>
 public sealed record OAuthProvider(
     string Authorize,
     string Token,
     string ClientId,
     string? ClientSecret,
-    IReadOnlyList<string> Scopes);
+    IReadOnlyList<string> Scopes,
+    string RedirectHost = "127.0.0.1");
 
 /// <summary>What came back, and when it stops working.</summary>
 public sealed record OAuthTokens(string AccessToken, string? RefreshToken, DateTimeOffset ExpiresAt)
@@ -71,7 +77,7 @@ public static class OAuthFlow
         var challenge = Challenge(verifier);
         var state = RandomUrlSafe(32);
 
-        using var listener = new LoopbackListener();
+        using var listener = new LoopbackListener(provider.RedirectHost);
 
         var url = $"{provider.Authorize}"
                   + $"?client_id={Uri.EscapeDataString(provider.ClientId)}"

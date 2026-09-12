@@ -23,8 +23,12 @@ internal sealed record AuthResponse(string? Code, string? State, string? Error);
 /// what was granted cannot.
 /// </para>
 /// <para>
-/// <c>127.0.0.1</c> rather than <c>localhost</c>: the two are not interchangeable to every
-/// provider's redirect matching, and the literal address is the one both document.
+/// <b>The host is the provider's choice, not ours.</b> <c>127.0.0.1</c> and <c>localhost</c>
+/// are not interchangeable to redirect matching, and the two providers disagree: Microsoft
+/// matches a registered <c>http://localhost</c> while ignoring the port, which is the only way
+/// an OS-assigned port can work at all; Google documents the loopback literal and has
+/// deprecated <c>localhost</c> for new clients. Registering the wrong one fails at sign-in with
+/// a redirect mismatch and nothing else to go on.
 /// </para>
 /// </remarks>
 internal sealed class LoopbackListener : IDisposable
@@ -33,10 +37,10 @@ internal sealed class LoopbackListener : IDisposable
 
     internal string RedirectUri { get; }
 
-    internal LoopbackListener()
+    internal LoopbackListener(string host)
     {
         var port = FreePort();
-        RedirectUri = $"http://127.0.0.1:{port}/";
+        RedirectUri = $"http://{host}:{port}/";
 
         _listener.Prefixes.Add(RedirectUri);
         _listener.Start();

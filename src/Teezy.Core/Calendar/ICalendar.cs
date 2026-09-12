@@ -48,5 +48,15 @@ public interface ICalendar
 /// and "I couldn't reach your calendar" call for opposite responses, and collapsing them would
 /// have someone walk confidently into a meeting they were never told about.
 /// </remarks>
-public sealed class CalendarUnavailableException(string message, Exception? inner = null)
-    : Exception(message, inner);
+public sealed class CalendarUnavailableException(
+    string message, Exception? inner = null, bool needsReconnect = false)
+    : Exception(message, inner)
+{
+    /// <summary>The account has to be signed in again; waiting will not fix it.</summary>
+    /// <remarks>
+    /// Access is revoked by changing a password, by an administrator, or simply by six months
+    /// of not asking — and it is the one calendar failure the user can do something about.
+    /// Settings shows it as an account needing attention rather than as a network hiccup.
+    /// </remarks>
+    public bool NeedsReconnect { get; } = needsReconnect;
+}

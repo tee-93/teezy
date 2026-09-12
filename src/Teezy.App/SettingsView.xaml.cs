@@ -547,6 +547,8 @@ public partial class SettingsView : UserControl
         ConnectGoogleButton.IsEnabled =
             _calendars is not null && !string.IsNullOrWhiteSpace(settings.GoogleClientId);
 
+        ShowGoogleReady();
+
         CalendarAccountList.ItemsSource = settings.ConnectedAccounts
             .Select(a => new CalendarRow(a))
             .ToList();
@@ -640,16 +642,41 @@ public partial class SettingsView : UserControl
         Refresh();
     }
 
-    private void OnGoogleClientTyped(object sender, RoutedEventArgs e) =>
-        SaveGoogleClientButton.IsEnabled = GoogleClientIdBox.Text.Trim().Length > 0;
+    private void OnGoogleClientTyped(object sender, RoutedEventArgs e) => ShowGoogleReady();
+
+    /// <summary>Whether there is enough to sign in with, said before you try.</summary>
+    /// <remarks>
+    /// Google refuses the exchange outright without a secret, and the refusal arrives at the
+    /// far end of a browser round trip reading "client_secret is missing" — which is true, and
+    /// useless, because by then the page that could fix it is behind you. Saving an id with no
+    /// secret is simply not allowed.
+    /// </remarks>
+    private void ShowGoogleReady()
+    {
+        var id = GoogleClientIdBox.Text.Trim();
+        var typed = GoogleSecretBox.Password.Trim().Length > 0;
+        var stored = _secrets?.Describe(App.GoogleSecretName) is not null;
+
+        SaveGoogleClientButton.IsEnabled = id.Length > 0 && (typed || stored);
+
+        GoogleSecretHint.Text = (id.Length > 0, typed || stored) switch
+        {
+            (true, false) => "Google refuses to sign in without the secret, so Teezy won’t "
+                             + "save an ID on its own. It is shown next to the client ID in "
+                             + "the Cloud console.",
+            (_, true) when stored && !typed => "Secret saved, encrypted for your Windows "
+                                               + "account. Leave this blank to keep it.",
+            _ => string.Empty,
+        };
+    }
 
     private void OnSaveGoogleClient(object sender, RoutedEventArgs e)
     {
         var id = GoogleClientIdBox.Text.Trim();
         if (id.Length == 0) return;
 
-        // The secret is optional here only because the box may be left alone on a second save;
-        // Google's desktop flow does want one.
+        // Blank on a second save means "keep the one you have", which is why this is not a
+        // hard requirement here — ShowGoogleReady is what stops a first save without one.
         if (GoogleSecretBox.Password.Trim() is { Length: > 0 } secret)
         {
             _secrets?.Write(App.GoogleSecretName, secret);

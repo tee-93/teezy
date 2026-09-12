@@ -246,7 +246,7 @@
                     </ItemsControl>
 
                     <StackPanel x:Name="GoogleSetup" Visibility="Collapsed">
-                        <TextBlock Text="GOOGLE CLIENT ID AND SECRET" Style="{StaticResource SectionLabel}"
+                        <TextBlock Text="GOOGLE CLIENT ID" Style="{StaticResource SectionLabel}"
                                    Margin="0,16,0,10"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -265,13 +265,21 @@
                                     IsEnabled="False" Click="OnSaveGoogleClient"/>
                         </Grid>
 
-                        <Border Background="{StaticResource Sunken}" CornerRadius="9" Margin="0,8,0,0"
+                        <!-- Labelled. Unlabelled it read as a gap between the id row and the
+                             note below it, and an id saved without a secret fails much later,
+                             at sign-in, with a message about client_secret. -->
+                        <TextBlock Text="CLIENT SECRET" Style="{StaticResource SectionLabel}"
+                                   Margin="0,14,0,10"/>
+                        <Border Background="{StaticResource Sunken}" CornerRadius="9"
                                 BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
                             <PasswordBox x:Name="GoogleSecretBox" BorderThickness="0" Background="Transparent"
                                          VerticalContentAlignment="Center" Margin="12,0"
                                          PasswordChar="•" FontSize="13"
                                          PasswordChanged="OnGoogleClientTyped"/>
                         </Border>
+
+                        <TextBlock x:Name="GoogleSecretHint" Style="{StaticResource Hint}"
+                                   Margin="0,8,0,0"/>
 
                         <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
                             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"

@@ -525,21 +525,22 @@ public partial class SettingsView : UserControl
 
     private void PopulateCalendar(TeezySettings settings)
     {
-        // Shown until an account is actually connected, not merely until an id is saved. A
-        // wrong id fails at sign-in, and hiding the only field that can fix it the moment it
-        // is first saved would leave editing settings.json as the only way out. Once something
-        // has connected the id is proven, and the box goes away.
-        CalendarSetup.Visibility = settings.ConnectedAccounts.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // Shown until an account from that provider is actually connected, not merely until an
+        // id is saved. A wrong id fails at sign-in, and hiding the only field that can fix it
+        // the moment it is first saved would leave editing settings.json as the only way out.
+        //
+        // Per provider, not per account. When this was "any account at all" a connected
+        // Microsoft account hid the Google box too, which left no way to enter a Google client
+        // id and so no way to ever enable its button.
+        CalendarSetup.Visibility = Connected(settings, CalendarSource.Microsoft)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         MicrosoftClientIdBox.Text = settings.MicrosoftClientId ?? string.Empty;
 
-        // Same rule as the Microsoft box: visible until an account has actually connected, so a
-        // wrong id can still be corrected after it fails at sign-in.
-        GoogleSetup.Visibility = settings.ConnectedAccounts.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        GoogleSetup.Visibility = Connected(settings, CalendarSource.Google)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         GoogleClientIdBox.Text = settings.GoogleClientId ?? string.Empty;
 
@@ -553,9 +554,14 @@ public partial class SettingsView : UserControl
         ConnectMicrosoftButton.IsEnabled =
             _calendars is not null && !string.IsNullOrWhiteSpace(settings.MicrosoftClientId);
 
-        CalendarStatus.Text = (settings.MicrosoftClientId, settings.ConnectedAccounts.Count) switch
+        var anyClientId = !string.IsNullOrWhiteSpace(settings.MicrosoftClientId)
+                          || !string.IsNullOrWhiteSpace(settings.GoogleClientId);
+
+        // Both providers, not just Microsoft's. The same oversight as the setup boxes above,
+        // and it would have told someone setting up Google alone to add an id they had.
+        CalendarStatus.Text = (anyClientId, settings.ConnectedAccounts.Count) switch
         {
-            (null or "", _) => "Add an application id above to connect an account.",
+            (false, _) => "Add an application id above to connect an account.",
             (_, 0) => "No accounts connected. Nothing about your diary leaves this machine "
                       + "until one is.",
 
@@ -607,6 +613,9 @@ public partial class SettingsView : UserControl
 
         Reprofile(row.Account, chosen);
     }
+
+    private static bool Connected(TeezySettings settings, CalendarSource source) =>
+        settings.ConnectedAccounts.Any(a => a.Source == source);
 
     private void Reprofile(ConnectedAccount account, CalendarProfile profile)
     {

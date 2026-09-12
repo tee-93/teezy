@@ -14,6 +14,7 @@ using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Dictionary;
 using Teezy.Core.Hotkeys;
+using Teezy.Core.Voice;
 using Teezy.Platform.Windows;
 using Teezy.Speech;
 using Forms = System.Windows.Forms;
@@ -25,12 +26,16 @@ public partial class App : Application
     /// <summary>Name the API key is filed under in the encrypted secret store.</summary>
     internal const string ApiKeyName = "anthropic-api-key";
 
+    /// <summary>Name the ElevenLabs key is filed under. Separate account, separate secret.</summary>
+    internal const string ElevenLabsKeyName = "elevenlabs-api-key";
+
     private VoiceSession? _session;
     private DictationController? _controller;
     private AssistantController? _assistant;
     private AssistantWindow? _assistantHud;
     private ClaudeAssistant? _claudeAssistant;
-    private WindowsSpeaker? _speaker;
+    private SwitchingSpeaker? _speaker;
+    private VoiceUsage? _voiceUsage;
     private ParakeetTranscriber? _transcriber;
     private WindowsAutostart? _autostart;
     private WindowsHotkeySource? _hotkeySource;
@@ -146,7 +151,18 @@ public partial class App : Application
         _assistant = new AssistantController(
             _session, new WindowsCommandRunner(), _claudeAssistant);
 
-        _speaker = new WindowsSpeaker();
+        _voiceUsage = new VoiceUsage();
+
+        // Both tiers exist; which one answers is a setting, read per utterance. The paid one
+        // falls back to the local one rather than to silence — a user left unsure whether the
+        // assistant heard them is the one thing the voice exists to prevent.
+        _speaker = new SwitchingSpeaker(
+            () => _settings,
+            new WindowsSpeaker(),
+            new ElevenLabsSpeaker(
+                () => _secrets.Read(ElevenLabsKeyName),
+                () => _settings.ElevenLabsModel,
+                _voiceUsage));
 
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.
@@ -385,7 +401,8 @@ public partial class App : Application
             // depends on would let a forgotten test leave it in a state a hotkey press then
             // inherits.
             microphone: () => new WindowsAudioCapture(),
-            speaker: _speaker);
+            speaker: _speaker,
+            usage: _voiceUsage);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -410,7 +427,14 @@ public partial class App : Application
 
         // The picker sets this directly for an immediate preview; this is for the other ways
         // settings can change, and for a voice restored at startup.
-        if (_speaker is not null) _speaker.PreferredVoice = _settings.SpeechVoice;
+        // Per provider: the two name their voices in completely different namespaces, and
+        // handing a SAPI voice name to ElevenLabs would silently leave it with no voice.
+        if (_speaker is not null)
+        {
+            _speaker.PreferredVoice = _settings.VoiceProvider == VoiceProvider.ElevenLabs
+                ? _settings.ElevenLabsVoice
+                : _settings.SpeechVoice;
+        }
 
         SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
     }

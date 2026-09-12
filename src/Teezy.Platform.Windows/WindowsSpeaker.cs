@@ -64,10 +64,12 @@ public sealed class WindowsSpeaker : ISpeaker
                     .Where(v => v.Enabled)
                     .Select(v => v.VoiceInfo)
                     .Select(v => new SpeechVoice(
-                        v.Name,
-                        v.Culture.DisplayName,
-                        v.Gender.ToString(),
-                        !v.Name.EndsWith(" Desktop", StringComparison.OrdinalIgnoreCase))),
+                        // A SAPI voice is selected by its name, so the two coincide here.
+                        Id: v.Name,
+                        Name: v.Name,
+                        Culture: v.Culture.DisplayName,
+                        Gender: v.Gender.ToString(),
+                        IsModern: !v.Name.EndsWith(" Desktop", StringComparison.OrdinalIgnoreCase))),
             ];
         }
         catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException)

@@ -14,6 +14,7 @@ using Teezy.Core.Abstractions;
 using Teezy.Core.Formatting;
 using Teezy.Core.Hotkeys;
 using Teezy.Core.Speech;
+using Teezy.Core.Voice;
 using Teezy.Speech;
 
 namespace Teezy.App;
@@ -63,6 +64,7 @@ public partial class SettingsView : UserControl
     private readonly Func<IReadOnlyList<string>>? _knownApps;
     private readonly Func<IAudioCapture>? _microphone;
     private readonly ISpeaker? _speaker;
+    private readonly VoiceUsage? _usage;
 
     /// <summary>The capture opened by the level test, or null when no test is running.</summary>
     private IAudioCapture? _preview;
@@ -86,6 +88,7 @@ public partial class SettingsView : UserControl
         ClaudeFormatter? claude = null,
         Func<IReadOnlyList<string>>? knownApps = null,
         ISpeaker? speaker = null,
+        VoiceUsage? usage = null,
         Func<IAudioCapture>? microphone = null)
     {
         InitializeComponent();
@@ -100,6 +103,7 @@ public partial class SettingsView : UserControl
         _knownApps = knownApps;
         _microphone = microphone;
         _speaker = speaker;
+        _usage = usage;
 
         RecordButton.IsEnabled = _capture is not null;
         MicTestButton.IsEnabled = _microphone is not null;
@@ -300,28 +304,54 @@ public partial class SettingsView : UserControl
     }
 
     /// <summary>One row of the voice picker. Null name means "pick the best available".</summary>
-    private sealed record VoiceChoice(string? Name, string Label);
+    private sealed record VoiceChoice(string? Id, string Label);
+
+    private static readonly (VoiceProvider Provider, string Label, string Hint)[] VoiceProviders =
+    [
+        (VoiceProvider.Windows, "Windows — free",
+            "The voices already on this machine. Free, offline, and instant."),
+        (VoiceProvider.ElevenLabs, "ElevenLabs — paid",
+            "Much better to listen to. Costs a subscription, and waits for the network before it starts."),
+    ];
 
     private void PopulateVoices(TeezySettings settings)
     {
         VoiceDetail.Visibility = settings.SpeakAnswers ? Visibility.Visible : Visibility.Collapsed;
         if (!settings.SpeakAnswers || _speaker is null) return;
 
+        if (VoiceProviderPicker.Items.Count == 0)
+        {
+            foreach (var (_, label, _) in VoiceProviders) VoiceProviderPicker.Items.Add(label);
+        }
+
+        var provider = Array.FindIndex(VoiceProviders, p => p.Provider == settings.VoiceProvider);
+        VoiceProviderPicker.SelectedIndex = provider >= 0 ? provider : 0;
+        VoiceProviderHint.Text = VoiceProviders[VoiceProviderPicker.SelectedIndex].Hint;
+
+        var paid = settings.VoiceProvider == VoiceProvider.ElevenLabs;
+        ElevenLabsDetail.Visibility = paid ? Visibility.Visible : Visibility.Collapsed;
+        if (paid) ShowElevenKeyState();
+
         var voices = _speaker.Voices();
+        var rows = new List<VoiceChoice>();
+
+        // No automatic row for the paid tier: its voices belong to an account rather than a
+        // fixed set, so there is nothing sensible to fall back to and an unchosen voice means
+        // the tier simply is not ready.
+        if (!paid)
+        {
+            rows.Add(new VoiceChoice(
+                null, _speaker.VoiceName is { } current ? $"Automatic — {current}" : "Automatic"));
+        }
 
         // Newer voices first, then by language, because the older SAPI5 set is worse in a way
         // nobody has ever wanted and it should not be what the eye lands on.
-        var rows = new List<VoiceChoice>
-        {
-            new(null, _speaker.VoiceName is { } current ? $"Automatic — {current}" : "Automatic"),
-        };
-
         rows.AddRange(voices
             .OrderByDescending(v => v.IsModern)
             .ThenBy(v => v.Culture, StringComparer.CurrentCulture)
             .ThenBy(v => v.Name, StringComparer.CurrentCulture)
             .Select(v => new VoiceChoice(
-                v.Name,
+                v.Id,
                 v.IsModern
                     ? $"{Shorten(v.Name)} — {v.Culture}"
                     : $"{Shorten(v.Name)} — {v.Culture} (older)")));
@@ -330,16 +360,26 @@ public partial class SettingsView : UserControl
         foreach (var row in rows) VoicePicker.Items.Add(row.Label);
         VoicePicker.Tag = rows;
 
-        var index = rows.FindIndex(r => r.Name == settings.SpeechVoice);
+        var wanted = paid ? settings.ElevenLabsVoice : settings.SpeechVoice;
+        var index = rows.FindIndex(r => r.Id == wanted);
         VoicePicker.SelectedIndex = index >= 0 ? index : 0;
 
-        VoicePicker.IsEnabled = voices.Count > 0;
-        VoiceTestButton.IsEnabled = voices.Count > 0;
+        VoicePicker.IsEnabled = rows.Count > 0;
+        VoiceTestButton.IsEnabled = rows.Count > 0;
 
-        VoiceHint.Text = voices.Count == 0
-            ? "No voices are installed on this machine."
-            : "These are the voices Windows ships. None will be mistaken for a person — "
-              + "the ones marked older are the 2009 set, and worth avoiding.";
+        // An empty list is never self-explanatory. Whatever the reason, say it rather than
+        // guessing at the likeliest one — that is how a wrong endpoint spent an afternoon
+        // masquerading as an unsaved key.
+        VoiceHint.Text = (paid, voices.Count) switch
+        {
+            (true, 0) => _speaker.VoiceListError
+                         ?? "Save a key above to load the voices on your ElevenLabs account.",
+            (true, _) => "Your ElevenLabs voices. Each one you hear here is billed like any "
+                         + "other, so the sample is not free.",
+            (false, 0) => "No voices are installed on this machine.",
+            _ => "These are the voices Windows ships. None will be mistaken for a person — "
+                 + "the ones marked older are the 2009 set, and worth avoiding.",
+        };
     }
 
     /// <summary>"Microsoft Catherine" reads better in a list as "Catherine".</summary>
@@ -352,12 +392,85 @@ public partial class SettingsView : UserControl
         if (VoicePicker.SelectedIndex < 0 || VoicePicker.SelectedIndex >= rows.Count) return;
 
         var chosen = rows[VoicePicker.SelectedIndex];
-        _write(_read() with { SpeechVoice = chosen.Name });
+        var settings = _read();
+
+        _write(settings.VoiceProvider == VoiceProvider.ElevenLabs
+            ? settings with { ElevenLabsVoice = chosen.Id }
+            : settings with { SpeechVoice = chosen.Id });
 
         // Applied and demonstrated at once. Choosing a voice from a list of names without
         // hearing it is guessing, and the whole point of the row is what it sounds like.
-        _speaker.PreferredVoice = chosen.Name;
+        _speaker.PreferredVoice = chosen.Id;
         Speak();
+
+        // The paid tier bills for the sample too, so the counter has just moved.
+        if (settings.VoiceProvider == VoiceProvider.ElevenLabs) ShowElevenKeyState();
+    }
+
+    private void OnVoiceProviderChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading || VoiceProviderPicker.SelectedIndex < 0) return;
+
+        _write(_read() with { VoiceProvider = VoiceProviders[VoiceProviderPicker.SelectedIndex].Provider });
+        Refresh();
+    }
+
+    // ---- the ElevenLabs key ----
+
+    private void OnElevenKeyTyped(object sender, RoutedEventArgs e) =>
+        SaveElevenKeyButton.IsEnabled = ElevenKeyBox.Password.Trim().Length > 0;
+
+    private void OnSaveElevenKey(object sender, RoutedEventArgs e)
+    {
+        var key = ElevenKeyBox.Password.Trim();
+        if (key.Length == 0 || _secrets is null) return;
+
+        _secrets.Write(App.ElevenLabsKeyName, key);
+        ElevenKeyBox.Clear();
+
+        // The voice list is fetched with the key, so it could not be populated until now.
+        Refresh();
+    }
+
+    private void OnForgetElevenKey(object sender, RoutedEventArgs e)
+    {
+        _secrets?.Delete(App.ElevenLabsKeyName);
+        Refresh();
+    }
+
+    /// <summary>
+    /// Whether a key is saved, and what has been spoken with it this month.
+    /// </summary>
+    /// <remarks>
+    /// Last month leads, because that is the figure a tier is chosen on: this month is always
+    /// partial, and on the second of the month it says almost nothing.
+    /// </remarks>
+    private void ShowElevenKeyState()
+    {
+        var saved = _secrets?.Describe(App.ElevenLabsKeyName);
+
+        ElevenKeyStatus.Text = saved is null
+            ? "No key saved. Create one at elevenlabs.io, under your profile."
+            : $"Key saved ({saved}). Encrypted for your Windows account.";
+
+        ForgetElevenKeyButton.Visibility = saved is null ? Visibility.Collapsed : Visibility.Visible;
+
+        if (_usage is null)
+        {
+            VoiceUsageText.Text = string.Empty;
+            return;
+        }
+
+        var thisMonth = _usage.ThisMonth;
+        var lastMonth = _usage.LastMonth;
+
+        VoiceUsageText.Text = lastMonth > 0
+            ? $"Spoken this month: {thisMonth:N0} characters. Last full month: {lastMonth:N0}. "
+              + "ElevenLabs sells a monthly character allowance rather than charging per use, "
+              + "so last month's figure is the one to pick a tier against."
+            : $"Spoken this month: {thisMonth:N0} characters. ElevenLabs sells a monthly "
+              + "character allowance rather than charging per use — leave this a few weeks and "
+              + "the number here will tell you which tier you actually need.";
     }
 
     private void OnHearVoice(object sender, RoutedEventArgs e) => Speak();

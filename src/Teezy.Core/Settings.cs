@@ -211,6 +211,27 @@ public sealed record TeezySettings
     /// </remarks>
     public bool SpeakAnswers { get; init; }
 
+    /// <summary>Which tier reads the answers.</summary>
+    /// <remarks>
+    /// Windows by default: free, offline, instant, and needs nothing configured. ElevenLabs is
+    /// better to listen to and costs a subscription, a third API key, and a round trip before
+    /// the first word — which lands on top of the wait for Claude that already happened.
+    /// </remarks>
+    public VoiceProvider VoiceProvider { get; init; } = VoiceProvider.Windows;
+
+    /// <summary>The ElevenLabs voice id. Unset means that tier is not ready.</summary>
+    public string? ElevenLabsVoice { get; init; }
+
+    /// <summary>
+    /// Which ElevenLabs model synthesises.
+    /// </summary>
+    /// <remarks>
+    /// Flash by default. It bills at roughly half the character rate of the higher-quality
+    /// models and starts speaking noticeably sooner, and both of those matter more here than
+    /// the last few percent of fidelity — this is one or two sentences over a taskbar.
+    /// </remarks>
+    public string ElevenLabsModel { get; init; } = "eleven_flash_v2_5";
+
     /// <summary>Which installed voice reads them. Null picks the best available.</summary>
     /// <remarks>
     /// Automatic is the default because the <i>system</i> default is usually the oldest voice

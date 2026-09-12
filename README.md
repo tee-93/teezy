@@ -745,3 +745,10 @@ The architecture and several hard-won constants were informed by
 [per-simmons/murmur-youtube](https://github.com/per-simmons/murmur-youtube), whose Windows
 directory is a specification rather than an implementation. That repository carries **no
 licence**, so no code was copied from it — only independently re-verified facts.
+
+## Privacy
+
+Teezy runs no servers and collects nothing. Speech recognition, commands, your dictionary and
+your history stay on the machine; four optional tiers can leave it, each off until you switch it
+on and each on your own account. Connected calendars and mailboxes are read-only and are never
+copied or stored. The full statement is in [PRIVACY.md](PRIVACY.md).

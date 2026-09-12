@@ -499,8 +499,12 @@ public partial class SettingsView : UserControl
     /// record is immutable, and the profile picker has to write a change back through settings
     /// rather than mutate what it was handed.
     /// </remarks>
-    private sealed class CalendarRow(ConnectedAccount account, Action<CalendarProfile> choose)
+    private sealed class CalendarRow(ConnectedAccount account)
     {
+        /// <summary>Shared, so reading the options twice yields the same collection.</summary>
+        private static readonly CalendarProfile[] Both =
+            [CalendarProfile.Personal, CalendarProfile.Work];
+
         public ConnectedAccount Account { get; } = account;
 
         public string DisplayName => Account.DisplayName;
@@ -509,24 +513,14 @@ public partial class SettingsView : UserControl
 
         /// <summary>What the profile picker offers.</summary>
         /// <remarks>
-        /// An instance property although it never varies. A binding path cannot reach a static
-        /// member through the item's data context, so the static version would have left every
-        /// picker empty — and silently, since a failed binding is not an error.
+        /// An instance property although it never varies: a binding path cannot reach a static
+        /// member through the item's data context, so a static one would leave every picker
+        /// empty — and silently, since a failed binding raises nothing.
         /// </remarks>
-        public CalendarProfile[] Profiles => [CalendarProfile.Personal, CalendarProfile.Work];
+        public CalendarProfile[] Profiles => Both;
 
-        private CalendarProfile _profile = account.Profile;
-
-        public CalendarProfile Profile
-        {
-            get => _profile;
-            set
-            {
-                if (_profile == value) return;
-                _profile = value;
-                choose(value);
-            }
-        }
+        /// <summary>Read only, and bound OneTime. The picker reports changes instead.</summary>
+        public CalendarProfile Profile => Account.Profile;
     }
 
     private void PopulateCalendar(TeezySettings settings)
@@ -542,7 +536,7 @@ public partial class SettingsView : UserControl
         MicrosoftClientIdBox.Text = settings.MicrosoftClientId ?? string.Empty;
 
         CalendarAccountList.ItemsSource = settings.CalendarAccounts
-            .Select(a => new CalendarRow(a, profile => Reprofile(a, profile)))
+            .Select(a => new CalendarRow(a))
             .ToList();
 
         ConnectMicrosoftButton.IsEnabled =
@@ -558,6 +552,23 @@ public partial class SettingsView : UserControl
             // integrations people are right to be wary of.
             _ => "Read-only. Teezy can see what is in your diary and cannot change any of it.",
         };
+    }
+
+    /// <summary>The user moving an account between work and personal.</summary>
+    /// <remarks>
+    /// Guarded by <c>_loading</c> like every other picker on this page, and checked against
+    /// what is stored. Populating a list raises SelectionChanged too, and saving that as though
+    /// someone had chosen it silently rewrote a connected account to Work the moment it was
+    /// first shown.
+    /// </remarks>
+    private void OnCalendarProfileChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || sender is not ComboBox picker) return;
+        if (picker.DataContext is not CalendarRow row) return;
+        if (picker.SelectedItem is not CalendarProfile chosen) return;
+        if (chosen == row.Account.Profile) return;
+
+        Reprofile(row.Account, chosen);
     }
 
     private void Reprofile(ConnectedAccount account, CalendarProfile profile)

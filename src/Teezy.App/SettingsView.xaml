@@ -227,9 +227,15 @@
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                                     VerticalAlignment="Center">
+                                            <!-- OneTime, and the change handled in code like
+                                                 every other picker here. A TwoWay binding
+                                                 writes back while the row is still being set
+                                                 up, which is not a user choice and must not
+                                                 be saved as one. -->
                                             <ComboBox Width="104" Height="30"
                                                       ItemsSource="{Binding Profiles}"
-                                                      SelectedItem="{Binding Profile, Mode=TwoWay}"/>
+                                                      SelectedItem="{Binding Profile, Mode=OneTime}"
+                                                      SelectionChanged="OnCalendarProfileChanged"/>
                                             <Button Content="Disconnect" Style="{StaticResource Quiet}"
                                                     Margin="8,0,0,0" Click="OnDisconnectCalendar"/>
                                         </StackPanel>

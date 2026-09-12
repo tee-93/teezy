@@ -175,6 +175,84 @@
                 </StackPanel>
             </Border>
 
+            <!-- Calendar. Under the assistant because it is only ever reached by asking the
+                 assistant something, and means nothing on its own. -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="Calendar" Style="{StaticResource H2}" Margin="0,0,0,4"/>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Connect an account and the assistant can answer “what’s next” and “what’s on today”. Teezy asks for read-only access, so it cannot move or cancel anything, and you sign in on Microsoft’s own page — no password is ever typed into Teezy."/>
+
+                    <!-- Only shown while there is nothing to sign in with. Once an id is saved
+                         this is setup detail that never needs looking at again. -->
+                    <StackPanel x:Name="CalendarSetup" Visibility="Collapsed">
+                        <TextBlock Text="MICROSOFT APPLICATION ID" Style="{StaticResource SectionLabel}"
+                                   Margin="0,16,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
+                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
+                                <TextBox x:Name="MicrosoftClientIdBox" BorderThickness="0"
+                                         Background="Transparent" VerticalContentAlignment="Center"
+                                         Margin="12,0" FontSize="13"
+                                         TextChanged="OnMicrosoftClientIdTyped"/>
+                            </Border>
+                            <Button x:Name="SaveMicrosoftClientIdButton" Grid.Column="1" Content="Save"
+                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
+                                    IsEnabled="False" Click="OnSaveMicrosoftClientId"/>
+                        </Grid>
+
+                        <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
+                                       FontSize="12"
+                                       Text="Teezy has no Microsoft registration of its own yet, so it uses yours. In the Azure portal, register an application, add a Mobile and desktop redirect of http://localhost, turn on “Allow public client flows”, and add the delegated permissions Calendars.Read and offline_access. The application id is not a secret."/>
+                        </Border>
+                    </StackPanel>
+
+                    <ItemsControl x:Name="CalendarAccountList" Margin="0,14,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Sunken}" CornerRadius="9"
+                                        BorderBrush="{StaticResource Hairline}" BorderThickness="1"
+                                        Padding="12,10" Margin="0,0,0,8">
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,200,0">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       Foreground="{StaticResource Ink}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Hint}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center">
+                                            <ComboBox Width="104" Height="30"
+                                                      ItemsSource="{Binding Profiles}"
+                                                      SelectedItem="{Binding Profile, Mode=TwoWay}"/>
+                                            <Button Content="Disconnect" Style="{StaticResource Quiet}"
+                                                    Margin="8,0,0,0" Click="OnDisconnectCalendar"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button x:Name="ConnectMicrosoftButton" Content="Connect a Microsoft account"
+                            Style="{StaticResource Secondary}" HorizontalAlignment="Left"
+                            Height="38" Margin="0,6,0,0" Click="OnConnectMicrosoft"/>
+
+                    <TextBlock x:Name="CalendarStatus" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+
+                    <Border x:Name="CalendarWarning" Style="{StaticResource CautionPanel}"
+                            Visibility="Collapsed" Margin="0,12,0,0">
+                        <TextBlock x:Name="CalendarWarningText" TextWrapping="Wrap"
+                                   Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
             <!-- Microphone. Directly under the hotkey because between them they are the whole
                  input path, and a wrong device here looks exactly like a bad recogniser. -->
             <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">

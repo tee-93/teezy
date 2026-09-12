@@ -32,9 +32,16 @@ public sealed record CalendarReading(
 /// prevent.
 /// </para>
 /// </remarks>
-public sealed class CombinedCalendar(IReadOnlyList<ICalendar> accounts)
+/// <param name="accounts">
+/// Asked each time rather than captured once, so connecting or disconnecting an account in
+/// Settings takes effect on the next question instead of on the next launch.
+/// </param>
+public sealed class CombinedCalendar(Func<IReadOnlyList<ICalendar>> accounts)
 {
-    public bool IsConnected => accounts.Any(a => a.IsConnected);
+    /// <summary>A fixed set, for tests and for anywhere the list genuinely cannot change.</summary>
+    public CombinedCalendar(IReadOnlyList<ICalendar> accounts) : this(() => accounts) { }
+
+    public bool IsConnected => accounts().Any(a => a.IsConnected);
 
     /// <summary>Reads every connected account at once and merges what comes back.</summary>
     /// <remarks>
@@ -44,7 +51,7 @@ public sealed class CombinedCalendar(IReadOnlyList<ICalendar> accounts)
     public async Task<CalendarReading> BetweenAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default)
     {
-        var connected = accounts.Where(a => a.IsConnected).ToList();
+        var connected = accounts().Where(a => a.IsConnected).ToList();
         if (connected.Count == 0) return CalendarReading.Empty;
 
         var readings = await Task

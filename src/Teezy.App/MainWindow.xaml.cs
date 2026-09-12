@@ -10,6 +10,7 @@ using Teezy.Core;
 using Teezy.Core.Dictionary;
 using Teezy.Core.History;
 using Teezy.Core.Voice;
+using Teezy.Calendar;
 using Teezy.Speech;
 
 namespace Teezy.App;
@@ -35,6 +36,7 @@ public partial class MainWindow : Window
     private readonly Func<IAudioCapture>? _microphone;
     private readonly ISpeaker? _speaker;
     private readonly VoiceUsage? _usage;
+    private readonly CalendarAccounts? _calendars;
 
     private HomeView? _home;
     private InsightsView? _insights;
@@ -53,7 +55,8 @@ public partial class MainWindow : Window
         ClaudeFormatter? claude = null,
         Func<IAudioCapture>? microphone = null,
         ISpeaker? speaker = null,
-        VoiceUsage? usage = null)
+        VoiceUsage? usage = null,
+        CalendarAccounts? calendars = null)
     {
         InitializeComponent();
         _history = history;
@@ -68,6 +71,7 @@ public partial class MainWindow : Window
         _microphone = microphone;
         _speaker = speaker;
         _usage = usage;
+        _calendars = calendars;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -162,7 +166,8 @@ public partial class MainWindow : Window
                 .Apps.Select(a => a.App)],
             microphone: _microphone,
             speaker: _speaker,
-            usage: _usage);
+            usage: _usage,
+            calendars: _calendars);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

@@ -1,4 +1,6 @@
 using Teezy.Assistant;
+using Teezy.Calendar;
+using Teezy.Core.Calendar;
 using Teezy.Cleanup;
 using Teezy.Core.Formatting;
 using Teezy.Core.History;
@@ -34,6 +36,8 @@ public partial class App : Application
     private AssistantController? _assistant;
     private AssistantWindow? _assistantHud;
     private ClaudeAssistant? _claudeAssistant;
+    private ClaudeCalendarNarrator? _narrator;
+    private CalendarAccounts? _calendars;
     private SwitchingSpeaker? _speaker;
     private VoiceUsage? _voiceUsage;
     private ParakeetTranscriber? _transcriber;
@@ -148,8 +152,26 @@ public partial class App : Application
             () => _settings.AssistantModel,
             TimeSpan.FromSeconds(Math.Clamp(_settings.AssistantTimeoutSeconds, 2, 30)));
 
+        _calendars = new CalendarAccounts(
+            new TokenStore(_secrets), () => _settings.MicrosoftClientId);
+
+        // Deliberately a second Claude client rather than a flag on the first. This one is
+        // given no tools because it is handed meeting subjects other people wrote; that
+        // property survives only as long as the two stay separate objects.
+        _narrator = new ClaudeCalendarNarrator(
+            () => _settings.AssistantLlmEnabled ? _secrets.Read(ApiKeyName) : null,
+            () => _settings.AssistantModel,
+            TimeSpan.FromSeconds(Math.Clamp(_settings.AssistantTimeoutSeconds, 2, 30)));
+
         _assistant = new AssistantController(
-            _session, new WindowsCommandRunner(), _claudeAssistant);
+            _session,
+            new WindowsCommandRunner(),
+            _claudeAssistant,
+
+            // Asked per question rather than built once, so connecting an account in Settings
+            // works immediately instead of at the next launch.
+            new CombinedCalendar(() => _calendars.Open(_settings.CalendarAccounts)),
+            _narrator);
 
         _voiceUsage = new VoiceUsage();
 
@@ -402,7 +424,8 @@ public partial class App : Application
             // inherits.
             microphone: () => new WindowsAudioCapture(),
             speaker: _speaker,
-            usage: _voiceUsage);
+            usage: _voiceUsage,
+            calendars: _calendars);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;

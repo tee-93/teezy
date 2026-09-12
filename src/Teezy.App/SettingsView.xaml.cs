@@ -11,11 +11,15 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Teezy.Core;
 using Teezy.Core.Abstractions;
+using Teezy.Core.Calendar;
 using Teezy.Core.Formatting;
 using Teezy.Core.Hotkeys;
 using Teezy.Core.Speech;
 using Teezy.Core.Voice;
 using Teezy.Speech;
+using Teezy.Calendar;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace Teezy.App;
 
@@ -65,6 +69,7 @@ public partial class SettingsView : UserControl
     private readonly Func<IAudioCapture>? _microphone;
     private readonly ISpeaker? _speaker;
     private readonly VoiceUsage? _usage;
+    private readonly CalendarAccounts? _calendars;
 
     /// <summary>The capture opened by the level test, or null when no test is running.</summary>
     private IAudioCapture? _preview;
@@ -89,7 +94,8 @@ public partial class SettingsView : UserControl
         Func<IReadOnlyList<string>>? knownApps = null,
         ISpeaker? speaker = null,
         VoiceUsage? usage = null,
-        Func<IAudioCapture>? microphone = null)
+        Func<IAudioCapture>? microphone = null,
+        CalendarAccounts? calendars = null)
     {
         InitializeComponent();
 
@@ -104,6 +110,7 @@ public partial class SettingsView : UserControl
         _microphone = microphone;
         _speaker = speaker;
         _usage = usage;
+        _calendars = calendars;
 
         RecordButton.IsEnabled = _capture is not null;
         MicTestButton.IsEnabled = _microphone is not null;
@@ -129,6 +136,7 @@ public partial class SettingsView : UserControl
 
         PopulateHotkeys(settings);
         PopulateAssistant(settings);
+        PopulateCalendar(settings);
         PopulateMicrophones(settings);
         ThreadPicker.SelectedItem = settings.NumThreads;
         CleanupBox.IsChecked = settings.CleanupEnabled;
@@ -481,6 +489,157 @@ public partial class SettingsView : UserControl
             : $"Spoken this month: {thisMonth:N0} characters. ElevenLabs sells a monthly "
               + "character allowance rather than charging per use — leave this a few weeks and "
               + "the number here will tell you which tier you actually need.";
+    }
+
+    // ---- calendar accounts ----
+
+    /// <summary>One connected account, as the list shows it.</summary>
+    /// <remarks>
+    /// A small view model rather than binding to <see cref="ConnectedAccount"/> directly: the
+    /// record is immutable, and the profile picker has to write a change back through settings
+    /// rather than mutate what it was handed.
+    /// </remarks>
+    private sealed class CalendarRow(ConnectedAccount account, Action<CalendarProfile> choose)
+    {
+        public ConnectedAccount Account { get; } = account;
+
+        public string DisplayName => Account.DisplayName;
+
+        public string Detail => Account.Source is CalendarSource.Microsoft ? "Microsoft" : "Google";
+
+        /// <summary>What the profile picker offers.</summary>
+        /// <remarks>
+        /// An instance property although it never varies. A binding path cannot reach a static
+        /// member through the item's data context, so the static version would have left every
+        /// picker empty — and silently, since a failed binding is not an error.
+        /// </remarks>
+        public CalendarProfile[] Profiles => [CalendarProfile.Personal, CalendarProfile.Work];
+
+        private CalendarProfile _profile = account.Profile;
+
+        public CalendarProfile Profile
+        {
+            get => _profile;
+            set
+            {
+                if (_profile == value) return;
+                _profile = value;
+                choose(value);
+            }
+        }
+    }
+
+    private void PopulateCalendar(TeezySettings settings)
+    {
+        // The whole card is inert without somewhere to sign in to, so the setup box appears
+        // only until there is one and then gets out of the way for good.
+        CalendarSetup.Visibility = string.IsNullOrWhiteSpace(settings.MicrosoftClientId)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        MicrosoftClientIdBox.Text = settings.MicrosoftClientId ?? string.Empty;
+
+        CalendarAccountList.ItemsSource = settings.CalendarAccounts
+            .Select(a => new CalendarRow(a, profile => Reprofile(a, profile)))
+            .ToList();
+
+        ConnectMicrosoftButton.IsEnabled =
+            _calendars is not null && !string.IsNullOrWhiteSpace(settings.MicrosoftClientId);
+
+        CalendarStatus.Text = (settings.MicrosoftClientId, settings.CalendarAccounts.Count) switch
+        {
+            (null or "", _) => "Add an application id above to connect an account.",
+            (_, 0) => "No accounts connected. Nothing about your diary leaves this machine "
+                      + "until one is.",
+
+            // Worth saying plainly, because it is the difference between this feature and the
+            // integrations people are right to be wary of.
+            _ => "Read-only. Teezy can see what is in your diary and cannot change any of it.",
+        };
+    }
+
+    private void Reprofile(ConnectedAccount account, CalendarProfile profile)
+    {
+        var settings = _read();
+
+        _write(settings with
+        {
+            CalendarAccounts = [.. settings.CalendarAccounts.Select(
+                a => a.Id == account.Id ? a with { Profile = profile } : a)],
+        });
+    }
+
+    private void OnMicrosoftClientIdTyped(object sender, RoutedEventArgs e) =>
+        SaveMicrosoftClientIdButton.IsEnabled = MicrosoftClientIdBox.Text.Trim().Length > 0;
+
+    private void OnSaveMicrosoftClientId(object sender, RoutedEventArgs e)
+    {
+        var id = MicrosoftClientIdBox.Text.Trim();
+        if (id.Length == 0) return;
+
+        _write(_read() with { MicrosoftClientId = id });
+        Refresh();
+    }
+
+    private async void OnConnectMicrosoft(object sender, RoutedEventArgs e)
+    {
+        if (_calendars is null) return;
+
+        ConnectMicrosoftButton.IsEnabled = false;
+        CalendarWarning.Visibility = Visibility.Collapsed;
+        CalendarStatus.Text = "Waiting for you to sign in, in your browser…";
+
+        try
+        {
+            // Personal to begin with. Which side of life an account belongs to is a judgement
+            // only the user can make, and the picker on the row is where they make it —
+            // guessing from the address would be wrong often enough to be annoying.
+            var connected = await _calendars.ConnectMicrosoftAsync(CalendarProfile.Personal);
+
+            var settings = _read();
+            _write(settings with
+            {
+                CalendarAccounts = [.. settings.CalendarAccounts, connected],
+            });
+
+            Refresh();
+        }
+        catch (OAuthException failure)
+        {
+            Warn(failure.Message);
+        }
+        catch (Exception failure) when (failure is HttpRequestException or TaskCanceledException)
+        {
+            Warn("Couldn’t reach Microsoft to finish signing in.");
+        }
+        finally
+        {
+            ConnectMicrosoftButton.IsEnabled = true;
+        }
+
+        void Warn(string why)
+        {
+            CalendarWarningText.Text = why;
+            CalendarWarning.Visibility = Visibility.Visible;
+            CalendarStatus.Text = string.Empty;
+        }
+    }
+
+    private void OnDisconnectCalendar(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not CalendarRow row) return;
+
+        // Tokens first: an interruption between the two leaves an orphaned secret rather than
+        // an account that has vanished from the list but can still be read.
+        _calendars?.Disconnect(row.Account);
+
+        var settings = _read();
+        _write(settings with
+        {
+            CalendarAccounts = [.. settings.CalendarAccounts.Where(a => a.Id != row.Account.Id)],
+        });
+
+        Refresh();
     }
 
     private void OnHearVoice(object sender, RoutedEventArgs e) => Speak();

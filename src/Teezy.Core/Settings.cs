@@ -240,6 +240,31 @@ public sealed record TeezySettings
     /// </remarks>
     public string? SpeechVoice { get; init; }
 
+    /// <summary>
+    /// The Entra application id Teezy signs in to Microsoft with.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Configurable rather than compiled in, because Teezy has no registration of its own yet
+    /// and each user brings theirs. Not a secret: a client id identifies the application, it
+    /// does not authorise anything, which is why it sits here in plain text while the tokens it
+    /// yields go into the encrypted store.
+    /// </para>
+    /// <para>
+    /// When Teezy does ship a registration this becomes an override for people who would rather
+    /// use their own, and nothing about the shape has to change.
+    /// </para>
+    /// </remarks>
+    public string? MicrosoftClientId { get; init; }
+
+    /// <summary>The calendar accounts that have been signed in to.</summary>
+    /// <remarks>
+    /// Only which accounts exist and what to call them. Every credential lives in the secret
+    /// store, filed under each account's id — so this file can be read, copied or pasted into a
+    /// bug report without handing anyone a calendar.
+    /// </remarks>
+    public IReadOnlyList<Calendar.ConnectedAccount> CalendarAccounts { get; init; } = [];
+
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }
 

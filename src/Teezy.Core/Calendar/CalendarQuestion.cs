@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Teezy.Core.Calendar;
 
 /// <summary>What a spoken calendar question is asking for.</summary>
@@ -33,11 +35,11 @@ public enum CalendarAsk
 /// "What's next" is by some distance the most asked and the least deserving of an API call.
 /// </para>
 /// </remarks>
-public static class CalendarQuestion
+public static partial class CalendarQuestion
 {
     public static CalendarAsk Classify(string? spoken)
     {
-        var text = Commands.CommandMatcher.Normalise(spoken);
+        var text = Possessives(Commands.CommandMatcher.Normalise(spoken));
         if (text.Length == 0) return CalendarAsk.None;
 
         // Anchored like the command patterns, and for the same reason: an unanchored "meeting"
@@ -62,6 +64,20 @@ public static class CalendarQuestion
         return CalendarAsk.Other;
     }
 
+    /// <summary>Puts back the "s" that normalising an apostrophe strands.</summary>
+    /// <remarks>
+    /// <see cref="Commands.CommandMatcher.Normalise"/> turns every non-alphanumeric character
+    /// into a space, so "what's next" arrives as "what s next" and no phrase written the
+    /// obvious way can ever match it. That made every "whats …" test below unreachable, which
+    /// is exactly the kind of thing that looks right in review and does nothing at runtime.
+    /// A lone "s" between words can only have come from an apostrophe, so rejoining it is safe.
+    /// </remarks>
+    private static string Possessives(string text) =>
+        StrandedS().Replace(text, "$1s");
+
+    [GeneratedRegex(@"(\w) s\b")]
+    private static partial Regex StrandedS();
+
     /// <summary>
     /// Whether this is about the diary at all.
     /// </summary>
@@ -78,6 +94,11 @@ public static class CalendarQuestion
         || text.Contains("appointment", StringComparison.Ordinal)
         || text.Contains("am i free", StringComparison.Ordinal)
         || text.Contains("am i busy", StringComparison.Ordinal)
+
+        // "What does my day look like" is one of the most natural ways to ask, and the Today
+        // branch below already looked for it — but the gate did not let it through, so the
+        // branch could never run.
+        || text.Contains("my day", StringComparison.Ordinal)
         || text.Contains("whats next", StringComparison.Ordinal)
         || text.Contains("what is next", StringComparison.Ordinal)
         || text.Contains("whats on", StringComparison.Ordinal)

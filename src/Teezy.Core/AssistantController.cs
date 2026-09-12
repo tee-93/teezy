@@ -1,3 +1,4 @@
+using Teezy.Core.Calendar;
 using Teezy.Core.Commands;
 using Teezy.Core.Hotkeys;
 
@@ -45,6 +46,9 @@ public sealed class AssistantController
 {
     private readonly ICommandRunner? _runner;
     private readonly IAssistantFallback? _fallback;
+    private readonly CombinedCalendar? _calendar;
+    private readonly ICalendarNarrator? _narrator;
+    private readonly Func<DateTimeOffset> _now;
 
     /// <summary>Raised when a command has been dealt with, however it turned out.</summary>
     public event Action<AssistantOutcome>? Finished;
@@ -58,13 +62,22 @@ public sealed class AssistantController
 
     /// <param name="runner">Null means understand but do nothing.</param>
     /// <param name="fallback">Null, or switched off, means the local vocabulary is all there is.</param>
+    /// <param name="calendar">Null, or nothing connected, means diary questions are not claimed.</param>
+    /// <param name="narrator">Null means only the everyday diary phrasings can be answered.</param>
+    /// <param name="now">Overridable so the phrasing can be tested at a fixed hour.</param>
     public AssistantController(
         VoiceSession session,
         ICommandRunner? runner = null,
-        IAssistantFallback? fallback = null)
+        IAssistantFallback? fallback = null,
+        CombinedCalendar? calendar = null,
+        ICalendarNarrator? narrator = null,
+        Func<DateTimeOffset>? now = null)
     {
         _runner = runner;
         _fallback = fallback;
+        _calendar = calendar;
+        _narrator = narrator;
+        _now = now ?? (() => DateTimeOffset.Now);
         session.Handle(HotkeyAction.Assistant, OnSpoken);
     }
 
@@ -75,6 +88,17 @@ public sealed class AssistantController
         if (CommandMatcher.Match(heard) is { } local)
         {
             await Perform(heard, local).ConfigureAwait(false);
+            return;
+        }
+
+        // Ahead of the general fallback, because a connected diary is the better answer to
+        // "what's on today" than a model guessing, and because the diary path deliberately
+        // offers no tools. Only claimed when something is actually connected — otherwise the
+        // question goes to the fallback, which at least says it cannot see a calendar.
+        if (_calendar is { IsConnected: true }
+            && CalendarQuestion.Classify(heard) is var ask and not CalendarAsk.None)
+        {
+            await AnswerFromDiary(heard, ask).ConfigureAwait(false);
             return;
         }
 
@@ -112,6 +136,68 @@ public sealed class AssistantController
         }
 
         Finished?.Invoke(new AssistantOutcome(heard, null, "I can’t do that yet", AssistantResult.NotUnderstood));
+    }
+
+    /// <summary>Answers a diary question from the diary.</summary>
+    /// <remarks>
+    /// <b>No tools are reachable from anywhere in here.</b> The everyday phrasings are composed
+    /// by <see cref="CalendarAnswer"/> without asking anyone; the rest go to
+    /// <see cref="ICalendarNarrator"/>, which can return prose and nothing else. That is the
+    /// structural answer to meeting subjects being written by strangers — see
+    /// <see cref="ICalendar"/>.
+    /// </remarks>
+    private async Task AnswerFromDiary(string heard, CalendarAsk ask)
+    {
+        var now = _now();
+        var (from, to) = CalendarAnswer.Window(ask, now);
+
+        // Reading a calendar is a network call, so the pill should say something while it
+        // happens — the same second of silence the smarter tier warns about.
+        Thinking?.Invoke();
+
+        CalendarReading reading;
+        try
+        {
+            reading = await _calendar!.BetweenAsync(from, to).ConfigureAwait(false);
+        }
+        catch (CalendarUnavailableException e)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, e.Message, AssistantResult.Failed));
+            return;
+        }
+
+        if (CalendarAnswer.For(ask, reading, now) is { } composed)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, composed, AssistantResult.Answered));
+            return;
+        }
+
+        if (_narrator is not { IsAvailable: true })
+        {
+            // Honest about the edge of what it can do, rather than answering a different
+            // question with the day's list and letting the user work out it was not asked.
+            Finished?.Invoke(new AssistantOutcome(
+                heard,
+                null,
+                "I can tell you what’s next, what’s on today, or tomorrow.",
+                AssistantResult.NotUnderstood));
+            return;
+        }
+
+        string? answer;
+        try
+        {
+            answer = await _narrator.AnswerAsync(heard, reading.Events, now).ConfigureAwait(false);
+        }
+        catch (AssistantUnavailableException e)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, e.Message, AssistantResult.Failed));
+            return;
+        }
+
+        Finished?.Invoke(string.IsNullOrWhiteSpace(answer)
+            ? new AssistantOutcome(heard, null, "I can’t do that yet", AssistantResult.NotUnderstood)
+            : new AssistantOutcome(heard, null, answer.Trim(), AssistantResult.Answered));
     }
 
     private async Task Perform(string heard, VoiceCommand command)

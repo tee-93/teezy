@@ -32,10 +32,17 @@ public interface ICalendar
     /// <summary>Whether it is connected and able to answer.</summary>
     bool IsConnected { get; }
 
-    /// <summary>Events starting within the window, soonest first.</summary>
+    /// <summary>Events overlapping the window, soonest first.</summary>
     /// <remarks>
+    /// <para>
     /// A window rather than a count: "what is on today" and "what is next" want different
     /// spans of the same data, and asking for a fixed number of events answers neither well.
+    /// </para>
+    /// <para>
+    /// <b>Overlapping, not starting within.</b> A meeting that began twenty minutes ago is the
+    /// answer to "what am I in", and an all-day event started at midnight — so a window that
+    /// only catches events starting inside it would silently drop both.
+    /// </para>
     /// </remarks>
     /// <exception cref="CalendarUnavailableException">The account could not be reached.</exception>
     Task<IReadOnlyList<CalendarEvent>> BetweenAsync(

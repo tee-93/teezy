@@ -7,7 +7,7 @@
 
             <TextBlock Text="Settings" Style="{StaticResource H1}"/>
             <TextBlock Style="{StaticResource Lede}" Margin="0,6,0,0"
-                       Text="Everything runs on this machine. Nothing you say is sent anywhere."/>
+                       Text="Local by default. Dictation, commands and your dictionary never leave this machine — only the two Claude tiers below do, and only once you switch them on."/>
 
             <!-- Hero: the hotkey, because it is the only setting most people ever change. -->
             <Border Style="{StaticResource CardPanel}" Margin="0,24,0,0" Padding="26">
@@ -227,7 +227,7 @@
                     <StackPanel x:Name="LlmDetail" Visibility="Collapsed">
                         <Border Style="{StaticResource CautionPanel}" Margin="0,14,0,0">
                             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
-                                       Text="This is the one thing in Teezy that leaves your machine. Transcripts are sent to the Anthropic API, billed to your own account — a Claude Pro or Max subscription does not cover it. Roughly $0.60 a month at 400 dictations, and it adds about a second to each one."/>
+                                       Text="One of the two things in Teezy that leave your machine. Transcripts are sent to the Anthropic API, billed to your own account — a Claude Pro or Max subscription does not cover it. Roughly $0.60 a month at 400 dictations, and it adds about a second to each one."/>
                         </Border>
 
                         <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}" Margin="0,16,0,10"/>

@@ -2,8 +2,9 @@
 
 Push-to-talk for Windows. Hold a key, talk, release — cleaned-up text is typed into whatever
 had focus. Hold a *different* key and it does what you said instead: opens an app, changes the
-volume, skips a track, locks the PC. Fully on-device: after the one-time model download,
-nothing leaves the machine.
+volume, skips a track, locks the PC. **Local by default** — after the one-time model download,
+dictation, commands and your dictionary all run on-device and stay there. Two optional Claude
+tiers are the exception, both off until you switch them on and both on your own API key.
 
 Everything dictated is kept, searchable, in an app window with usage stats — because the
 text goes into *someone else's* app, and when that app eats it, mangles it, or you simply
@@ -187,6 +188,28 @@ the current Outlook all resolved to nothing. Which app you meant is scored in `T
 where it is tested: exact beats whole word beats prefix, shorter wins ties so "chrome" is
 Chrome rather than Chrome Canary, and nothing is fuzzy. Edit distance would let "teams" reach
 TeamViewer, and opening the wrong application is worse than admitting nothing matched.
+
+### When the patterns miss
+
+Settings ▸ Assistant can hand what they could not place to Claude, which either picks from the
+*same* command list or answers you in a sentence. Off by default, on your own API key, and it
+reuses the cleanup tier's — it is the same account.
+
+**The everyday vocabulary never reaches it.** Only what the local patterns decline costs a round
+trip, which is the economic argument as much as the privacy one: if "volume up" went to Claude,
+every command would cost money and leave the machine. There is a test pinning that.
+
+**Claude chooses; it does not name.** It gets the same six commands as tools, and what comes
+back is validated rather than trusted — an unknown tool, a missing argument or a number out of
+range yields no command at all instead of a best guess. The worst a confused model can do is set
+the volume wrong, because nothing destructive is on the list.
+
+**It is sent your words and nothing else.** No screen, no clipboard, no history, no documents.
+With no untrusted text in the request there is no prompt-injection surface, and that is a
+property to defend as this grows rather than a happy accident of it being small.
+
+Answers appear in a taller pill, sized from the wrapped text and left up longer the more there
+is to read — it cannot be summoned back, so a missed answer is a lost one.
 
 **Pick a combination that does not contain your dictation one.** Holding Ctrl+Alt+Win satisfies
 Alt+Win on the way, so dictation briefly starts first — you will hear its tone. Settings warns
@@ -638,12 +661,11 @@ synthesised key events).
 
 ## Not built yet
 
-1. **A smarter assistant.** The local vocabulary is a dozen verbs; anything outside it is
-   refused. A Claude tier would take what the patterns could not place and choose from the same
-   typed command list, or answer in words. Opt-in and bring-your-own-key, like the cleanup tier.
-2. **Translation.** Dictate in English, type in another language. Cheap once the Claude tier
-   exists — it is one more transform on the text — and a real project without it, since it
-   needs a translation engine and there is no local one here.
+1. **Spoken replies.** Answers are read, not heard. Windows' own voice would be free, offline
+   and instant; a better one costs money and a third API key.
+2. **Translation.** Dictate in English, type in another language. Cheap now the Claude tier
+   exists — it is one more transform on the text — but it still needs a translation engine, so
+   an *offline* version remains a real project.
 3. **Command mode over selected text.** Select text, hold a key, "make this more formal."
 4. **Code signing.** `install.ps1` needs no elevation and clears the mark-of-the-web, but the
    executable itself is unsigned — so SmartScreen warns on first launch, Smart App Control can

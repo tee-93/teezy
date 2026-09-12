@@ -19,7 +19,10 @@ public sealed record HistoryRow(string Time, string Text, string Meta, HistoryEn
 public sealed record HistoryGroup(string Header, IReadOnlyList<HistoryRow> Items);
 
 /// <summary>One line under the day band — a time and what is on.</summary>
-public sealed record UpcomingRow(string When, string What);
+public sealed record UpcomingRow(string When, string What, string Where);
+
+/// <summary>One unread message, as the inbox card shows it.</summary>
+public sealed record InboxRow(string Initials, string Who, string Subject);
 
 /// <summary>Recent dictations, newest first, with the headline stats alongside.</summary>
 /// <remarks>
@@ -47,12 +50,16 @@ public partial class HomeView : UserControl
     public HomeView(
         HistoryStore history,
         CombinedCalendar? calendar = null,
-        CombinedMailbox? mailbox = null)
+        CombinedMailbox? mailbox = null,
+        Func<string>? hotkey = null)
     {
         InitializeComponent();
         _history = history;
         _calendar = calendar;
         _mailbox = mailbox;
+
+        // The hotkey is the one thing on this page that is useful before you have read anything.
+        HotkeyChip.Text = hotkey?.Invoke() ?? "";
         Refresh();
     }
 
@@ -93,9 +100,87 @@ public partial class HomeView : UserControl
         _summaryRead = DateTimeOffset.Now;
 
         SummaryText.Text = DaySummary.For(diary, mail, now);
-        SummaryList.ItemsSource = Upcoming(diary, now);
         SummaryBand.Visibility = Visibility.Visible;
+
+        ShowToday(diary, now);
+        ShowInbox(mail);
     }
+
+    private void ShowToday(CalendarReading? diary, DateTimeOffset now)
+    {
+        if (diary is null)
+        {
+            TodayCard.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var left = diary.Events.Where(e => e.IsAllDay || e.End > now).ToList();
+
+        TodayList.ItemsSource = left
+            .Take(5)
+            .Select(e => new UpcomingRow(
+                e.IsAllDay ? "all day" : Spoken.Clock(e.Start),
+                e.Subject,
+                Where(e)))
+            .ToList();
+
+        TodayCount.Text = (left.Count, diary.Events.Count) switch
+        {
+            // The empty line under it already says there is nothing; "0 things" beside it is
+            // the same fact stated twice, once badly.
+            (0, 0) => "",
+            (0, var had) => $"{Plural(had, "thing")}, all done",
+            var (now_, had) when now_ == had => Plural(now_, "thing"),
+            var (now_, had) => $"{now_} left of {had}",
+        };
+
+        TodayEmpty.Visibility = left.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        TodayCard.Visibility = Visibility.Visible;
+    }
+
+    private void ShowInbox(MailReading? mail)
+    {
+        if (mail is null)
+        {
+            InboxCard.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var unread = mail.Messages.Where(m => m.IsUnread).ToList();
+
+        InboxList.ItemsSource = unread
+            .Take(4)
+            .Select(m => new InboxRow(Initials(m.Who), m.Who, m.Subject))
+            .ToList();
+
+        InboxCount.Text = unread.Count == 0 ? "" : Plural(unread.Count, "unread", plural: "unread");
+        InboxEmpty.Visibility = unread.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        InboxCard.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>Where a meeting is, when the organiser said and it is short enough to read.</summary>
+    /// <remarks>
+    /// Locations are frequently a whole conference URL. One of those in a card is a wall of
+    /// characters that says nothing, so anything that long is dropped rather than trimmed.
+    /// </remarks>
+    private static string Where(CalendarEvent occurrence) =>
+        occurrence.Location is { Length: > 0 and < 40 } place ? place : "";
+
+    /// <summary>Two letters for the avatar, from the sender's own name.</summary>
+    private static string Initials(string who)
+    {
+        var words = who.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        return words.Length switch
+        {
+            0 => "?",
+            1 => words[0][..Math.Min(2, words[0].Length)].ToUpperInvariant(),
+            _ => $"{char.ToUpperInvariant(words[0][0])}{char.ToUpperInvariant(words[^1][0])}",
+        };
+    }
+
+    private static string Plural(int count, string one, string? plural = null) =>
+        count == 1 ? $"1 {one}" : $"{count} {plural ?? one + "s"}";
 
     /// <summary>Runs a read, turning any failure into the reading's own "unavailable" shape.</summary>
     /// <remarks>
@@ -114,21 +199,6 @@ public partial class HomeView : UserControl
         }
     }
 
-    /// <summary>The next few things, for under the line.</summary>
-    private static IReadOnlyList<UpcomingRow> Upcoming(CalendarReading? diary, DateTimeOffset now)
-    {
-        if (diary is null) return [];
-
-        return
-        [
-            .. diary.Events
-                .Where(e => e.IsAllDay || e.End > now)
-                .Take(3)
-                .Select(e => new UpcomingRow(
-                    e.IsAllDay ? "all day" : Spoken.Clock(e.Start),
-                    e.Subject)),
-        ];
-    }
 
     private void UpdateStats()
     {

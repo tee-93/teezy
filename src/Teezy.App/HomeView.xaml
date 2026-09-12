@@ -9,6 +9,9 @@
             <ColumnDefinition Width="286"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <!-- greeting · day band · today and inbox · search · history -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -19,11 +22,129 @@
         <TextBlock x:Name="Subtitle" Grid.Row="0" Grid.Column="0" Margin="0,38,0,0"
                    Foreground="{StaticResource Muted}" FontSize="13"/>
 
+        <!-- The hotkey, where the eye lands first on a page you opened to check something. -->
+        <Border Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Top"
+                CornerRadius="999" Padding="11,6" Background="{StaticResource Card}"
+                BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Hold" Foreground="{StaticResource Muted}" FontSize="12"
+                           VerticalAlignment="Center"/>
+                <Border Background="{StaticResource Hover}" CornerRadius="6" Margin="8,0,0,0"
+                        Padding="7,2">
+                    <TextBlock x:Name="HotkeyChip" Foreground="{StaticResource Ink}" FontSize="11.5"
+                               FontWeight="SemiBold"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!--
+          The day, said in one line, across the top. The page opens with the assistant telling
+          you what is going on rather than with figures to assemble into a sentence yourself,
+          and it is composed from the same readings the spoken answers use — so the window and
+          the pill cannot describe different days.
+
+          Collapsed until there is something to say. Most of Teezy has never needed an account,
+          and an empty band is worse than no band.
+        -->
+        <Border x:Name="SummaryBand" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                Style="{StaticResource CardPanel}" Padding="20" Margin="0,22,0,0"
+                Visibility="Collapsed"
+                Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentSoft}">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="34" Height="34" CornerRadius="11" VerticalAlignment="Center"
+                        Background="{StaticResource AccentWash}">
+                    <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
+                          Width="18" Height="18"/>
+                </Border>
+                <TextBlock x:Name="SummaryText" Style="{StaticResource H2}" FontSize="17"
+                           TextWrapping="Wrap" LineHeight="24" Margin="15,0,0,0"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Today and the inbox, side by side, in the proportions the mock-up settled on. -->
+        <Border x:Name="TodayCard" Grid.Row="2" Grid.Column="0" Style="{StaticResource CardPanel}"
+                Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
+            <StackPanel>
+                <Grid Margin="0,0,0,12">
+                    <TextBlock Text="TODAY" Style="{StaticResource SectionLabel}" Margin="0"/>
+                    <TextBlock x:Name="TodayCount" HorizontalAlignment="Right" FontSize="11.5"
+                               Foreground="{StaticResource Faint}"/>
+                </Grid>
+                <ItemsControl x:Name="TodayList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,11">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="3"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding When}" FontSize="12.5"
+                                           Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                <Border Grid.Column="1" Width="3" CornerRadius="2" MinHeight="26"
+                                        Background="{StaticResource AccentWash}"/>
+                                <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding What}" FontSize="13.5"
+                                               Foreground="{StaticResource Ink}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Where}" FontSize="11.5" Margin="0,2,0,0"
+                                               Foreground="{StaticResource Muted}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="TodayEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
+                           Visibility="Collapsed" Text="Nothing else in your diary today."/>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="InboxCard" Grid.Row="2" Grid.Column="2" Style="{StaticResource CardPanel}"
+                Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
+            <StackPanel>
+                <Grid Margin="0,0,0,12">
+                    <TextBlock Text="INBOX" Style="{StaticResource SectionLabel}" Margin="0"/>
+                    <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="11.5"
+                               Foreground="{StaticResource Faint}"/>
+                </Grid>
+                <ItemsControl x:Name="InboxList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,11">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="9"
+                                        Background="{StaticResource Hover}" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding Initials}" FontSize="11"
+                                               FontWeight="SemiBold" Foreground="{StaticResource Body}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="11,0,0,0">
+                                    <TextBlock Text="{Binding Who}" FontSize="13"
+                                               Foreground="{StaticResource Ink}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
+                                               Foreground="{StaticResource Muted}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="InboxEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
+                           Visibility="Collapsed" Text="Nothing unread."/>
+            </StackPanel>
+        </Border>
+
 
         <!-- Search -->
         <!-- Right margin matches the scroll viewer's padding plus its scrollbar, so the
              search field lines up with the cards below it rather than overhanging them. -->
-        <Border Grid.Row="1" Grid.Column="0" Margin="0,22,22,14" Height="38"
+        <Border Grid.Row="3" Grid.Column="0" Margin="0,22,22,14" Height="38"
                 Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"
                 BorderThickness="1" CornerRadius="10">
             <Grid>
@@ -41,7 +162,7 @@
         </Border>
 
         <!-- History -->
-        <ScrollViewer Grid.Row="2" Grid.Column="0" VerticalScrollBarVisibility="Auto"
+        <ScrollViewer Grid.Row="4" Grid.Column="0" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0" Margin="0,0,0,0">
             <StackPanel>
                 <ItemsControl x:Name="Groups">
@@ -123,52 +244,7 @@
         </ScrollViewer>
 
         <!-- Stats sidebar -->
-        <StackPanel Grid.Row="0" Grid.RowSpan="3" Grid.Column="2" Margin="0,4,0,0">
-
-            <!--
-              The day, said in one line, above everything else. The page now opens with the
-              assistant telling you what is going on rather than with figures to assemble into
-              a sentence yourself — and it is composed from the same readings the spoken
-              answers use, so the window and the pill cannot disagree.
-
-              Collapsed until there is something to say. Most of Teezy has never needed an
-              account, and an empty band is worse than no band.
-            -->
-            <Border x:Name="SummaryBand" Style="{StaticResource CardPanel}" Padding="18"
-                    Margin="0,0,0,14" Visibility="Collapsed">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,11">
-                        <Border Width="28" Height="28" CornerRadius="9"
-                                Background="{StaticResource AccentWash}">
-                            <Path Data="{StaticResource MarkGeometry}" Fill="White"
-                                  Stretch="Uniform" Width="15" Height="15"/>
-                        </Border>
-                        <TextBlock Text="TODAY" Style="{StaticResource SectionLabel}"
-                                   Margin="11,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock x:Name="SummaryText" Style="{StaticResource H2}" FontSize="15.5"
-                               TextWrapping="Wrap" LineHeight="22"/>
-
-                    <ItemsControl x:Name="SummaryList" Margin="0,14,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,9">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="54"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding When}" FontSize="12"
-                                               Foreground="{StaticResource Muted}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding What}" FontSize="12.5"
-                                               Foreground="{StaticResource Body}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-
+        <StackPanel Grid.Row="4" Grid.Column="2" Margin="0,0,0,0">
             <Border Style="{StaticResource CardPanel}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">

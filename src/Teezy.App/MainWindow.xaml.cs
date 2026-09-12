@@ -132,7 +132,7 @@ public partial class MainWindow : Window
 
     private void ShowHome()
     {
-        _home ??= new HomeView(_history, _diary, _mail);
+        _home ??= new HomeView(_history, _diary, _mail, () => _settings().Hotkey.Display);
         _home.Refresh();
         PageHost.Content = _home;
     }

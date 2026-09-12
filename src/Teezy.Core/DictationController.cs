@@ -40,7 +40,7 @@ public sealed record DictationCompleted(
 /// the HUD is still up while the Claude tier is thinking.
 /// </para>
 /// </remarks>
-public sealed class DictationController : IDisposable
+public sealed class DictationController
 {
     private readonly VoiceSession _session;
     private readonly ITextInjector _injector;
@@ -52,17 +52,16 @@ public sealed class DictationController : IDisposable
     /// rather than needing a restart.</summary>
     private readonly Func<ITextFormatter> _formatter;
 
-    public event Action<DictationState>? StateChanged;
-    public event Action<float>? LevelChanged;
     public event Action<DictationCompleted>? Completed;
-    public event Action<string>? Failed;
 
     public DictationState State => _session.State;
 
+    /// <param name="session">
+    /// Shared, not owned. Every voice mode registers on the same session because there is one
+    /// hook and one microphone; whoever created it disposes it.
+    /// </param>
     public DictationController(
-        IHotkeySource hotkey,
-        IAudioCapture capture,
-        ITranscriber transcriber,
+        VoiceSession session,
         ITextInjector injector,
         DictionaryStore dictionary,
         Func<TeezySettings> settings,
@@ -75,20 +74,9 @@ public sealed class DictationController : IDisposable
         _dictionary = dictionary;
         _settings = settings;
 
-        _session = new VoiceSession(hotkey, capture, transcriber, settings);
+        _session = session;
         _session.Handle(HotkeyAction.Dictate, OnDictated);
-
-        _session.StateChanged += state => StateChanged?.Invoke(state);
-        _session.LevelChanged += level => LevelChanged?.Invoke(level);
-        _session.Failed += message => Failed?.Invoke(message);
     }
-
-    public bool Start() => _session.Start();
-
-    public void Stop() => _session.Stop();
-
-    /// <summary>Re-arms the hook after the user picks a different key.</summary>
-    public bool ReloadHotkey() => _session.ReloadHotkeys();
 
     // ---- The dictation tail ----
 
@@ -134,5 +122,4 @@ public sealed class DictationController : IDisposable
             new StageTimings(result.Transcribe, cleanup, inject)));
     }
 
-    public void Dispose() => _session.Dispose();
 }

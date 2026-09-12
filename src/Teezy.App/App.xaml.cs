@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Dictionary;
+using Teezy.Core.Hotkeys;
 using Teezy.Platform.Windows;
 using Teezy.Speech;
 using Forms = System.Windows.Forms;
@@ -23,7 +24,10 @@ public partial class App : Application
     /// <summary>Name the API key is filed under in the encrypted secret store.</summary>
     internal const string ApiKeyName = "anthropic-api-key";
 
+    private VoiceSession? _session;
     private DictationController? _controller;
+    private AssistantController? _assistant;
+    private AssistantWindow? _assistantHud;
     private ParakeetTranscriber? _transcriber;
     private WindowsAutostart? _autostart;
     private WindowsHotkeySource? _hotkeySource;
@@ -72,6 +76,7 @@ public partial class App : Application
         WatchDictionaryFile();
 
         _hud = new HudWindow();
+        _assistantHud = new AssistantWindow();
         BuildTray();
 
         _transcriber = new ParakeetTranscriber(
@@ -116,26 +121,33 @@ public partial class App : Application
         // always the one that was chosen.
         _audio = new WindowsAudioCapture { PreferredDeviceId = _settings.InputDeviceId };
 
+        // One session, shared. There is one hook and one microphone, so every voice mode
+        // registers on the same session rather than each owning its own.
+        _session = new VoiceSession(_hotkeySource, _audio, _transcriber, () => _settings);
+
         _controller = new DictationController(
-            _hotkeySource,
-            _audio,
-            _transcriber,
+            _session,
             new WindowsTextInjector(),
             _dictionary,
             () => _settings,
             new WindowsForegroundApp(),
             () => _settings.LlmCleanupEnabled ? _claude! : new RuleBasedFormatter());
 
+        // No runner yet: it understands and reports, and touches nothing. Wiring the actions
+        // is the next step, and "does nothing" is the right default for the one before it.
+        _assistant = new AssistantController(_session);
+
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.
-        _controller.StateChanged += s => Dispatch(() => OnStateChanged(s));
-        _controller.LevelChanged += l => Dispatch(() => _hud!.SetLevel(l));
-        _controller.Failed += m => Dispatch(() => OnFailed(m));
+        _session.StateChanged += (action, state) => Dispatch(() => OnStateChanged(action, state));
+        _session.LevelChanged += l => Dispatch(() => OnLevel(l));
+        _session.Failed += (action, m) => Dispatch(() => OnFailed(action, m));
         _controller.Completed += OnCompleted;
+        _assistant.Finished += o => Dispatch(() => OnAssistantFinished(o));
 
         // The hook must be installed from a thread with a message pump; OnStartup is on the
         // UI thread, which has one. From a pool thread the callback silently never fires.
-        if (!_controller.Start())
+        if (!_session.Start())
         {
             Notify("Teezy could not install its keyboard hook.", Forms.ToolTipIcon.Error);
         }
@@ -247,10 +259,25 @@ public partial class App : Application
         }
     }
 
-    private void OnFailed(string message)
+    private void OnFailed(HotkeyAction action, string message)
     {
-        _hud!.ShowState(DictationState.Error, message);
+        if (action == HotkeyAction.Assistant) _assistantHud!.ShowError(message);
+        else _hud!.ShowState(DictationState.Error, message);
+
         Notify(message, Forms.ToolTipIcon.Error);
+    }
+
+    /// <summary>The meter belongs to whichever pill is up.</summary>
+    private void OnLevel(float level)
+    {
+        _hud!.SetLevel(level);
+        _assistantHud!.SetLevel(level);
+    }
+
+    private void OnAssistantFinished(AssistantOutcome outcome)
+    {
+        if (outcome.Succeeded) _assistantHud!.ShowDone(outcome.Message);
+        else _assistantHud!.ShowUnknown(outcome.Heard);
     }
 
     private void Dispatch(Action action) => Dispatcher.BeginInvoke(action, DispatcherPriority.Normal);
@@ -324,11 +351,12 @@ public partial class App : Application
     /// <summary>Applies and persists a settings change from any window.</summary>
     private void ApplySettings(TeezySettings updated)
     {
-        var keyChanged = updated.Hotkey != _settings.Hotkey;
+        var keyChanged = updated.Hotkey != _settings.Hotkey
+                         || updated.AssistantHotkey != _settings.AssistantHotkey;
         var micChanged = updated.InputDeviceId != _settings.InputDeviceId;
         _settings = updated;
         _settings.Save();
-        if (keyChanged) _controller?.ReloadHotkey();
+        if (keyChanged) _session?.ReloadHotkeys();
 
         // A newly chosen microphone deserves to be reported on its own merits, even if the
         // previous one had already been warned about.
@@ -364,7 +392,7 @@ public partial class App : Application
     {
         _dictWatcher?.Dispose();
         _instance?.Dispose();
-        _controller?.Dispose();
+        _session?.Dispose();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
         TrayIcons.Dispose();
         base.OnExit(e);

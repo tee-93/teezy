@@ -137,11 +137,37 @@ public sealed record TeezySettings
     /// its hotkey here and nowhere else — <see cref="VoiceSession"/> binds whatever it is given
     /// and has no opinion about where the keys came from.
     /// </remarks>
-    public IReadOnlyDictionary<Hotkeys.HotkeyAction, Hotkeys.Hotkey> Bindings() =>
-        new Dictionary<Hotkeys.HotkeyAction, Hotkeys.Hotkey>
+    public IReadOnlyDictionary<Hotkeys.HotkeyAction, Hotkeys.Hotkey> Bindings()
+    {
+        var bindings = new Dictionary<Hotkeys.HotkeyAction, Hotkeys.Hotkey>
         {
             [Hotkeys.HotkeyAction.Dictate] = Hotkey,
         };
+
+        // Unset by default, and left out entirely rather than bound to nothing: an empty
+        // combination watched by the hook would be a key that does nothing, forever.
+        if (!AssistantHotkey.IsEmpty)
+        {
+            bindings[Hotkeys.HotkeyAction.Assistant] = AssistantHotkey;
+        }
+
+        return bindings;
+    }
+
+    /// <summary>
+    /// The combination that speaks to the assistant. Empty means the assistant is off.
+    /// </summary>
+    /// <remarks>
+    /// No default, deliberately. A second global hotkey appearing on upgrade would take a key
+    /// combination out of someone's hands without being asked, and the whole feature is opt-in
+    /// until it has earned otherwise.
+    /// <para>
+    /// Worth avoiding a combination that contains <see cref="Hotkey"/>: holding Ctrl+Alt+Win
+    /// satisfies Alt+Win on the way, so dictation starts for a few milliseconds first. See
+    /// <see cref="Hotkeys.HotkeyBindings"/>.
+    /// </para>
+    /// </remarks>
+    public Hotkeys.Hotkey AssistantHotkey { get; init; } = new();
 
     /// <summary>Copy the transcript to the clipboard in addition to typing it.</summary>
     public bool AlsoCopyToClipboard { get; init; }

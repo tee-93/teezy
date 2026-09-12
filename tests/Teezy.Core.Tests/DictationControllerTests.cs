@@ -13,7 +13,8 @@ public class DictationControllerTests
         FakeHotkey Hotkey,
         FakeCapture Capture,
         FakeTranscriber Transcriber,
-        FakeInjector Injector);
+        FakeInjector Injector,
+        VoiceSession Session);
 
     private static Harness Build(TeezySettings? settings = null, string? dictionaryFile = null)
     {
@@ -26,10 +27,11 @@ public class DictationControllerTests
         var store = new DictionaryStore(path);
 
         var effective = settings ?? new TeezySettings { MinimumHoldMilliseconds = 0 };
-        var controller = new DictationController(
-            hotkey, capture, transcriber, injector, store, () => effective);
+        var session = new VoiceSession(hotkey, capture, transcriber, () => effective);
+        var controller = new DictationController(session, injector, store, () => effective);
+        session.Start();
 
-        return new Harness(controller, hotkey, capture, transcriber, injector);
+        return new Harness(controller, hotkey, capture, transcriber, injector, session);
     }
 
     /// <summary>Waits for the fire-and-forget tail to finish rather than sleeping a fixed
@@ -129,7 +131,7 @@ public class DictationControllerTests
         h.Capture.FailOnStart = true;
 
         string? reported = null;
-        h.Controller.Failed += m => reported = m;
+        h.Session.Failed += (_, m) => reported = m;
 
         h.Hotkey.Press();
 

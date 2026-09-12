@@ -23,9 +23,10 @@ public class InputDeviceTests
         var capture = new FakeCapture();
         var path = Path.Combine(Path.GetTempPath(), $"teezy-{Guid.NewGuid():N}.txt");
 
+        var session = new VoiceSession(hotkey, capture, new FakeTranscriber(), settings);
         var controller = new DictationController(
-            hotkey, capture, new FakeTranscriber(), new FakeInjector(),
-            new DictionaryStore(path), settings);
+            session, new FakeInjector(), new DictionaryStore(path), settings);
+        session.Start();
 
         return new Harness(controller, hotkey, capture);
     }

@@ -72,6 +72,43 @@
     <SolidColorBrush x:Key="HudText"   Color="#EFEBE4"/>
     <SolidColorBrush x:Key="HudMeter"  Color="#EFEBE4"/>
 
+    <!--
+      The assistant pill. Glass rather than one flat fill: the diagonal catches light at the
+      top left and falls away at the bottom right, which is what stops translucency reading as
+      a grey box at seventy percent.
+    -->
+    <LinearGradientBrush x:Key="AssistantGlass" StartPoint="0,0" EndPoint="0.35,1">
+        <GradientStop Color="#D92F2B26" Offset="0"/>
+        <GradientStop Color="#D41E1C19" Offset="0.55"/>
+        <GradientStop Color="#DE141311" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- The lit top edge, and a sheen over the upper half. -->
+    <LinearGradientBrush x:Key="AssistantEdge" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#59FFFFFF" Offset="0"/>
+        <GradientStop Color="#1AFFFFFF" Offset="0.45"/>
+        <GradientStop Color="#0DFFFFFF" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="AssistantSheen" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#26FFFFFF" Offset="0"/>
+        <GradientStop Color="#08FFFFFF" Offset="0.42"/>
+        <GradientStop Color="#00FFFFFF" Offset="0.75"/>
+    </LinearGradientBrush>
+
+    <!--
+      A cooler, more electric treatment of the accent, so assistant mode is distinguishable
+      from dictation at a glance. Deliberately still blue: red means recording and appears
+      nowhere else, and a warm accent here would compete with the one signal that must read
+      instantly.
+    -->
+    <LinearGradientBrush x:Key="AssistantWave" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#2E7BFF" Offset="0"/>
+        <GradientStop Color="#57D0FF" Offset="1"/>
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="AssistantGood" Color="#4ADE80"/>
+
     <!-- Caution, for hotkey and dictionary warnings. -->
     <SolidColorBrush x:Key="CautionBg"     Color="#FDF6E7"/>
     <SolidColorBrush x:Key="CautionBorder" Color="#EFE0BC"/>

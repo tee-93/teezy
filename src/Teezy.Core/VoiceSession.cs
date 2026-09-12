@@ -70,9 +70,18 @@ public sealed class VoiceSession : IDisposable
     private long _holdStartedTicks;
     private HotkeyAction _active;
 
-    public event Action<DictationState>? StateChanged;
+    /// <summary>
+    /// State, and which mode it belongs to.
+    /// </summary>
+    /// <remarks>
+    /// The action is part of the signal rather than something to look up afterwards: the UI
+    /// has a different window per mode, and reading "which mode is active" separately from
+    /// "what it is doing" is a race waiting to show the wrong pill.
+    /// </remarks>
+    public event Action<HotkeyAction, DictationState>? StateChanged;
+
     public event Action<float>? LevelChanged;
-    public event Action<string>? Failed;
+    public event Action<HotkeyAction, string>? Failed;
 
     public DictationState State
     {
@@ -247,7 +256,7 @@ public sealed class VoiceSession : IDisposable
     private void SetState(DictationState next)
     {
         _state = next;
-        StateChanged?.Invoke(next);
+        StateChanged?.Invoke(_active, next);
     }
 
     private void Reset()
@@ -269,7 +278,7 @@ public sealed class VoiceSession : IDisposable
             SetState(DictationState.Error);
         }
 
-        Failed?.Invoke(message);
+        Failed?.Invoke(_active, message);
         LevelChanged?.Invoke(0);
 
         // Drop back to Idle so one bad utterance doesn't strand the app.

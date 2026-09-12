@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Dictionary;
+using Teezy.Core.Hotkeys;
 using Teezy.Speech;
 using Forms = System.Windows.Forms;
 
@@ -12,9 +13,10 @@ namespace Teezy.App;
 public partial class App
 {
     /// <summary>Mirrors controller state into the HUD and the two chimes.</summary>
-    private void OnStateChanged(DictationState state)
+    private void OnStateChanged(HotkeyAction action, DictationState state)
     {
-        if (_settings.ShowHud) _hud!.ShowState(state);
+        if (action == HotkeyAction.Assistant) ShowAssistantState(state);
+        else if (_settings.ShowHud) _hud!.ShowState(state);
         else _hud!.Hide();
 
         if (state == DictationState.Listening) WarnIfMicrophoneMissing();
@@ -26,6 +28,32 @@ public partial class App
         // open. On a cold start those are meaningfully different.
         if (state == DictationState.Listening) Chime.Start();
         else if (state == DictationState.Finishing) Chime.Stop();
+    }
+
+    /// <summary>
+    /// Drives the assistant pill, which shows regardless of the "show the level meter" switch.
+    /// </summary>
+    /// <remarks>
+    /// That switch turns off a meter that sits there while you talk and tells you nothing you
+    /// did not already know. The assistant pill is the only thing that reports what it heard
+    /// and what it did, so turning it off would leave commands happening silently.
+    /// </remarks>
+    private void ShowAssistantState(DictationState state)
+    {
+        switch (state)
+        {
+            case DictationState.Starting:
+            case DictationState.Listening:
+                _assistantHud!.ShowListening();
+                break;
+
+            case DictationState.Finishing:
+                _assistantHud!.ShowWorking();
+                break;
+
+            // Idle and Error are not dismissals: the outcome arrives separately and the pill
+            // stays up long enough to be read, then retires itself.
+        }
     }
 
     /// <summary>Says so, once, when the chosen microphone was not the one that opened.</summary>

@@ -121,6 +121,7 @@ public partial class SettingsView : UserControl
         var settings = _read();
 
         PopulateHotkeys(settings);
+        PopulateAssistant(settings);
         PopulateMicrophones(settings);
         ThreadPicker.SelectedItem = settings.NumThreads;
         CleanupBox.IsChecked = settings.CleanupEnabled;
@@ -212,6 +213,112 @@ public partial class SettingsView : UserControl
         }
 
         _write(settings with { Hotkey = hotkey });
+        Refresh();
+    }
+
+    // ---- Assistant ----
+
+    /// <summary>What the assistant key can be set to. The first entry turns it off.</summary>
+    /// <remarks>
+    /// Ctrl+Win leads the offered combinations because it is the one most likely to be free:
+    /// dictation defaults to it, but anyone who has moved dictation elsewhere has it spare, and
+    /// it does not contain the other presets.
+    /// </remarks>
+    private void PopulateAssistant(TeezySettings settings)
+    {
+        var options = new List<Hotkey> { new() };
+        options.AddRange(Presets.Where(p => p != settings.Hotkey));
+
+        if (!settings.AssistantHotkey.IsEmpty && !options.Contains(settings.AssistantHotkey))
+        {
+            // A recorded combination must stay selectable, or reopening settings would show —
+            // and on the next change apply — a different key than the one in force.
+            options.Insert(1, settings.AssistantHotkey);
+        }
+
+        AssistantPicker.Items.Clear();
+        foreach (var option in options)
+        {
+            AssistantPicker.Items.Add(option.IsEmpty ? "Off" : option.Display);
+        }
+
+        AssistantPicker.Tag = options;
+        AssistantPicker.SelectedIndex = Math.Max(0, options.IndexOf(settings.AssistantHotkey));
+        AssistantRecordButton.IsEnabled = _capture is not null;
+
+        ShowAssistantState(settings);
+    }
+
+    private void ShowAssistantState(TeezySettings settings)
+    {
+        var assistant = settings.AssistantHotkey;
+
+        AssistantHint.Text = assistant.IsEmpty
+            ? "Off. Pick a combination to switch it on."
+            : $"Hold {assistant.Display} and say what you want.";
+
+        // The overlap that cannot be designed away: holding a combination that contains the
+        // dictation one satisfies it on the way, so dictation starts for a few milliseconds
+        // first. Steering people away from it beats taxing every dictation with a debounce.
+        var overlaps = !assistant.IsEmpty
+                       && (assistant.Contains(settings.Hotkey) || settings.Hotkey.Contains(assistant));
+
+        AssistantWarning.Visibility = overlaps ? Visibility.Visible : Visibility.Collapsed;
+        if (overlaps)
+        {
+            AssistantWarningText.Text =
+                $"{assistant.Display} and your dictation key {settings.Hotkey.Display} share keys, "
+                + "so holding one briefly starts the other — you will hear the dictation tone "
+                + "first. Combinations that do not contain one another avoid it.";
+        }
+    }
+
+    private void OnAssistantPreset(object sender, RoutedEventArgs e)
+    {
+        if (_loading || AssistantPicker.Tag is not List<Hotkey> options) return;
+        if (AssistantPicker.SelectedIndex < 0 || AssistantPicker.SelectedIndex >= options.Count) return;
+
+        ApplyAssistantHotkey(options[AssistantPicker.SelectedIndex]);
+    }
+
+    private void OnRecordAssistantHotkey(object sender, RoutedEventArgs e)
+    {
+        if (_capture is null) return;
+
+        if (_capture.IsCapturing)
+        {
+            _capture.CancelCapture();
+            EndAssistantRecording();
+            return;
+        }
+
+        AssistantRecordButton.Content = "Cancel";
+        AssistantHint.Text = "Hold the keys you want, then let go.";
+        AssistantPicker.IsEnabled = false;
+
+        _capture.BeginCapture(hotkey => Dispatcher.Invoke(() =>
+        {
+            EndAssistantRecording();
+            ApplyAssistantHotkey(hotkey);
+        }));
+    }
+
+    private void EndAssistantRecording()
+    {
+        AssistantRecordButton.Content = "Record my own";
+        AssistantPicker.IsEnabled = true;
+    }
+
+    private void ApplyAssistantHotkey(Hotkey hotkey)
+    {
+        var settings = _read();
+        if (hotkey == settings.AssistantHotkey)
+        {
+            ShowAssistantState(settings);
+            return;
+        }
+
+        _write(settings with { AssistantHotkey = hotkey });
         Refresh();
     }
 
@@ -1005,6 +1112,8 @@ public partial class SettingsView : UserControl
     public void Leaving()
     {
         _capture?.CancelCapture();
+        EndRecording();
+        EndAssistantRecording();
         StopPreview();
         MicTestStatus.Text = string.Empty;
     }

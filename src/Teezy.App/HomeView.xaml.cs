@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+
 using System.Threading.Tasks;
 using Teezy.Core;
 using Teezy.Core.Calendar;
@@ -12,23 +14,28 @@ using Teezy.Core.Mail;
 
 namespace Teezy.App;
 
-/// <summary>One dictation, shaped for display.</summary>
-public sealed record HistoryRow(string Time, string Text, string Meta, HistoryEntry Entry);
-
-/// <summary>A day of dictations under one heading.</summary>
-public sealed record HistoryGroup(string Header, IReadOnlyList<HistoryRow> Items);
 
 /// <summary>One line under the day band — a time and what is on.</summary>
-public sealed record UpcomingRow(string When, string What, string Where);
+public sealed record UpcomingRow(string When, string What, string Where, bool Done, bool Now)
+{
+    /// <summary>Past events stay on the card, faded, so the shape of the day is legible.</summary>
+    public double Dim => Done ? 0.40 : 1.0;
+
+    /// <summary>Struck through as well as faded — fade alone reads as "loading".</summary>
+    public TextDecorationCollection? Strike => Done ? TextDecorations.Strikethrough : null;
+
+    /// <summary>The one happening right now gets the marker; everything else is a plain rule.</summary>
+    public double RailWidth => Now ? 4 : 3;
+}
 
 /// <summary>One unread message, as the inbox card shows it.</summary>
-public sealed record InboxRow(string Initials, string Who, string Subject);
+public sealed record InboxRow(
+    string Initials, string Who, string Subject, string Mailbox, MailMessage Message);
 
-/// <summary>Recent dictations, newest first, with the headline stats alongside.</summary>
+/// <summary>The dashboard: the day said in one line, then the diary, the inbox and the figures.</summary>
 /// <remarks>
-/// The point of this page is recovery: text is injected into another app, and if that app
-/// ate it, mangled it, or the user simply wants it again, this is the only place it still
-/// exists. That is why the list is the page rather than a panel on it.
+/// Everything on it is a summary. The transcripts moved to their own page, so this one can
+/// answer "what is going on" without also being a search results list.
 /// </remarks>
 public partial class HomeView : UserControl
 {
@@ -66,7 +73,7 @@ public partial class HomeView : UserControl
     public void Refresh()
     {
         _all = _history.Load();
-        ApplyFilter(SearchBox.Text);
+        
         UpdateStats();
 
         // Deliberately not awaited. The history is the page and must paint immediately; the
@@ -89,7 +96,14 @@ public partial class HomeView : UserControl
         if (DateTimeOffset.Now - _summaryRead < SummaryFreshFor) return;
 
         var now = DateTimeOffset.Now;
-        var (from, to) = CalendarAnswer.Window(CalendarAsk.Today, now);
+
+        // Midnight to midnight, not the spoken window. CalendarAnswer.Window starts at "now"
+        // because nobody asks out loud about a meeting they have already sat through — but the
+        // card shows the morning greyed out, and it cannot show what was never fetched.
+        var midnight = now.ToLocalTime().Date;
+        var from = new DateTimeOffset(midnight, TimeZoneInfo.Local.GetUtcOffset(midnight));
+        var to = from.AddDays(1);
+
         var (since, atMost) = MailAnswer.Window(MailAsk.Unread, now);
 
         // Both at once, and neither allowed to take the other down: a mailbox that cannot be
@@ -106,6 +120,13 @@ public partial class HomeView : UserControl
         ShowInbox(mail);
     }
 
+    /// <summary>The whole day, with what has already happened dimmed rather than dropped.</summary>
+    /// <remarks>
+    /// The spoken answer only reports what is left, because nobody asks out loud to be told
+    /// about a meeting they have already sat through. A card is read differently: seeing the
+    /// morning greyed out is what makes an empty afternoon legible as an afternoon rather than
+    /// as a calendar that failed to load.
+    /// </remarks>
     private void ShowToday(CalendarReading? diary, DateTimeOffset now)
     {
         if (diary is null)
@@ -114,27 +135,28 @@ public partial class HomeView : UserControl
             return;
         }
 
-        var left = diary.Events.Where(e => e.IsAllDay || e.End > now).ToList();
+        var all = diary.Events;
+        var left = all.Count(e => e.IsAllDay || e.End > now);
 
-        TodayList.ItemsSource = left
-            .Take(5)
+        TodayList.ItemsSource = all
+            .Take(6)
             .Select(e => new UpcomingRow(
                 e.IsAllDay ? "all day" : Spoken.Clock(e.Start),
                 e.Subject,
-                Where(e)))
+                Where(e),
+                Done: !e.IsAllDay && e.End <= now,
+                Now: e.IsHappeningAt(now)))
             .ToList();
 
-        TodayCount.Text = (left.Count, diary.Events.Count) switch
+        TodayCount.Text = (left, all.Count) switch
         {
-            // The empty line under it already says there is nothing; "0 things" beside it is
-            // the same fact stated twice, once badly.
             (0, 0) => "",
             (0, var had) => $"{Plural(had, "thing")}, all done",
-            var (now_, had) when now_ == had => Plural(now_, "thing"),
-            var (now_, had) => $"{now_} left of {had}",
+            var (remaining, had) when remaining == had => Plural(had, "thing"),
+            var (remaining, had) => $"{remaining} left of {had}",
         };
 
-        TodayEmpty.Visibility = left.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        TodayEmpty.Visibility = all.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         TodayCard.Visibility = Visibility.Visible;
     }
 
@@ -148,14 +170,47 @@ public partial class HomeView : UserControl
 
         var unread = mail.Messages.Where(m => m.IsUnread).ToList();
 
-        InboxList.ItemsSource = unread
-            .Take(4)
-            .Select(m => new InboxRow(Initials(m.Who), m.Who, m.Subject))
-            .ToList();
+        InboxList.ItemsSource = unread.Take(5).Select(Row).ToList();
 
         InboxCount.Text = unread.Count == 0 ? "" : Plural(unread.Count, "unread", plural: "unread");
         InboxEmpty.Visibility = unread.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         InboxCard.Visibility = Visibility.Visible;
+    }
+
+    private static InboxRow Row(MailMessage message) => new(
+        Initials(message.Who),
+        message.Who,
+        message.Subject,
+        message.Source is MailSource.Google ? "GMAIL" : "OUTLOOK",
+        message);
+
+    // ---- one message, read in place ----
+
+    /// <summary>Opens one message in its own dialog.</summary>
+    /// <remarks>
+    /// A real window, not a panel laid over the page. The in-page version rendered, laid out
+    /// and hovered correctly, and simply never appeared when clicked — and a modal that cannot
+    /// be found in the visual tree is not worth debugging when a dialog cannot be lost.
+    /// </remarks>
+    /// <summary>
+    /// One handler on the list, resolving which row was hit from the element under the mouse.
+    /// </summary>
+    /// <remarks>
+    /// Per-item wiring was tried twice and failed both times, silently: a Border with
+    /// MouseLeftButtonUp never raised, and a templated Button would not even take a hover.
+    /// Rather than keep guessing at why a generated item container behaves that way, the
+    /// handler moved to the one named element that certainly exists — the ItemsControl —
+    /// and PreviewMouseLeftButtonDown tunnels from the root, so nothing downstream can eat it.
+    /// The deepest element hit carries the row as its DataContext.
+    /// </remarks>
+    private void OnMessageOpened(object sender, MouseButtonEventArgs e)
+    {
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is not InboxRow row) return;
+
+        new MessageWindow(row.Message, row.Mailbox)
+        {
+            Owner = Window.GetWindow(this),
+        }.ShowDialog();
     }
 
     /// <summary>Where a meeting is, when the organiser said and it is short enough to read.</summary>
@@ -218,8 +273,6 @@ public partial class HomeView : UserControl
         TimeSaved.Text = minutes >= 60
             ? $"{minutes / 60:0.#} h"
             : $"{minutes:0} min";
-        TimeSavedHint.Text =
-            $"versus typing at {UsageStats.AssumedTypingWpm} wpm — an upper bound if you type quickly.";
     }
 
     private static string FirstName()
@@ -245,93 +298,4 @@ public partial class HomeView : UserControl
         >= 10_000 => $"{n / 1_000.0:0.#}K",
         _ => n.ToString("N0", CultureInfo.CurrentCulture),
     };
-
-    private void OnSearchChanged(object sender, TextChangedEventArgs e)
-    {
-        SearchHint.Visibility = string.IsNullOrEmpty(SearchBox.Text)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ApplyFilter(SearchBox.Text);
-    }
-
-    private void ApplyFilter(string? query)
-    {
-        var matches = string.IsNullOrWhiteSpace(query)
-            ? _all
-            : [.. _all.Where(e => e.Text.Contains(query, StringComparison.OrdinalIgnoreCase))];
-
-        Groups.ItemsSource = Group(matches);
-
-        var empty = matches.Count == 0;
-        EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
-
-        if (!empty) return;
-
-        var searching = !string.IsNullOrWhiteSpace(query);
-        EmptyTitle.Text = searching ? "No matches" : "Nothing dictated yet";
-        EmptyHint.Text = searching
-            ? $"Nothing in your history contains “{query}”."
-            : "Everything you dictate is kept here, so you can copy it again later.";
-    }
-
-    private static List<HistoryGroup> Group(IReadOnlyList<HistoryEntry> entries)
-    {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
-        return [.. entries
-            .GroupBy(e => DateOnly.FromDateTime(e.At.LocalDateTime))
-            .OrderByDescending(g => g.Key)
-            .Select(g => new HistoryGroup(
-                HeaderFor(g.Key, today),
-                [.. g.OrderByDescending(e => e.At).Select(ToRow)]))];
-    }
-
-    private static string HeaderFor(DateOnly day, DateOnly today)
-    {
-        if (day == today) return "TODAY";
-        if (day == today.AddDays(-1)) return "YESTERDAY";
-
-        // Within the last week the weekday is more useful than the date.
-        if (today.DayNumber - day.DayNumber < 7)
-            return day.ToDateTime(TimeOnly.MinValue).ToString("dddd", CultureInfo.CurrentCulture).ToUpperInvariant();
-
-        return day.ToDateTime(TimeOnly.MinValue)
-            .ToString(day.Year == today.Year ? "d MMMM" : "d MMMM yyyy", CultureInfo.CurrentCulture)
-            .ToUpperInvariant();
-    }
-
-    private static HistoryRow ToRow(HistoryEntry e)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(e.App)) parts.Add(e.App);
-        if (e.WordCount > 0) parts.Add($"{e.WordCount} words");
-        if (e.Corrections > 0) parts.Add($"{e.Corrections} correction{(e.Corrections == 1 ? "" : "s")}");
-
-        return new HistoryRow(
-            e.At.LocalDateTime.ToString("h:mm tt", CultureInfo.CurrentCulture).ToLowerInvariant(),
-            e.Text,
-            string.Join("  ·  ", parts),
-            e);
-    }
-
-    private void OnCopy(object sender, RoutedEventArgs e)
-    {
-        if ((sender as Button)?.Tag is not HistoryRow row) return;
-        try
-        {
-            Clipboard.SetText(row.Entry.Text);
-        }
-        catch (System.Runtime.InteropServices.COMException)
-        {
-            // Another process can hold the clipboard open. Nothing useful to do, and it is
-            // certainly not worth an error dialog over a copy button.
-        }
-    }
-
-    private void OnDelete(object sender, RoutedEventArgs e)
-    {
-        if ((sender as Button)?.Tag is not HistoryRow row) return;
-        _history.Delete(row.Entry.Id);
-        Refresh();
-    }
 }

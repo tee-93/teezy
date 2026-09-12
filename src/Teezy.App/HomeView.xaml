@@ -9,8 +9,7 @@
             <ColumnDefinition Width="286"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <!-- greeting · day band · today and inbox · search · history -->
-            <RowDefinition Height="Auto"/>
+            <!-- greeting · day band · today and inbox · figures -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -22,15 +21,21 @@
         <TextBlock x:Name="Subtitle" Grid.Row="0" Grid.Column="0" Margin="0,38,0,0"
                    Foreground="{StaticResource Muted}" FontSize="13"/>
 
-        <!-- The hotkey, where the eye lands first on a page you opened to check something. -->
+        <!--
+          The hotkey, where the eye lands first on a page you opened to check something.
+
+          A fixed height with a matching radius, not CornerRadius 999 on an auto-sized box: the
+          stadium shape only looks right when the radius is exactly half the height, and letting
+          the content decide the height made the ends into lopsided ellipses.
+        -->
         <Border Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Top"
-                CornerRadius="999" Padding="11,6" Background="{StaticResource Card}"
+                Height="30" CornerRadius="15" Padding="12,0" Background="{StaticResource Card}"
                 BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="Hold" Foreground="{StaticResource Muted}" FontSize="12"
                            VerticalAlignment="Center"/>
                 <Border Background="{StaticResource Hover}" CornerRadius="6" Margin="8,0,0,0"
-                        Padding="7,2">
+                        Padding="8,3" VerticalAlignment="Center">
                     <TextBlock x:Name="HotkeyChip" Foreground="{StaticResource Ink}" FontSize="11.5"
                                FontWeight="SemiBold"/>
                 </Border>
@@ -74,7 +79,7 @@
                 <ItemsControl x:Name="TodayList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,0,0,11">
+                            <Grid Margin="0,0,0,11" Opacity="{Binding Dim}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="60"/>
                                     <ColumnDefinition Width="3"/>
@@ -82,10 +87,10 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="{Binding When}" FontSize="12.5"
                                            Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
-                                <Border Grid.Column="1" Width="3" CornerRadius="2" MinHeight="26"
+                                <Border Grid.Column="1" Width="{Binding RailWidth}" CornerRadius="2" MinHeight="26"
                                         Background="{StaticResource AccentWash}"/>
                                 <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding What}" FontSize="13.5"
+                                    <TextBlock Text="{Binding What}" FontSize="13.5" TextDecorations="{Binding Strike}"
                                                Foreground="{StaticResource Ink}"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Where}" FontSize="11.5" Margin="0,2,0,0"
@@ -109,29 +114,53 @@
                     <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="11.5"
                                Foreground="{StaticResource Faint}"/>
                 </Grid>
-                <ItemsControl x:Name="InboxList">
+                <ItemsControl x:Name="InboxList" PreviewMouseLeftButtonDown="OnMessageOpened">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,0,0,11">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Width="28" Height="28" CornerRadius="9"
-                                        Background="{StaticResource Hover}" VerticalAlignment="Top">
-                                    <TextBlock Text="{Binding Initials}" FontSize="11"
-                                               FontWeight="SemiBold" Foreground="{StaticResource Body}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" Margin="11,0,0,0">
-                                    <TextBlock Text="{Binding Who}" FontSize="13"
-                                               Foreground="{StaticResource Ink}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
-                                               Foreground="{StaticResource Muted}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </Grid>
+                            <!-- The whole row opens the message, so the hit target is the row
+                                 rather than a link somewhere inside it. -->
+                            <Border x:Name="Row" Background="Transparent" Cursor="Hand" CornerRadius="9"
+                                    Padding="6,7" Margin="-6,0,-6,4"
+
+                                    >
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="28" Height="28" CornerRadius="9"
+                                            Background="{StaticResource Hover}" VerticalAlignment="Top">
+                                        <TextBlock Text="{Binding Initials}" FontSize="11"
+                                                   FontWeight="SemiBold" Foreground="{StaticResource Body}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="11,0,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Who}" FontSize="13"
+                                                       Foreground="{StaticResource Ink}"
+                                                       TextTrimming="CharacterEllipsis"/>
+
+                                            <!-- Which mailbox it landed in. Two accounts merge
+                                                 into one list, and "who is this from" is a
+                                                 different question from "where do I reply". -->
+                                            <Border Background="{StaticResource Hover}" CornerRadius="5"
+                                                    Padding="5,1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Mailbox}" FontSize="9.5"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource Faint}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
+                                                   Foreground="{StaticResource Muted}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
+                                </Trigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -139,143 +168,40 @@
                            Visibility="Collapsed" Text="Nothing unread."/>
             </StackPanel>
         </Border>
-
-
-        <!-- Search -->
-        <!-- Right margin matches the scroll viewer's padding plus its scrollbar, so the
-             search field lines up with the cards below it rather than overhanging them. -->
-        <Border Grid.Row="3" Grid.Column="0" Margin="0,22,22,14" Height="38"
-                Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"
-                BorderThickness="1" CornerRadius="10">
+        <!--
+          The dictation figures, as one strip rather than a sidebar. With the transcripts on
+          their own page there is no tall column beside them any more, and four numbers in a
+          row is how a dashboard states a total.
+        -->
+        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource CardPanel}"
+                Margin="0,14,0,0" Padding="22,18" VerticalAlignment="Top">
             <Grid>
-                <Path Data="M10,3 A7,7 0 1 1 10,17 A7,7 0 1 1 10,3 M15,15 L20,20"
-                      Stroke="{StaticResource Faint}" StrokeThickness="1.8" Fill="Transparent"
-                      Width="15" Height="15" Stretch="Uniform"
-                      HorizontalAlignment="Left" Margin="13,0,0,0" VerticalAlignment="Center"/>
-                <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent"
-                         VerticalContentAlignment="Center" Margin="36,0,12,0"
-                         Foreground="{StaticResource Ink}" TextChanged="OnSearchChanged"/>
-                <TextBlock x:Name="SearchHint" Text="Search everything you have dictated"
-                           Foreground="{StaticResource Faint}" IsHitTestVisible="False"
-                           VerticalAlignment="Center" Margin="37,0,0,0"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="TotalWords" Style="{StaticResource StatNumber}" FontSize="28"/>
+                    <TextBlock Text="total words" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock x:Name="Wpm" Style="{StaticResource StatNumber}" FontSize="28"/>
+                    <TextBlock Text="words / min" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock x:Name="Streak" Style="{StaticResource StatNumber}" FontSize="28"/>
+                    <TextBlock x:Name="StreakCaption" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="3">
+                    <TextBlock x:Name="TimeSaved" Style="{StaticResource StatNumber}" FontSize="28"
+                               Foreground="{StaticResource AccentDeep}"/>
+                    <TextBlock Text="saved vs typing" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- History -->
-        <ScrollViewer Grid.Row="4" Grid.Column="0" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0" Margin="0,0,0,0">
-            <StackPanel>
-                <ItemsControl x:Name="Groups">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,0,0,22">
-                                <TextBlock Text="{Binding Header}" Style="{StaticResource SectionLabel}"/>
-                                <Border Background="{StaticResource Card}" CornerRadius="12"
-                                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-                                    <ItemsControl ItemsSource="{Binding Items}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border x:Name="Row" Padding="16,13" Background="Transparent"
-                                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="76"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <TextBlock Grid.Column="0" Text="{Binding Time}"
-                                                                   Foreground="{StaticResource Faint}"
-                                                                   VerticalAlignment="Top" Margin="0,1,0,0"/>
-
-                                                        <StackPanel Grid.Column="1">
-                                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
-                                                                       Foreground="{StaticResource Ink}"
-                                                                       LineHeight="20"/>
-                                                            <TextBlock Text="{Binding Meta}" FontSize="11"
-                                                                       Foreground="{StaticResource Faint}"
-                                                                       Margin="0,5,0,0"/>
-                                                        </StackPanel>
-
-                                                        <StackPanel x:Name="Actions" Grid.Column="2"
-                                                                    Orientation="Horizontal" Opacity="0"
-                                                                    VerticalAlignment="Top">
-                                                            <Button Content="Copy" Style="{StaticResource Quiet}"
-                                                                    FontSize="12" Click="OnCopy" Tag="{Binding}"/>
-                                                            <Button Content="Delete" Style="{StaticResource Quiet}"
-                                                                    FontSize="12" Click="OnDelete" Tag="{Binding}"/>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                                <DataTemplate.Triggers>
-                                                    <!-- Actions stay hidden until hover, so a long list reads
-                                                         as text rather than as rows of buttons. -->
-                                                    <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Actions" Property="Opacity" Value="1"/>
-                                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
-                                                    </Trigger>
-                                                </DataTemplate.Triggers>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Border>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!-- Empty state -->
-                <Border x:Name="EmptyState" Visibility="Collapsed" Padding="30,44"
-                        Background="{StaticResource Card}" CornerRadius="12"
-                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-                    <StackPanel HorizontalAlignment="Center">
-                        <!-- The full logo. An empty state is all space, so this is the one
-                             place in the window the mark gets to be read properly. -->
-                        <Image Source="{StaticResource MarkImage}" Height="64" Stretch="Uniform"
-                               HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="EmptyTitle" Text="Nothing dictated yet" Style="{StaticResource H2}"
-                                   Margin="0,16,0,0" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="EmptyHint" Margin="0,5,0,0" HorizontalAlignment="Center"
-                                   Foreground="{StaticResource Muted}" TextAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-                <Border Height="24"/>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- Stats sidebar -->
-        <StackPanel Grid.Row="4" Grid.Column="2" Margin="0,0,0,0">
-            <Border Style="{StaticResource CardPanel}">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock x:Name="TotalWords" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="total words" Style="{StaticResource StatCaption}"
-                                   VerticalAlignment="Bottom" Margin="8,0,0,7"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock x:Name="Wpm" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="words / min" Style="{StaticResource StatCaption}"
-                                   VerticalAlignment="Bottom" Margin="8,0,0,7"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="Streak" Style="{StaticResource StatNumber}"/>
-                        <TextBlock x:Name="StreakCaption" Style="{StaticResource StatCaption}"
-                                   VerticalAlignment="Bottom" Margin="8,0,0,7"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0"
-                    Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentSoft}">
-                <StackPanel>
-                    <TextBlock Text="TIME SAVED" Style="{StaticResource SectionLabel}"
-                               Foreground="{StaticResource AccentInk}"/>
-                    <TextBlock x:Name="TimeSaved" Style="{StaticResource StatNumber}"
-                               Foreground="{StaticResource AccentInk}"/>
-                    <TextBlock x:Name="TimeSavedHint" FontSize="11.5" TextWrapping="Wrap"
-                               Foreground="{StaticResource AccentInk}" Opacity="0.75" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
-        </StackPanel>
     </Grid>
 </UserControl>

@@ -1,0 +1,51 @@
+<Window x:Class="Teezy.App.MessageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Message" Width="560" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{StaticResource Paper}"
+        FontFamily="{StaticResource UiFont}" FontSize="13">
+    <!--
+      One message, read without leaving Teezy. Deliberately a reader and not a client: there is
+      no reply, no forward and no mark-as-read, because the permissions to do any of those were
+      never asked for.
+
+      A real window rather than a panel over the page. The in-page version rendered and hovered
+      correctly and simply never appeared on click; a dialog cannot be lost behind anything.
+    -->
+    <Border Padding="26">
+        <StackPanel>
+            <Grid>
+                <TextBlock x:Name="Mailbox" Style="{StaticResource SectionLabel}" Margin="0"/>
+                <TextBlock x:Name="When" HorizontalAlignment="Right" FontSize="11.5"
+                           Foreground="{StaticResource Faint}"/>
+            </Grid>
+
+            <TextBlock x:Name="Subject" Style="{StaticResource H2}" FontSize="18"
+                       TextWrapping="Wrap" Margin="0,12,0,0"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <TextBlock x:Name="Who" FontSize="13" Foreground="{StaticResource Body}"/>
+
+                <!-- The address next to the name it claims. A display name is chosen by whoever
+                     sent the message; the address is the part that is hard to fake. -->
+                <TextBlock x:Name="Address" FontSize="12" Margin="8,0,0,0"
+                           Foreground="{StaticResource Faint}" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+
+            <Border Background="{StaticResource Sunken}" CornerRadius="10" Padding="14"
+                    Margin="0,16,0,0">
+                <TextBlock x:Name="Preview" TextWrapping="Wrap" FontSize="12.5" LineHeight="20"
+                           Foreground="{StaticResource Body}"/>
+            </Border>
+
+            <Grid Margin="0,16,0,0">
+                <TextBlock Style="{StaticResource Hint}" Margin="0" MaxWidth="340"
+                           HorizontalAlignment="Left"
+                           Text="A preview only, and read-only — Teezy cannot reply, delete, or mark this as read."/>
+                <Button Content="Close" Style="{StaticResource Secondary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnClose"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

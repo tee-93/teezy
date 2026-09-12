@@ -35,6 +35,10 @@
     <SolidColorBrush x:Key="Hairline"   Color="#16FFFFFF"/>
     <SolidColorBrush x:Key="Hover"      Color="#14FFFFFF"/>
 
+    <!-- Behind a modal. Dark rather than the usual white wash: on a dark ground a light scrim
+         lifts the page toward the dialog instead of pushing it back. -->
+    <SolidColorBrush x:Key="Scrim"      Color="#B8000000"/>
+
     <!-- Type -->
     <SolidColorBrush x:Key="Ink"        Color="#EFEBE4"/>
     <SolidColorBrush x:Key="Body"       Color="#B9B3AA"/>
@@ -492,6 +496,35 @@
                             <Setter TargetName="Rule" Property="Visibility" Value="Visible"/>
                             <Setter Property="Foreground" Value="{StaticResource Ink}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+      A whole row that is a button. Used where the row itself is the target — a message in the
+      inbox card — rather than a link somewhere inside it.
+
+      A Button and not a Border with a mouse handler: MouseLeftButtonUp on a Border depends on
+      hit-test fill and event routing through the item template, and it quietly did nothing.
+      A Button is the control whose entire job is to be clicked.
+    -->
+    <Style x:Key="RowButton" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="6,7"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="Transparent" CornerRadius="9"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Stretch"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Hover}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

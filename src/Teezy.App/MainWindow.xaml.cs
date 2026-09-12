@@ -43,6 +43,7 @@ public partial class MainWindow : Window
     private readonly CombinedMailbox? _mail;
 
     private HomeView? _home;
+    private TranscriptsView? _transcripts;
     private InsightsView? _insights;
     private DictionaryView? _dictionaryView;
     private SettingsView? _settingsView;
@@ -125,9 +126,17 @@ public partial class MainWindow : Window
         if (PageHost.Content is SettingsView leaving && sender != NavSettings) leaving.Leaving();
 
         if (sender == NavHome) ShowHome();
+        else if (sender == NavTranscripts) ShowTranscripts();
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) ShowSettings();
+    }
+
+    private void ShowTranscripts()
+    {
+        _transcripts ??= new TranscriptsView(_history);
+        _transcripts.Refresh();
+        PageHost.Content = _transcripts;
     }
 
     private void ShowHome()

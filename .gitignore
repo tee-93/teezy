@@ -4,3 +4,6 @@ obj/
 *.user
 models/
 dist/
+
+# Seeded design canvas — 2 MB of editor payload, rebuilt from the .dc.html files.
+design/teezy-interface.html

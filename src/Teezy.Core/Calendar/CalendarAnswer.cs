@@ -233,6 +233,10 @@ public static class CalendarAnswer
             ? $"I couldn’t reach your {Name(unavailable[0])} calendar."
             : "I couldn’t reach your calendars.";
 
-    private static string Name(CalendarSource source) =>
-        source is CalendarSource.Microsoft ? "Microsoft" : "Google";
+    private static string Name(CalendarSource source) => source switch
+    {
+        CalendarSource.Microsoft => "Microsoft",
+        CalendarSource.Google => "Google",
+        _ => "linked",
+    };
 }

@@ -29,6 +29,10 @@
          platform-neutral build its fonts, so it needs no GDI or WPF. -->
     <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.1" />
 
+    <!-- Calendars published as ICS links. Ical.Net is MIT, and expands recurrence, exceptions
+         and Outlook's Windows time-zone names correctly — measured against an Outlook-style feed. -->
+    <PackageVersion Include="Ical.Net" Version="5.2.3" />
+
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 

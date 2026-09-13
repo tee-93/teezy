@@ -530,7 +530,12 @@ public partial class SettingsView : UserControl
 
         public string DisplayName => Account.DisplayName;
 
-        public string Detail => Account.Source is CalendarSource.Microsoft ? "Microsoft" : "Google";
+        public string Detail => Account.Source switch
+        {
+            CalendarSource.Microsoft => "Microsoft",
+            CalendarSource.Google => "Google",
+            _ => "Calendar link · read-only",
+        };
 
         /// <summary>What the profile picker offers.</summary>
         /// <remarks>
@@ -584,7 +589,7 @@ public partial class SettingsView : UserControl
         // and it would have told someone setting up Google alone to add an id they had.
         CalendarStatus.Text = (anyClientId, settings.ConnectedAccounts.Count) switch
         {
-            (false, _) => "Add an application id above to connect an account.",
+            (false, 0) => "Add an application id above to connect an account, or add a calendar link.",
             (_, 0) => "No accounts connected. Nothing about your diary leaves this machine "
                       + "until one is.",
 
@@ -823,6 +828,43 @@ public partial class SettingsView : UserControl
             CalendarWarningText.Text = why;
             CalendarWarning.Visibility = Visibility.Visible;
             CalendarStatus.Text = string.Empty;
+        }
+    }
+
+    private void OnCalendarLinkTyped(object sender, TextChangedEventArgs e) =>
+        AddCalendarLinkButton.IsEnabled = _calendars is not null && CalendarLinkBox.Text.Trim().Length > 0;
+
+    /// <summary>Checks and saves a published calendar link as a new account.</summary>
+    private async void OnAddCalendarLink(object sender, RoutedEventArgs e)
+    {
+        var link = CalendarLinkBox.Text.Trim();
+        if (_calendars is null || link.Length == 0) return;
+
+        AddCalendarLinkButton.IsEnabled = false;
+        CalendarWarning.Visibility = Visibility.Collapsed;
+        CalendarStatus.Text = "Checking the link…";
+
+        try
+        {
+            // Work to begin with: a published link is nearly always the way in to a calendar that
+            // could not be signed in to, and that is a work one. The picker on the row changes it.
+            var added = await _calendars.ConnectLinkAsync(link, "Work calendar", CalendarProfile.Work);
+
+            var settings = _read();
+            _write(settings with { ConnectedAccounts = [.. settings.ConnectedAccounts, added] });
+
+            CalendarLinkBox.Clear();
+            Refresh();
+        }
+        catch (CalendarUnavailableException problem)
+        {
+            CalendarWarningText.Text = problem.Message;
+            CalendarWarning.Visibility = Visibility.Visible;
+            CalendarStatus.Text = string.Empty;
+        }
+        finally
+        {
+            AddCalendarLinkButton.IsEnabled = CalendarLinkBox.Text.Trim().Length > 0;
         }
     }
 

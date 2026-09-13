@@ -66,7 +66,7 @@ public sealed class ConnectedAccounts(
     /// </remarks>
     private void Forget(IReadOnlyList<ConnectedAccount> accounts)
     {
-        foreach (var stale in _sessions.Keys.Except(accounts.Select(a => a.Id)).ToList())
+        foreach (var stale in _sessions.Keys.Concat(_calendars.Keys).Distinct().Except(accounts.Select(a => a.Id)).ToList())
         {
             _sessions.TryRemove(stale, out _);
             _calendars.TryRemove(stale, out _);
@@ -104,6 +104,11 @@ public sealed class ConnectedAccounts(
 
     private ICalendar? Calendar(ConnectedAccount account)
     {
+        // A published link has no session: there is nothing to sign in to and nothing to refresh.
+        if (account.Source is CalendarSource.Ics)
+        {
+            return _calendars.GetOrAdd(account.Id, id => new IcsCalendar(() => tokens.ReadLink(id)));
+        }
         if (Session(account) is not { } session) return null;
 
         return _calendars.GetOrAdd(account.Id, _ => account.Source switch
@@ -122,7 +127,7 @@ public sealed class ConnectedAccounts(
     /// </remarks>
     private IMailbox? Mailbox(ConnectedAccount account)
     {
-        if (account.Source is CalendarSource.Google) return null;
+        if (account.Source is not CalendarSource.Microsoft) return null;
         if (Session(account) is not { } session) return null;
 
         return _mailboxes.GetOrAdd(account.Id, _ => new GraphMailbox(session));
@@ -155,6 +160,23 @@ public sealed class ConnectedAccounts(
 
         return GoogleCalendar.ConnectAsync(
             clientId, googleClientSecret?.Invoke(), profile, tokens, ct: ct);
+    }
+
+    /// <summary>Checks a published calendar link, stores it, and returns what to save.</summary>
+    /// <remarks>
+    /// Checked before anything is stored, so a mistyped link or the HTML link pasted by mistake
+    /// is refused with its reason at the moment it is pasted, rather than turning up later as an
+    /// account that silently never answers.
+    /// </remarks>
+    /// <exception cref="CalendarUnavailableException">The link does not return a readable calendar.</exception>
+    public async Task<ConnectedAccount> ConnectLinkAsync(
+        string link, string name, CalendarProfile profile, CancellationToken ct = default)
+    {
+        await IcsCalendar.CheckAsync(link, ct: ct).ConfigureAwait(false);
+
+        var account = new ConnectedAccount(ConnectedAccount.NewId(), name, CalendarSource.Ics, profile);
+        tokens.SaveLink(account.Id, IcsCalendar.Normalise(link)!);
+        return account;
     }
 
     /// <summary>Forgets an account's credentials. The caller drops it from settings.</summary>

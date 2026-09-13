@@ -5,6 +5,9 @@ public enum CalendarSource
 {
     Microsoft,
     Google,
+
+    /// <summary>A calendar published as an ICS link, read without signing in to anything.</summary>
+    Ics,
 }
 
 /// <summary>One thing in the diary, reduced to what an answer needs.</summary>

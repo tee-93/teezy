@@ -49,7 +49,26 @@ public sealed class TokenStore(ISecretStore secrets)
         }
     }
 
-    public void Delete(string accountId) => secrets.Delete(Key(accountId));
+    /// <summary>Kept apart from tokens: a calendar link has none, and its secret is the address itself.</summary>
+    private static string LinkKey(string accountId) => $"calendar-link-{accountId}";
+
+    /// <summary>Saves a published calendar's link.</summary>
+    /// <remarks>
+    /// As sensitive as a refresh token, and for the same reason: anyone holding it can read the
+    /// calendar, for as long as it stays published. So it lives here, not in settings.
+    /// </remarks>
+    public void SaveLink(string accountId, string link) => secrets.Write(LinkKey(accountId), link);
+
+    /// <summary>The saved link, or null if there is none.</summary>
+    public string? ReadLink(string accountId) =>
+        secrets.Read(LinkKey(accountId)) is { Length: > 0 } link ? link : null;
+
+    /// <summary>Forgets everything stored for an account, whichever kind it was.</summary>
+    public void Delete(string accountId)
+    {
+        secrets.Delete(Key(accountId));
+        secrets.Delete(LinkKey(accountId));
+    }
 
     private sealed record Stored(
         [property: JsonPropertyName("access")] string? AccessToken,

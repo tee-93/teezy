@@ -9,6 +9,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MailKit" />
+    <PackageReference Include="Ical.Net" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Teezy.Core.Tests" />

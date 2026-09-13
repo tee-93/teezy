@@ -68,7 +68,9 @@ public sealed class GoogleCalendar(AccountSession session, HttpClient? http = nu
                   // also required before orderBy=startTime is allowed.
                   + "&singleEvents=true"
                   + "&orderBy=startTime"
-                  + "&maxResults=50";
+
+                  // Sized for the dashboard's whole week in one request, not one spoken question.
+                  + "&maxResults=250";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization = new AuthenticationHeaderValue(

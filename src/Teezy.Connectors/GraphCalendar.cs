@@ -95,8 +95,9 @@ public sealed class GraphCalendar(AccountSession session, HttpClient? http = nul
                   + "&$orderby=start/dateTime"
 
                   // Graph pages at ten by default, which quietly truncates a busy day into a
-                  // wrong answer. Fifty covers any window worth asking about out loud.
-                  + "&$top=50";
+                  // wrong answer. Sized for the dashboard, which reads a whole working week in
+                  // one request, rather than for a single spoken question.
+                  + "&$top=250";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization = new AuthenticationHeaderValue(

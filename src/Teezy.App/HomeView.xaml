@@ -2,18 +2,24 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="{StaticResource UiFont}" FontSize="13">
-    <Grid Margin="32,26,32,0">
+    <!--
+      Scrolls, because the week made the page taller than the window. Before it the dashboard
+      happened to fit, which is not the same as being built to.
+    -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid Margin="32,26,32,24">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="20"/>
             <ColumnDefinition Width="286"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <!-- greeting · day band · today and inbox · figures -->
+            <!-- greeting · day band · your day and the inbox · your week · figures -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock x:Name="Greeting" Grid.Row="0" Grid.Column="0" Style="{StaticResource H1}"
@@ -72,7 +78,7 @@
                 Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
             <StackPanel>
                 <Grid Margin="0,0,0,12">
-                    <TextBlock Text="TODAY" Style="{StaticResource SectionLabel}" Margin="0"/>
+                    <TextBlock Text="YOUR DAY" Style="{StaticResource SectionLabel}" Margin="0"/>
                     <TextBlock x:Name="TodayCount" HorizontalAlignment="Right" FontSize="11.5"
                                Foreground="{StaticResource Faint}"/>
                 </Grid>
@@ -106,7 +112,71 @@
             </StackPanel>
         </Border>
 
-        <Border x:Name="InboxCard" Grid.Row="2" Grid.Column="2" Style="{StaticResource CardPanel}"
+        <!--
+          The week under the day: Sunday to Saturday, a line a day. The day card above is the
+          detail; this is the shape of the week, so today is in it too, marked, and the days
+          already gone are faded rather than dropped. Every day is listed even when empty,
+          because a free Thursday is exactly what someone glancing at a week is looking for.
+        -->
+        <Border x:Name="WeekCard" Grid.Row="3" Grid.Column="0" Style="{StaticResource CardPanel}"
+                Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
+            <StackPanel>
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="YOUR WEEK" Style="{StaticResource SectionLabel}" Margin="0"/>
+                    <TextBlock x:Name="WeekCount" HorizontalAlignment="Right" FontSize="11.5"
+                               Foreground="{StaticResource Faint}"/>
+                </Grid>
+                <ItemsControl x:Name="WeekList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0"
+                                    Padding="0,9" Opacity="{Binding Dim}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="96"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                                        <Border Width="3" Height="14" CornerRadius="2" Margin="0,2,7,0"
+                                                Background="{StaticResource AccentWash}"
+                                                Visibility="{Binding TodayMarker}"/>
+                                        <TextBlock Text="{Binding Day}" FontSize="12.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Text="{Binding Date}" FontSize="11.5" Margin="6,1,0,0"
+                                                   Foreground="{StaticResource Faint}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <ItemsControl ItemsSource="{Binding Entries}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,3">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="78"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding When}" FontSize="12"
+                                                                   Foreground="{StaticResource Muted}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding What}" FontSize="12.5"
+                                                                   Foreground="{StaticResource Ink}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="Nothing booked" FontSize="12" Foreground="{StaticResource Faint}"
+                                                   Visibility="{Binding EmptyVisibility}"/>
+                                        <TextBlock Text="{Binding More}" FontSize="11.5" Foreground="{StaticResource Faint}"
+                                                   Visibility="{Binding MoreVisibility}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        <!-- Beside both the day and the week, so the right-hand column does not end in a gap. -->
+        <Border x:Name="InboxCard" Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" Style="{StaticResource CardPanel}"
                 Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
             <StackPanel>
                 <Grid Margin="0,0,0,12">
@@ -169,7 +239,7 @@
           their own page there is no tall column beside them any more, and four numbers in a
           row is how a dashboard states a total.
         -->
-        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource CardPanel}"
+        <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource CardPanel}"
                 Margin="0,14,0,0" Padding="22,18" VerticalAlignment="Top">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -200,4 +270,5 @@
         </Border>
 
     </Grid>
+    </ScrollViewer>
 </UserControl>

@@ -27,6 +27,19 @@ public sealed record UpcomingRow(string When, string What, string Where, bool Do
     public double RailWidth => Now ? 4 : 3;
 }
 
+/// <summary>One day on the week card.</summary>
+public sealed record WeekRow(string Day, string Date, bool IsToday, double Dim, IReadOnlyList<WeekEntry> Entries, string More)
+{
+    public Visibility TodayMarker => IsToday ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility EmptyVisibility => Entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility MoreVisibility => More.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+}
+
+/// <summary>One thing on a day of the week card.</summary>
+public sealed record WeekEntry(string When, string What);
+
 /// <summary>One unread message, as the inbox card shows it.</summary>
 public sealed record InboxRow(
     string Initials, string Who, string Subject, string Mailbox, MailMessage Message);
@@ -96,18 +109,19 @@ public partial class HomeView : UserControl
 
         var now = DateTimeOffset.Now;
 
-        // Midnight to midnight, not the spoken window. CalendarAnswer.Window starts at "now"
-        // because nobody asks out loud about a meeting they have already sat through — but the
-        // card shows the morning greyed out, and it cannot show what was never fetched.
-        var midnight = now.ToLocalTime().Date;
-        var from = new DateTimeOffset(midnight, TimeZoneInfo.Local.GetUtcOffset(midnight));
-        var to = from.AddDays(1);
+        // One read covers the day and the week. Sunday to Saturday, as Zack counts a week, and
+        // today's card is cut from the same reading so the two cards cannot disagree. Midnight to
+        // midnight rather than the spoken window: the cards show what already happened, faded,
+        // and cannot show what was never fetched.
+        var (from, to) = CalendarWeek.Bounds(now);
+        var today = CalendarWeek.Today(now);
 
         var (since, atMost) = MailAnswer.Window(MailAsk.Unread, now);
 
         // Both at once, and neither allowed to take the other down: a mailbox that cannot be
         // reached must not cost the diary its half of the line.
-        var diary = connectedDiary ? await Read(() => _calendar!.BetweenAsync(from, to)) : null;
+        var week = connectedDiary ? await Read(() => _calendar!.BetweenAsync(from, to)) : null;
+        var diary = week is null ? null : week with { Events = CalendarWeek.On(week.Events, today) };
         var mail = connectedMail ? await Read(() => _mailbox!.RecentAsync(since, atMost)) : null;
 
         _summaryRead = DateTimeOffset.Now;
@@ -116,6 +130,7 @@ public partial class HomeView : UserControl
         SummaryBand.Visibility = Visibility.Visible;
 
         ShowToday(diary, now);
+        ShowWeek(week, now);
         ShowInbox(mail);
     }
 
@@ -158,6 +173,66 @@ public partial class HomeView : UserControl
         TodayEmpty.Visibility = all.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         TodayCard.Visibility = Visibility.Visible;
     }
+
+    /// <summary>The most a day shows before the rest is counted instead.</summary>
+    private const int MaxPerDay = 3;
+
+    /// <summary>Sunday to Saturday, a line a day, with the days already gone faded.</summary>
+    /// <remarks>
+    /// Collapsed when no account answered at all. Seven days of "Nothing booked" over a calendar
+    /// that could not be read would be the most confident wrong answer on the page; the band
+    /// above already says an account could not be reached.
+    /// </remarks>
+    private void ShowWeek(CalendarReading? week, DateTimeOffset now)
+    {
+        if (week is null || week.NothingAnswered)
+        {
+            WeekCard.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var days = CalendarWeek.Days(week.Events, now);
+
+        WeekList.ItemsSource = days
+            .Select(day =>
+            {
+                var start = CalendarWeek.Midnight(day.Date);
+                var end = CalendarWeek.Midnight(day.Date.AddDays(1));
+
+                return new WeekRow(
+                    day.IsToday ? "Today" : day.Date.ToString("ddd", CultureInfo.CurrentCulture),
+                    day.Date.ToString("d MMM", CultureInfo.CurrentCulture),
+                    day.IsToday,
+                    day.IsPast ? 0.4 : 1.0,
+                    [.. day.Events.Take(MaxPerDay).Select(e => new WeekEntry(WeekWhen(e, start, end), e.Subject))],
+                    day.Events.Count > MaxPerDay ? $"+{day.Events.Count - MaxPerDay} more" : "");
+            })
+            .ToList();
+
+        var booked = week.Events.Count == 0 ? "Nothing booked" : Plural(week.Events.Count, "thing");
+        var missing = week.Unavailable.Count > 0 ? " · an account couldn’t be reached" : "";
+        WeekCount.Text = $"{booked} · {Span(days[0].Date, days[^1].Date)}{missing}";
+
+        WeekCard.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>When something is on, as it reads on one particular day of it.</summary>
+    /// <remarks>
+    /// A conference that began yesterday at nine does not start at nine today. On the days after
+    /// its first it says when it ends, or "all day" if it runs straight through.
+    /// </remarks>
+    private static string WeekWhen(CalendarEvent occurrence, DateTimeOffset dayStart, DateTimeOffset dayEnd)
+    {
+        if (occurrence.IsAllDay) return "all day";
+        if (occurrence.Start >= dayStart) return Spoken.Clock(occurrence.Start);
+
+        return occurrence.End <= dayEnd ? $"until {Spoken.Clock(occurrence.End)}" : "all day";
+    }
+
+    /// <summary>"13–19 September", or "27 Sep – 3 Oct" across a month.</summary>
+    private static string Span(DateOnly first, DateOnly last) => first.Month == last.Month
+        ? $"{first.Day}–{last.Day} {last.ToString("MMMM", CultureInfo.CurrentCulture)}"
+        : $"{first.ToString("d MMM", CultureInfo.CurrentCulture)} – {last.ToString("d MMM", CultureInfo.CurrentCulture)}";
 
     private void ShowInbox(MailReading? mail)
     {

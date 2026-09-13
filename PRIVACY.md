@@ -1,6 +1,6 @@
 # Teezy privacy policy
 
-_Last updated: 12 September 2026_
+_Last updated: 13 September 2026_
 
 Teezy is a push-to-talk dictation and voice assistant app that runs on your own Windows PC.
 There is no Teezy account, no Teezy server, and no Teezy company collecting anything. Nothing
@@ -13,8 +13,9 @@ machine does with what it can see.
   to. We cannot see your dictation, your diary or your mail, and could not hand them over if
   asked.
 - **Everything is local until you switch something on.** Speech recognition, the command
-  vocabulary, your dictionary, your history and the built-in Windows voice all run on-device.
-- **Four optional tiers leave the machine**, each off by default, each on your own API key or
+  vocabulary, your dictionary, your history, meeting transcription and the built-in Windows voice
+  all run on-device.
+- **Five optional tiers leave the machine**, each off by default, each on your own API key or
   your own account, and each listed below.
 - **No analytics, no telemetry, no crash reporting, no advertising, no tracking of any kind.**
   Teezy does not phone home, and there is no build of it that does.
@@ -22,17 +23,24 @@ machine does with what it can see.
 ## What stays on your computer, always
 
 Your voice is transcribed on-device by a speech model that ships with the app. **Audio is never
-uploaded anywhere, by any tier, ever** — it is held in memory while you hold the key and
-discarded once it has been transcribed.
+uploaded anywhere, by any tier, ever.** Dictation audio is held in memory while you hold the key
+and discarded once it has been transcribed.
+
+**Meetings are recorded only when you press Start recording**, and record your microphone and
+whatever your speakers play. Nothing joins the call, so nobody in it can tell it is happening —
+letting them know is your responsibility, and in some places the law requires their consent. The
+recording is written to `Meetings\` while it is transcribed on this computer after the call, and
+**the audio is deleted as soon as its transcript has been written**.
 
 These live in `%LOCALAPPDATA%\Teezy` and are never transmitted:
 
 | File | What it holds |
 | --- | --- |
 | `history.jsonl` | Everything you have dictated, so you can find it again |
+| `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed |
 | `settings.json` | Your preferences, and which accounts you have connected |
 | `dictionary.txt` | Words and names you have taught it |
-| `secrets\` | API keys and account tokens, encrypted (see below) |
+| `secrets\` | API keys, account tokens, the Gmail app password and calendar links, encrypted (see below) |
 
 ## What leaves your computer, and only if you turn it on
 
@@ -53,19 +61,34 @@ sends the relevant events or message summaries so Claude can answer in a sentenc
 **4. Spoken replies (ElevenLabs).** If you choose the paid voice, the text to be spoken is sent
 to ElevenLabs on your own key. The free Windows voice sends nothing.
 
+**5. Meeting summaries (Anthropic).** When you press **Summarise** on a meeting, that meeting's
+transcript is sent so Claude can write a summary and the follow-up tasks. It is never automatic:
+it happens for that meeting, when you ask, and at no other time. The recording itself is never
+sent, and the PDF is made on your computer. Like calendar and mail answers, the request is given
+no tools, because a transcript is other people's words.
+
 Requests to Anthropic and ElevenLabs are subject to those companies' own terms and privacy
 policies, under your own account with them.
 
 ## Connected accounts
 
-Teezy can read your **calendar** (Microsoft, Google) and your **mail** (Microsoft), if you
-connect an account.
+Teezy can read your **calendar** (Microsoft, Google, or a published calendar link) and your
+**mail** (Microsoft, Gmail), if you connect them.
 
-- **Read-only, enforced at the provider.** Teezy requests `Calendars.Read`, `Mail.Read` and
-  `calendar.readonly`. It holds no permission to send, delete, move, or mark anything as read —
-  not to your calendar, and not to your mailbox.
-- **You sign in on the provider's own page**, in your own browser. No password is ever typed
-  into Teezy, and Teezy never sees one.
+- **Signed-in accounts are read-only, enforced at the provider.** Teezy requests
+  `Calendars.Read`, `Mail.Read` and `calendar.readonly`. It holds no permission to send, delete,
+  move, or mark anything as read — not to your calendar, and not to your mailbox.
+- **Gmail is read over IMAP with an app password**, because Google restricts its mail API. An app
+  password is not limited by Google: it is full access to the mailbox. Teezy opens your inbox
+  read-only and never changes anything, but that is Teezy's own restraint, not a limit Google
+  enforces.
+- **A calendar link** is a calendar you published from Outlook. The link itself is the access, so
+  Teezy stores it encrypted like a token, fetches it only over HTTPS, and has no way to change the
+  calendar behind it.
+- **Microsoft and Google accounts sign in on the provider's own page**, in your own browser. No
+  account password is ever typed into Teezy, and Teezy never sees one. A Gmail app password is a
+  separate password Google issues for one app; it is typed into Teezy, stored encrypted, and can
+  be revoked on its own without touching your Google password.
 - **Reading mail is a separate switch** from connecting the account, and asked for separately at
   sign-in. Connecting a calendar never grants access to mail.
 - **Teezy never opens a link, loads a remote image, or fetches anything a message points at.**
@@ -74,8 +97,10 @@ connect an account.
 
 **To revoke access at any time**, without involving Teezy: at
 [myaccount.google.com/permissions](https://myaccount.google.com/permissions) or
-[microsoft.com/consent](https://account.live.com/consent/Manage). Disconnecting an account
-inside Teezy deletes its stored tokens from your machine.
+[microsoft.com/consent](https://account.live.com/consent/Manage); delete a Gmail app password at
+[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords); or stop
+publishing a calendar in Outlook's calendar settings. Disconnecting an account inside Teezy
+deletes its stored tokens, password or link from your machine.
 
 ### Google API Services user data
 

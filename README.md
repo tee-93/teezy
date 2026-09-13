@@ -2,9 +2,10 @@
 
 Push-to-talk for Windows. Hold a key, talk, release — cleaned-up text is typed into whatever
 had focus. Hold a *different* key and it does what you said instead: opens an app, changes the
-volume, skips a track, locks the PC, and can answer you out loud. **Local by default** — after
-the one-time model download, dictation, commands, your dictionary and the built-in voice all run
-on-device and stay there. Three optional cloud tiers are the exception — two Claude, one
+volume, skips a track, locks the PC, and can answer you out loud. It also records a meeting and
+transcribes it once the call is over. **Local by default** — after the one-time model download,
+dictation, commands, meeting transcription, your dictionary and the built-in voice all run
+on-device and stay there. Five optional cloud tiers are the exception — four Claude, one
 ElevenLabs — every one of them off until you switch it on, and every one on your own API key.
 
 Everything dictated is kept, searchable, in an app window with usage stats — because the
@@ -698,6 +699,8 @@ synthesised key events).
    publisher-allowlist policy can block it with nothing we can do locally.
 4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating Teezy would be worse than the problem.
+5. **Budget figures.** The Budget page and its dashboard widget exist; reading a Cashew export
+   and the bills that arrive by email does not yet, so both say so rather than show numbers.
 
 ---
 
@@ -748,7 +751,8 @@ licence**, so no code was copied from it — only independently re-verified fact
 
 ## Privacy
 
-Teezy runs no servers and collects nothing. Speech recognition, commands, your dictionary and
-your history stay on the machine; four optional tiers can leave it, each off until you switch it
-on and each on your own account. Connected calendars and mailboxes are read-only and are never
-copied or stored. The full statement is in [PRIVACY.md](PRIVACY.md).
+Teezy runs no servers and collects nothing. Speech recognition, commands, meeting transcription,
+your dictionary and your history stay on the machine; five optional tiers can leave it, each off
+until you switch it on and each on your own account. Meeting audio is deleted once it has been
+transcribed. Connected calendars and mailboxes are read, never copied or stored. The full
+statement is in [PRIVACY.md](PRIVACY.md).

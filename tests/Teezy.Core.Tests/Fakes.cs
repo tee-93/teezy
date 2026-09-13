@@ -65,6 +65,8 @@ internal sealed class FakeCapture : IAudioCapture
     public void Emit(int samples = 1600) =>
         ChunkAvailable?.Invoke(new AudioChunk(new float[samples]));
 
+    public void Emit(float[] samples) => ChunkAvailable?.Invoke(new AudioChunk(samples));
+
     public void EmitLevel(float level) => LevelChanged?.Invoke(level);
 }
 

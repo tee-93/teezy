@@ -70,6 +70,18 @@
                               Width="19" Height="19" Stretch="Uniform"/>
                     </RadioButton>
 
+                    <RadioButton x:Name="NavMeetings" Style="{StaticResource RailButton}" Tag="Meetings"
+                                 GroupName="Nav" Checked="OnNavChanged">
+                        <!-- Two people: the one page in the rail about other people talking. -->
+                        <Path Data="M5.5,7.5 A3.5,3.5 0 1 1 5.5,7.51 Z
+                                    M2.5,20 C2.5,15.8 5.4,13.5 9,13.5 C12.6,13.5 15.5,15.8 15.5,20
+                                    M15.5,4.2 A3.3,3.3 0 0 1 15.5,10.8
+                                    M17.6,13.9 C20.1,14.6 21.5,16.8 21.5,20"
+                              Stroke="{StaticResource Ink}" StrokeThickness="1.7" Fill="Transparent"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Width="19" Height="19" Stretch="Uniform"/>
+                    </RadioButton>
+
                     <RadioButton x:Name="NavInsights" Style="{StaticResource RailButton}" Tag="Insights" GroupName="Nav"
                                  Checked="OnNavChanged">
                         <Path Data="M4,20 L4,12 M10,20 L10,5 M16,20 L16,9 M22,20 L22,14"

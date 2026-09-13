@@ -1,0 +1,164 @@
+<UserControl x:Class="Teezy.App.MeetingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}" FontSize="13">
+    <!--
+      Meeting notes, first build. It exists to answer one question on the work laptop: does
+      recording a Teams meeting and transcribing it afterwards work there, and how long does
+      the wait turn out to be. So the recorder is honest about what it can hear, and every
+      finished meeting says how long it took.
+
+      Nothing here joins the call. That is why it works without anyone's permission, and also
+      why nobody in the meeting can tell it is running — so the page says so, every time.
+    -->
+    <Grid Margin="32,26,32,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Meetings" Style="{StaticResource H1}"/>
+            <TextBlock Style="{StaticResource Lede}" Margin="0,6,0,0" TextWrapping="Wrap"
+                       Text="Recorded on this computer and transcribed once the meeting is over."/>
+        </StackPanel>
+
+        <!-- The recorder -->
+        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,20,22,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                    <TextBlock x:Name="RecorderTitle" Text="Record a meeting" Style="{StaticResource H2}"/>
+                    <TextBlock x:Name="RecorderHint" Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="19"
+                               Foreground="{StaticResource Muted}"
+                               Text="Records your microphone and whatever your speakers play. Nothing joins the call, so nobody in it can see this running — let people know you are taking notes."/>
+
+                    <!-- One meter per side. The second one moving is the proof that this
+                         computer lets Teezy hear the call at all. -->
+                    <Grid x:Name="Meters" Margin="0,16,0,0" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,10" MinWidth="150">
+                            <TextBlock Text="You" Foreground="{StaticResource Ink}"/>
+                            <TextBlock x:Name="MeName" FontSize="11" Foreground="{StaticResource Faint}"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+                        </StackPanel>
+                        <Border x:Name="MeTrack" Grid.Row="0" Grid.Column="1" Height="6" CornerRadius="3"
+                                Background="{StaticResource Sunken}" VerticalAlignment="Center" Margin="0,0,0,10">
+                            <Border x:Name="MeFill" HorizontalAlignment="Left" Width="0" CornerRadius="3"
+                                    Background="{StaticResource AccentWash}"/>
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Everyone else" Foreground="{StaticResource Ink}"/>
+                            <TextBlock x:Name="ThemName" FontSize="11" Foreground="{StaticResource Faint}"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+                        </StackPanel>
+                        <Border x:Name="ThemTrack" Grid.Row="1" Grid.Column="1" Height="6" CornerRadius="3"
+                                Background="{StaticResource Sunken}" VerticalAlignment="Center">
+                            <Border x:Name="ThemFill" HorizontalAlignment="Left" Width="0" CornerRadius="3"
+                                    Background="{StaticResource AccentWash}"/>
+                        </Border>
+                    </Grid>
+
+                    <Border x:Name="ProblemPanel" Style="{StaticResource CautionPanel}" Margin="0,14,0,0"
+                            Visibility="Collapsed">
+                        <TextBlock x:Name="ProblemText" TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"/>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right">
+                    <StackPanel x:Name="RecordingClock" Orientation="Horizontal" HorizontalAlignment="Right"
+                                Margin="0,0,0,12" Visibility="Collapsed">
+                        <!-- Red is reserved for recording, everywhere in Teezy. -->
+                        <Ellipse Width="9" Height="9" Fill="{StaticResource Record}" VerticalAlignment="Center"
+                                 Margin="0,0,9,0"/>
+                        <TextBlock x:Name="ElapsedText" Style="{StaticResource StatNumber}" FontSize="26"/>
+                    </StackPanel>
+                    <Button x:Name="RecordButton" Style="{StaticResource Primary}" Content="Start recording"
+                            Click="OnRecord" MinWidth="170"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Transcription in progress -->
+        <Border x:Name="WorkCard" Grid.Row="2" Style="{StaticResource CardPanel}" Margin="0,14,22,0"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                    <TextBlock x:Name="WorkTitle" Style="{StaticResource H2}" Text="Transcribing"/>
+                    <Border x:Name="WorkTrack" Height="6" CornerRadius="3" Margin="0,12,0,0"
+                            Background="{StaticResource Sunken}">
+                        <Border x:Name="WorkFill" HorizontalAlignment="Left" Width="0" CornerRadius="3"
+                                Background="{StaticResource AccentWash}"/>
+                    </Border>
+                    <TextBlock x:Name="WorkDetail" Margin="0,8,0,0" FontSize="12"
+                               Foreground="{StaticResource Muted}"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="Stop" Style="{StaticResource Secondary}"
+                        VerticalAlignment="Center" Click="OnCancelTranscription"/>
+            </Grid>
+        </Border>
+
+        <!-- Past meetings -->
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Padding="0,0,8,0" Margin="0,22,0,0">
+            <StackPanel>
+                <TextBlock Text="RECORDED" Style="{StaticResource SectionLabel}"/>
+                <Border x:Name="ListCard" Background="{StaticResource Card}" CornerRadius="12"
+                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                    <ItemsControl x:Name="MeetingList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="16,13" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource Ink}"/>
+                                            <TextBlock Text="{Binding Meta}" FontSize="11.5" Margin="0,4,0,0"
+                                                       TextWrapping="Wrap" Foreground="{StaticResource Muted}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="Transcribe" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding TranscribeVisibility}" Click="OnTranscribe"/>
+                                            <Button Content="Open" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding TranscriptVisibility}" Click="OnOpen"/>
+                                            <Button Content="Copy" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding TranscriptVisibility}" Click="OnCopy"/>
+                                            <Button Content="Delete" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding DeleteVisibility}" Click="OnDelete"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+                <TextBlock x:Name="EmptyText" Margin="0,4,0,0" Foreground="{StaticResource Muted}"
+                           Visibility="Collapsed"
+                           Text="Nothing recorded yet. Start recording when a meeting begins and stop when it ends."/>
+                <Border Height="24"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

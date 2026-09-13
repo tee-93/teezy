@@ -13,6 +13,7 @@ using Teezy.Core.Voice;
 using Teezy.Connectors;
 using Teezy.Core.Calendar;
 using Teezy.Core.Mail;
+using Teezy.Core.Meetings;
 using Teezy.Speech;
 
 namespace Teezy.App;
@@ -41,12 +42,15 @@ public partial class MainWindow : Window
     private readonly ConnectedAccounts? _calendars;
     private readonly CombinedCalendar? _diary;
     private readonly CombinedMailbox? _mail;
+    private readonly MeetingStore? _meetingStore;
+    private readonly MeetingRecorder? _meetingRecorder;
 
     private HomeView? _home;
     private TranscriptsView? _transcripts;
     private InsightsView? _insights;
     private DictionaryView? _dictionaryView;
     private SettingsView? _settingsView;
+    private MeetingsView? _meetingsView;
 
     public MainWindow(
         HistoryStore history,
@@ -63,7 +67,9 @@ public partial class MainWindow : Window
         VoiceUsage? usage = null,
         ConnectedAccounts? calendars = null,
         CombinedCalendar? diary = null,
-        CombinedMailbox? mail = null)
+        CombinedMailbox? mail = null,
+        MeetingStore? meetingStore = null,
+        MeetingRecorder? meetingRecorder = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -82,6 +88,8 @@ public partial class MainWindow : Window
         _calendars = calendars;
         _diary = diary;
         _mail = mail;
+        _meetingStore = meetingStore;
+        _meetingRecorder = meetingRecorder;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -98,6 +106,7 @@ public partial class MainWindow : Window
             case InsightsView insights: insights.Refresh(); break;
             case DictionaryView dictionary: dictionary.Refresh(); break;
             case SettingsView settings: settings.Refresh(); break;
+            case MeetingsView meetings: meetings.Refresh(); break;
         }
     }
 
@@ -127,11 +136,20 @@ public partial class MainWindow : Window
 
         if (sender == NavHome) ShowHome();
         else if (sender == NavTranscripts) ShowTranscripts();
+        else if (sender == NavMeetings) ShowMeetings();
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) ShowSettings();
     }
 
+    private void ShowMeetings()
+    {
+        if (_meetingStore is null || _meetingRecorder is null) return;
+
+        _meetingsView ??= new MeetingsView(_meetingStore, _meetingRecorder, _transcriber);
+        _meetingsView.Refresh();
+        PageHost.Content = _meetingsView;
+    }
     private void ShowTranscripts()
     {
         _transcripts ??= new TranscriptsView(_history);
@@ -168,6 +186,7 @@ public partial class MainWindow : Window
             case Page.Insights: NavInsights.IsChecked = true; break;
             case Page.Dictionary: NavDictionary.IsChecked = true; break;
             case Page.Settings: NavSettings.IsChecked = true; break;
+            case Page.Meetings: NavMeetings.IsChecked = true; break;
             default: NavHome.IsChecked = true; break;
         }
     }
@@ -211,4 +230,5 @@ public enum Page
     Insights,
     Dictionary,
     Settings,
+    Meetings,
 }

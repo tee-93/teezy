@@ -5,7 +5,17 @@ using Teezy.Core.Abstractions;
 
 namespace Teezy.Platform.Windows;
 
-/// <summary>Microphone capture through WASAPI, delivered as 16 kHz mono float32.</summary>
+/// <summary>Which side of the sound card to capture.</summary>
+public enum CaptureSource
+{
+    /// <summary>A microphone.</summary>
+    Microphone,
+
+    /// <summary>Whatever the speakers are playing — the other side of a call.</summary>
+    Speakers,
+}
+
+/// <summary>Audio capture through WASAPI, delivered as 16 kHz mono float32.</summary>
 /// <remarks>
 /// <para>
 /// The device is opened <i>directly</i> at Parakeet's format rather than at the hardware mix
@@ -15,13 +25,20 @@ namespace Teezy.Platform.Windows;
 /// it.
 /// </para>
 /// <para>
+/// <b>Speakers are captured the same way, through loopback.</b> Verified on this machine too:
+/// a loopback capture of the 48 kHz stereo output opens at 16 kHz mono and delivers real
+/// signal, with no administrator rights. Loopback differs in one way that matters — while
+/// nothing is playing it delivers <i>nothing</i>, not silence — which is the recorder's
+/// problem to handle, not this class's.
+/// </para>
+/// <para>
 /// <b>Silence rather than an error is the signature of a permissions problem.</b> When
 /// "Let desktop apps access your microphone" is off, WASAPI opens the device and returns
 /// digital zeroes forever. Nothing throws. <see cref="SawSignal"/> exists so the app can
 /// tell the user that specific truth instead of showing an empty transcript.
 /// </para>
 /// </remarks>
-public sealed class WindowsAudioCapture : IAudioCapture
+public sealed class WindowsAudioCapture(CaptureSource source = CaptureSource.Microphone) : IAudioCapture
 {
     /// <summary>Anything above this counts as real signal rather than a dead channel.</summary>
     private const float SilenceFloor = 1e-5f;
@@ -31,6 +48,8 @@ public sealed class WindowsAudioCapture : IAudioCapture
 
     public event Action<AudioChunk>? ChunkAvailable;
     public event Action<float>? LevelChanged;
+
+    public CaptureSource Source => source;
 
     public string? DeviceName { get; private set; }
 
@@ -44,7 +63,18 @@ public sealed class WindowsAudioCapture : IAudioCapture
     /// <summary>True if any sample since <see cref="Start"/> was non-zero.</summary>
     public bool SawSignal { get; private set; }
 
-    /// <summary>Active capture endpoints, with the Windows choice marked.</summary>
+    private DataFlow Flow => source == CaptureSource.Speakers ? DataFlow.Render : DataFlow.Capture;
+
+    /// <summary>
+    /// Role.Communications for a microphone: Windows lets the user nominate a different default
+    /// specifically for voice, and dictation is exactly that. Role.Console for speakers, because
+    /// "Default device" in an app's audio settings — Teams' included — means that one.
+    /// </summary>
+    private Role DefaultRole => source == CaptureSource.Speakers ? Role.Console : Role.Communications;
+
+    private string Noun => source == CaptureSource.Speakers ? "speakers" : "microphone";
+
+    /// <summary>Active endpoints of this kind, with the Windows choice marked.</summary>
     /// <remarks>
     /// Only <see cref="DeviceState.Active"/> devices are listed. Windows also reports
     /// unplugged and disabled endpoints, and offering those would let someone pick a
@@ -57,15 +87,15 @@ public sealed class WindowsAudioCapture : IAudioCapture
             using var enumerator = new MMDeviceEnumerator();
 
             string? defaultId = null;
-            if (enumerator.HasDefaultAudioEndpoint(DataFlow.Capture, Role.Communications))
+            if (enumerator.HasDefaultAudioEndpoint(Flow, DefaultRole))
             {
-                using var preferred = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+                using var preferred = enumerator.GetDefaultAudioEndpoint(Flow, DefaultRole);
                 defaultId = preferred.ID;
             }
 
             // The collection itself is not disposable in NAudio 2.3.0; the devices in it are.
             var devices = new List<AudioDevice>();
-            foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+            foreach (var device in enumerator.EnumerateAudioEndPoints(Flow, DeviceState.Active))
             {
                 using (device)
                 {
@@ -92,22 +122,21 @@ public sealed class WindowsAudioCapture : IAudioCapture
         {
             using var enumerator = new MMDeviceEnumerator();
 
-            _device = OpenPreferred(enumerator) ?? OpenDefault(enumerator);
+            _device = OpenPreferred(enumerator) ?? enumerator.GetDefaultAudioEndpoint(Flow, DefaultRole);
             DeviceName = _device.FriendlyName;
             DeviceId = _device.ID;
 
-            _capture = new WasapiCapture(_device)
-            {
-                WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(AudioChunk.SampleRate, 1),
-            };
+            _capture = source == CaptureSource.Speakers
+                ? new WasapiLoopbackCapture(_device)
+                : new WasapiCapture(_device);
+            _capture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(AudioChunk.SampleRate, 1);
             _capture.DataAvailable += OnData;
             _capture.StartRecording();
         }
         catch (Exception e) when (e is COMException or InvalidOperationException or ArgumentException)
         {
             Stop();
-            throw new AudioCaptureException(
-                $"Could not open the microphone: {e.Message}", e);
+            throw new AudioCaptureException($"Could not open the {Noun}: {e.Message}", e);
         }
     }
 
@@ -137,11 +166,6 @@ public sealed class WindowsAudioCapture : IAudioCapture
         UsingFallbackDevice = true;
         return null;
     }
-
-    // Role.Communications, not Role.Console: Windows lets the user nominate a
-    // different default specifically for voice, and dictation is exactly that.
-    private static MMDevice OpenDefault(MMDeviceEnumerator enumerator) =>
-        enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
 
     private void OnData(object? sender, WaveInEventArgs e)
     {

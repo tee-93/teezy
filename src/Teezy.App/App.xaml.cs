@@ -2,6 +2,7 @@ using Teezy.Assistant;
 using Teezy.Connectors;
 using Teezy.Core.Calendar;
 using Teezy.Core.Mail;
+using Teezy.Core.Meetings;
 using Teezy.Cleanup;
 using Teezy.Core.Formatting;
 using Teezy.Core.History;
@@ -57,6 +58,8 @@ public partial class App : Application
     private ConnectedAccounts? _calendars;
     private CombinedCalendar? _diary;
     private CombinedMailbox? _mail;
+    private MeetingStore? _meetingStore;
+    private MeetingRecorder? _meetingRecorder;
     private SwitchingSpeaker? _speaker;
     private VoiceUsage? _voiceUsage;
     private ParakeetTranscriber? _transcriber;
@@ -196,6 +199,16 @@ public partial class App : Application
         // the mail gate never claims anything, so a question falls through to the general tier
         // exactly as it did before.
         _mail = new CombinedMailbox(() => _settings.ReadMailEnabled ? Mailboxes() : []);
+        // Meetings record through captures of their own, never dictation's: a meeting runs for
+        // an hour, and dictating inside one must not find its microphone already taken.
+        _meetingStore = new MeetingStore();
+        _meetingRecorder = new MeetingRecorder(
+            _meetingStore,
+            microphone: () => new WindowsAudioCapture(CaptureSource.Microphone)
+            {
+                PreferredDeviceId = _settings.InputDeviceId,
+            },
+            speakers: () => new WindowsAudioCapture(CaptureSource.Speakers));
 
         _assistant = new AssistantController(
             _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator);
@@ -414,6 +427,7 @@ public partial class App : Application
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Settings…", null, (_, _) => ShowMainWindow(Page.Settings));
         menu.Items.Add("Dictionary…", null, (_, _) => ShowMainWindow(Page.Dictionary));
+        menu.Items.Add("Meetings…", null, (_, _) => ShowMainWindow(Page.Meetings));
 
         // Only meaningful when setup was cancelled or failed, so it hides itself once the
         // model is loaded rather than sitting in the menu as a permanent puzzle.
@@ -454,7 +468,9 @@ public partial class App : Application
             usage: _voiceUsage,
             calendars: _calendars,
             diary: _diary,
-            mail: _mail);
+            mail: _mail,
+            meetingStore: _meetingStore,
+            meetingRecorder: _meetingRecorder);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -537,6 +553,8 @@ public partial class App : Application
     {
         _dictWatcher?.Dispose();
         _instance?.Dispose();
+        // A meeting still recording is stopped and saved rather than abandoned mid-file.
+        _meetingRecorder?.Dispose();
         _session?.Dispose();
         _speaker?.Dispose();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }

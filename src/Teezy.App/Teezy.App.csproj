@@ -35,6 +35,7 @@
     <ProjectReference Include="..\Teezy.Speech\Teezy.Speech.csproj" />
     <ProjectReference Include="..\Teezy.Assistant\Teezy.Assistant.csproj" />
     <ProjectReference Include="..\Teezy.Connectors\Teezy.Connectors.csproj" />
+    <ProjectReference Include="..\Teezy.Documents\Teezy.Documents.csproj" />
     <ProjectReference Include="..\Teezy.Cleanup\Teezy.Cleanup.csproj" />
     <ProjectReference Include="..\Teezy.Platform.Windows\Teezy.Platform.Windows.csproj" />
   </ItemGroup>

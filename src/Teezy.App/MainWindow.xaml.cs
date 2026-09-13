@@ -44,6 +44,7 @@ public partial class MainWindow : Window
     private readonly CombinedMailbox? _mail;
     private readonly MeetingStore? _meetingStore;
     private readonly MeetingRecorder? _meetingRecorder;
+    private readonly IMeetingSummariser? _meetingSummariser;
 
     private HomeView? _home;
     private TranscriptsView? _transcripts;
@@ -69,7 +70,8 @@ public partial class MainWindow : Window
         CombinedCalendar? diary = null,
         CombinedMailbox? mail = null,
         MeetingStore? meetingStore = null,
-        MeetingRecorder? meetingRecorder = null)
+        MeetingRecorder? meetingRecorder = null,
+        IMeetingSummariser? meetingSummariser = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -90,6 +92,7 @@ public partial class MainWindow : Window
         _mail = mail;
         _meetingStore = meetingStore;
         _meetingRecorder = meetingRecorder;
+        _meetingSummariser = meetingSummariser;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -146,7 +149,7 @@ public partial class MainWindow : Window
     {
         if (_meetingStore is null || _meetingRecorder is null) return;
 
-        _meetingsView ??= new MeetingsView(_meetingStore, _meetingRecorder, _transcriber);
+        _meetingsView ??= new MeetingsView(_meetingStore, _meetingRecorder, _transcriber, _meetingSummariser);
         _meetingsView.Refresh();
         PageHost.Content = _meetingsView;
     }

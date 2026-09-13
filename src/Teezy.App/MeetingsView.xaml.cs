@@ -10,18 +10,34 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Teezy.Core.Abstractions;
+using Teezy.Core.Cost;
 using Teezy.Core.Meetings;
+using Teezy.Documents;
 
 namespace Teezy.App;
 
 /// <summary>One recorded meeting, as the list shows it.</summary>
-public sealed record MeetingRow(string Title, string Meta, bool HasTranscript, bool CanTranscribe, bool CanDelete, MeetingRecord Record)
+public sealed record MeetingRow(
+    string Title,
+    string Meta,
+    bool HasTranscript,
+    bool CanTranscribe,
+    bool CanSummarise,
+    bool HasNotes,
+    bool CanDelete,
+    MeetingRecord Record)
 {
-    public Visibility TranscriptVisibility => HasTranscript ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility TranscriptVisibility => Show(HasTranscript);
 
-    public Visibility TranscribeVisibility => CanTranscribe ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility TranscribeVisibility => Show(CanTranscribe);
 
-    public Visibility DeleteVisibility => CanDelete ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility SummariseVisibility => Show(CanSummarise);
+
+    public Visibility NotesVisibility => Show(HasNotes);
+
+    public Visibility DeleteVisibility => Show(CanDelete);
+
+    private static Visibility Show(bool shown) => shown ? Visibility.Visible : Visibility.Collapsed;
 }
 
 /// <summary>Records meetings, transcribes them afterwards, and lists what came of it.</summary>
@@ -34,6 +50,11 @@ public sealed record MeetingRow(string Title, string Meta, bool HasTranscript, b
 /// transcription keeps its audio and starts over next time; nothing is lost but the time.
 /// </para>
 /// <para>
+/// <b>Summarising is the opposite: never automatic.</b> It is the only step that sends a
+/// meeting off this computer, so it happens when the button on that meeting is pressed and at
+/// no other time. It is a network call, not processor work, so it is allowed during a recording.
+/// </para>
+/// <para>
 /// The recorder is owned by the app, not this page, so a recording carries on with the
 /// window closed and is saved properly if Teezy quits. This page only ever looks at it.
 /// </para>
@@ -43,8 +64,10 @@ public partial class MeetingsView : UserControl
     private readonly MeetingStore _store;
     private readonly MeetingRecorder _recorder;
     private readonly ITranscriber? _transcriber;
+    private readonly IMeetingSummariser? _summariser;
     private readonly DispatcherTimer _tick;
     private readonly Dictionary<string, string> _failures = [];
+    private readonly HashSet<string> _summarising = [];
 
     private CancellationTokenSource? _transcribing;
     private MeetingRecord? _working;
@@ -54,12 +77,17 @@ public partial class MeetingsView : UserControl
     private float _meLevel;
     private float _themLevel;
 
-    public MeetingsView(MeetingStore store, MeetingRecorder recorder, ITranscriber? transcriber)
+    public MeetingsView(
+        MeetingStore store,
+        MeetingRecorder recorder,
+        ITranscriber? transcriber,
+        IMeetingSummariser? summariser = null)
     {
         InitializeComponent();
         _store = store;
         _recorder = recorder;
         _transcriber = transcriber;
+        _summariser = summariser;
 
         _recorder.LevelChanged += OnLevel;
 
@@ -229,7 +257,7 @@ public partial class MeetingsView : UserControl
         }
 
         WorkFill.Width = Math.Clamp(progress.Fraction, 0, 1) * WorkTrack.ActualWidth;
-        WorkDetail.Text = $"{MeetingTranscript.Clock(progress.SpeechDone)} of {MeetingTranscript.Clock(progress.SpeechTotal)} of speech"
+        WorkDetail.Text = $"{MeetingTranscript.Clock(progress.SpeechDone)} of {MeetingTranscript.Clock(progress.SpeechTotal)} of audio"
                           + $" · {MeetingTranscript.Clock(progress.Elapsed)} so far";
     }
 
@@ -239,6 +267,79 @@ public partial class MeetingsView : UserControl
     {
         if ((sender as FrameworkElement)?.Tag is MeetingRow row) _failures.Remove(row.Record.Folder);
         _ = TranscribePendingAsync();
+    }
+
+    // ---- summary and follow-ups ----
+
+    private async void OnSummarise(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not MeetingRow row) return;
+        var meeting = row.Record;
+
+        if (_summariser is not { IsAvailable: true } summariser)
+        {
+            Warn("Summaries are written by Claude, using your own Anthropic API key, and none is saved yet.\n\n"
+                 + "Add one in Settings ▸ Dictation, under Smarter cleanup with Claude. The switch there can stay off.");
+            return;
+        }
+
+        if (!_summarising.Add(meeting.Folder)) return;
+        _failures.Remove(meeting.Folder);
+        ShowList();
+
+        try
+        {
+            var lines = MeetingTranscript.ParseLines(await File.ReadAllTextAsync(meeting.TranscriptPath));
+            var notes = await summariser.SummariseAsync(meeting.Info, lines);
+
+            _store.SaveNotes(meeting, notes);
+            await Task.Run(() => MeetingNotesPdf.Write(meeting.PdfPath, meeting.Info, notes, lines));
+
+            OpenFile(meeting.PdfPath);
+        }
+        catch (MeetingSummaryException problem)
+        {
+            _failures[meeting.Folder] = problem.Message;
+            Warn(problem.Message);
+        }
+        catch (Exception problem) when (problem is IOException or UnauthorizedAccessException
+                                            or InvalidOperationException)
+        {
+            // InvalidOperationException is PDFsharp finding no usable font, the one way the PDF
+            // itself fails; the notes are already saved by then, so Notes PDF can try again.
+            _failures[meeting.Folder] = problem.Message;
+            Warn($"The notes could not be saved as a PDF: {problem.Message}");
+        }
+        finally
+        {
+            _summarising.Remove(meeting.Folder);
+            ShowList();
+        }
+    }
+
+    /// <summary>Opens the notes PDF, making it again from the saved notes if it has gone.</summary>
+    private void OnNotes(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not MeetingRow row) return;
+        var meeting = row.Record;
+
+        try
+        {
+            if (!File.Exists(meeting.PdfPath) && _store.LoadNotes(meeting) is { } notes)
+            {
+                var lines = meeting.HasTranscript
+                    ? MeetingTranscript.ParseLines(File.ReadAllText(meeting.TranscriptPath))
+                    : [];
+                MeetingNotesPdf.Write(meeting.PdfPath, meeting.Info, notes, lines);
+            }
+
+            OpenFile(meeting.PdfPath);
+        }
+        catch (Exception problem) when (problem is IOException or UnauthorizedAccessException
+                                            or InvalidOperationException)
+        {
+            Warn($"The notes could not be saved as a PDF: {problem.Message}");
+        }
     }
 
     // ---- the list ----
@@ -259,20 +360,31 @@ public partial class MeetingsView : UserControl
     {
         var info = record.Info;
         var working = record.Folder == _working?.Folder;
+        var summarising = _summarising.Contains(record.Folder);
         var length = info.Recorded > TimeSpan.Zero ? MeetingTranscript.Clock(info.Recorded) : "Length unknown";
 
         var meta = (record.HasTranscript, info.Stats) switch
         {
+            _ when summarising => $"{length} · Claude is writing the summary and follow-up tasks…",
             (true, { } stats) => string.Create(CultureInfo.CurrentCulture,
                 $"{length} · transcribed in {MeetingTranscript.Clock(stats.Took)}, {stats.TimesRealtime:0.0}× realtime"),
             (true, null) => length,
             _ when working => $"{length} · transcribing now",
-            _ when _failures.TryGetValue(record.Folder, out var failure) => $"{length} · could not be transcribed: {failure}",
             _ when !record.HasAudio => "No audio and no transcript",
             _ when _recorder.IsRecording => $"{length} · waits until this recording ends",
             _ when _transcriber is not { IsLoaded: true } => $"{length} · waiting for the speech model to load",
             _ => $"{length} · not transcribed yet",
         };
+
+        if (!summarising && record.HasNotes && _store.LoadNotes(record) is { } notes)
+        {
+            meta += Cost(notes);
+        }
+
+        if (!summarising && _failures.TryGetValue(record.Folder, out var failure))
+        {
+            meta += $" · {failure}";
+        }
 
         return new MeetingRow(
             When(info.Started),
@@ -280,21 +392,32 @@ public partial class MeetingsView : UserControl
             HasTranscript: record.HasTranscript,
             CanTranscribe: record.HasAudio && !record.HasTranscript && !working && _transcribing is null
                            && !_recorder.IsRecording && _transcriber is { IsLoaded: true },
-            CanDelete: !working,
+            CanSummarise: record.HasTranscript && !record.HasNotes && !summarising,
+            HasNotes: record.HasNotes && !summarising,
+            CanDelete: !working && !summarising,
             record);
     }
 
+    /// <summary>What the summary cost, when the price of the model is known.</summary>
+    private static string Cost(SavedNotes notes) =>
+        ModelRates.Cost(notes.Model, notes.Tokens, DateOnly.FromDateTime(notes.Written.LocalDateTime)) is { } dollars
+            ? string.Create(CultureInfo.InvariantCulture, $" · summary cost US${dollars:0.00}")
+            : " · summarised";
+
     private void OnOpen(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is not MeetingRow row) return;
+        if ((sender as FrameworkElement)?.Tag is MeetingRow row) OpenFile(row.Record.TranscriptPath);
+    }
 
+    private void OpenFile(string path)
+    {
         try
         {
-            Process.Start(new ProcessStartInfo(row.Record.TranscriptPath) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
         catch (Exception problem) when (problem is System.ComponentModel.Win32Exception or IOException)
         {
-            MessageBox.Show(Window.GetWindow(this), problem.Message, "Teezy", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Warn(problem.Message);
         }
     }
 
@@ -308,15 +431,15 @@ public partial class MeetingsView : UserControl
         }
         catch (Exception problem) when (problem is IOException or System.Runtime.InteropServices.COMException)
         {
-            MessageBox.Show(Window.GetWindow(this), problem.Message, "Teezy", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Warn(problem.Message);
         }
     }
 
     private void OnDelete(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is not MeetingRow row || row.Record.Folder == _working?.Folder) return;
+        if ((sender as FrameworkElement)?.Tag is not MeetingRow row || !row.CanDelete) return;
 
-        var what = row.HasTranscript ? "its transcript" : "its recording";
+        var what = row.HasNotes ? "its transcript and notes" : row.HasTranscript ? "its transcript" : "its recording";
         var answer = MessageBox.Show(
             Window.GetWindow(this),
             $"Delete the meeting from {row.Title} and {what}? This cannot be undone.",
@@ -330,11 +453,14 @@ public partial class MeetingsView : UserControl
         }
         catch (IOException problem)
         {
-            MessageBox.Show(Window.GetWindow(this), problem.Message, "Teezy", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Warn(problem.Message);
         }
 
         ShowList();
     }
+
+    private void Warn(string message) =>
+        MessageBox.Show(Window.GetWindow(this), message, "Teezy", MessageBoxButton.OK, MessageBoxImage.Warning);
 
     private static string When(DateTimeOffset started) =>
         started.ToLocalTime().ToString("dddd d MMMM, h:mm tt", CultureInfo.CurrentCulture);

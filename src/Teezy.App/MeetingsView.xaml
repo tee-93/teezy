@@ -122,6 +122,10 @@
                       Padding="0,0,8,0" Margin="0,22,0,0">
             <StackPanel>
                 <TextBlock Text="RECORDED" Style="{StaticResource SectionLabel}"/>
+                <!-- Said where the button is, not in a dialog after it: Summarise is the one thing on
+                     this page that sends a meeting anywhere. -->
+                <TextBlock Style="{StaticResource Hint}" Margin="0,-4,0,10" TextWrapping="Wrap"
+                           Text="Recording and transcripts stay on this computer. Summarise sends that meeting's transcript to Claude, using your own Anthropic API key."/>
                 <Border x:Name="ListCard" Background="{StaticResource Card}" CornerRadius="12"
                         BorderBrush="{StaticResource Hairline}" BorderThickness="1">
                     <ItemsControl x:Name="MeetingList">
@@ -141,7 +145,11 @@
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                             <Button Content="Transcribe" Style="{StaticResource Quiet}" Tag="{Binding}"
                                                     Visibility="{Binding TranscribeVisibility}" Click="OnTranscribe"/>
-                                            <Button Content="Open" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                            <Button Content="Summarise" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding SummariseVisibility}" Click="OnSummarise"/>
+                                            <Button Content="Notes PDF" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding NotesVisibility}" Click="OnNotes"/>
+                                            <Button Content="Transcript" Style="{StaticResource Quiet}" Tag="{Binding}"
                                                     Visibility="{Binding TranscriptVisibility}" Click="OnOpen"/>
                                             <Button Content="Copy" Style="{StaticResource Quiet}" Tag="{Binding}"
                                                     Visibility="{Binding TranscriptVisibility}" Click="OnCopy"/>

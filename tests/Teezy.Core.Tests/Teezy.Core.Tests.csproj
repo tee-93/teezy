@@ -7,6 +7,8 @@
     <ProjectReference Include="..\..\src\Teezy.Core\Teezy.Core.csproj" />
     <ProjectReference Include="..\..\src\Teezy.Cleanup\Teezy.Cleanup.csproj" />
     <ProjectReference Include="..\..\src\Teezy.Connectors\Teezy.Connectors.csproj" />
+    <ProjectReference Include="..\..\src\Teezy.Assistant\Teezy.Assistant.csproj" />
+    <ProjectReference Include="..\..\src\Teezy.Documents\Teezy.Documents.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit" />

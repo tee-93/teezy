@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Documents Teezy writes for people to keep: meeting notes as a PDF. Out of Teezy.App so it
+         can be tested, and out of Teezy.Core so Core keeps no document dependency. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Teezy.Core\Teezy.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="PDFsharp-MigraDoc" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Teezy.Core.Tests" />
+  </ItemGroup>
+</Project>

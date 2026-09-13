@@ -60,6 +60,7 @@ public partial class App : Application
     private CombinedMailbox? _mail;
     private MeetingStore? _meetingStore;
     private MeetingRecorder? _meetingRecorder;
+    private ClaudeMeetingSummariser? _meetingSummariser;
     private SwitchingSpeaker? _speaker;
     private VoiceUsage? _voiceUsage;
     private ParakeetTranscriber? _transcriber;
@@ -209,6 +210,10 @@ public partial class App : Application
                 PreferredDeviceId = _settings.InputDeviceId,
             },
             speakers: () => new WindowsAudioCapture(CaptureSource.Speakers));
+
+        // Asked only when the user presses Summarise on a meeting. The key is read at that moment,
+        // not gated on the cleanup or assistant switches: the button press is the decision.
+        _meetingSummariser = new ClaudeMeetingSummariser(() => _secrets!.Read(ApiKeyName));
 
         _assistant = new AssistantController(
             _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator);
@@ -470,7 +475,8 @@ public partial class App : Application
             diary: _diary,
             mail: _mail,
             meetingStore: _meetingStore,
-            meetingRecorder: _meetingRecorder);
+            meetingRecorder: _meetingRecorder,
+            meetingSummariser: _meetingSummariser);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;

@@ -25,6 +25,10 @@
          MailKit is MIT. -->
     <PackageVersion Include="MailKit" Version="4.14.0" />
 
+    <!-- Meeting notes as PDF. PDFsharp and MigraDoc are MIT; Teezy.Documents gives the
+         platform-neutral build its fonts, so it needs no GDI or WPF. -->
+    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.1" />
+
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 

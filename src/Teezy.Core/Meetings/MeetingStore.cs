@@ -37,7 +37,14 @@ public sealed record MeetingRecord(string Folder, MeetingInfo Info)
 
     internal string InfoPath => Path.Combine(Folder, "meeting.json");
 
+    /// <summary>The summary and follow-ups, as data, so the PDF can always be made again.</summary>
+    public string NotesPath => Path.Combine(Folder, "notes.json");
+
+    public string PdfPath => Path.Combine(Folder, "notes.pdf");
+
     public bool HasTranscript => File.Exists(TranscriptPath);
+
+    public bool HasNotes => File.Exists(NotesPath);
 
     public bool HasAudio => File.Exists(MePath) || File.Exists(ThemPath);
 }
@@ -91,6 +98,26 @@ public sealed class MeetingStore
         var temporary = record.InfoPath + ".tmp";
         File.WriteAllText(temporary, JsonSerializer.Serialize(record.Info, Json));
         File.Move(temporary, record.InfoPath, overwrite: true);
+    }
+
+    public void SaveNotes(MeetingRecord record, SavedNotes notes)
+    {
+        var temporary = record.NotesPath + ".tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(notes, Json));
+        File.Move(temporary, record.NotesPath, overwrite: true);
+    }
+
+    /// <summary>The meeting's notes, or null if it has none or they cannot be read.</summary>
+    public SavedNotes? LoadNotes(MeetingRecord record)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<SavedNotes>(File.ReadAllText(record.NotesPath), Json);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Every meeting, newest first. Folders that cannot be read are skipped.</summary>

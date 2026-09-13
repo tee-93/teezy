@@ -163,6 +163,26 @@ public static partial class MeetingTranscript
         return text.ToString();
     }
 
+    /// <summary>The spoken lines back out of a transcript file written by <see cref="Render"/>.</summary>
+    /// <remarks>
+    /// The file is the record of what was said, so the summary and the PDF read it rather than
+    /// a second copy kept somewhere else. Lengths are not in the file and come back as zero.
+    /// </remarks>
+    public static IReadOnlyList<MeetingLine> ParseLines(string transcript) =>
+    [
+        .. LinePattern().Matches(transcript).Select(m => new MeetingLine(
+            new TimeSpan(
+                int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture)),
+            TimeSpan.Zero,
+            m.Groups[4].Value == "Me" ? Side.Me : Side.Them,
+            m.Groups[5].Value.Trim())),
+    ];
+
+    [GeneratedRegex(@"^\[(\d+):(\d\d):(\d\d)\] (Me|Them): (.+?)\r?$", RegexOptions.Multiline)]
+    private static partial Regex LinePattern();
+
     /// <summary>"4:05" under an hour, "1:02:09" over it.</summary>
     public static string Clock(TimeSpan t) => t.TotalHours >= 1
         ? string.Create(CultureInfo.InvariantCulture, $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}")

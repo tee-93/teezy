@@ -162,7 +162,13 @@ public partial class MainWindow : Window
 
     private void ShowHome()
     {
-        _home ??= new HomeView(_history, _diary, _mail, () => _settings().Hotkey.Display);
+        _home ??= new HomeView(
+            _history,
+            _diary,
+            _mail,
+            () => _settings().Hotkey.Display,
+            closedSections: () => _settings().ClosedSections,
+            saveClosedSections: closed => _saveSettings(_settings() with { ClosedSections = closed }));
         _home.Refresh();
         PageHost.Content = _home;
     }

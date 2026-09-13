@@ -4,6 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 using System.Threading.Tasks;
 using Teezy.Core;
@@ -44,7 +47,7 @@ public sealed record WeekEntry(string When, string What);
 public sealed record InboxRow(
     string Initials, string Who, string Subject, string Mailbox, MailMessage Message);
 
-/// <summary>The dashboard: the day said in one line, then the diary, the inbox and the figures.</summary>
+/// <summary>The dashboard: the day said in one line, then your day, your week and the inbox, then the figures.</summary>
 /// <remarks>
 /// Everything on it is a summary. The transcripts moved to their own page, so this one can
 /// answer "what is going on" without also being a search results list.
@@ -55,6 +58,15 @@ public partial class HomeView : UserControl
     private readonly CombinedCalendar? _calendar;
     private readonly CombinedMailbox? _mailbox;
     private IReadOnlyList<HistoryEntry> _all = [];
+
+    private readonly Func<IReadOnlyList<string>> _closedSections;
+    private readonly Action<IReadOnlyList<string>> _saveClosedSections;
+
+    /// <summary>Set while sections are put back how they were left, so that is not saved as a change.</summary>
+    private bool _restoring;
+
+    /// <summary>How long a section takes to open or close: long enough to be seen, short enough not to wait for.</summary>
+    private static readonly Duration SectionMotion = TimeSpan.FromMilliseconds(200);
 
     /// <summary>When the day band was last filled, so opening Home does not re-read every time.</summary>
     /// <remarks>
@@ -70,16 +82,93 @@ public partial class HomeView : UserControl
         HistoryStore history,
         CombinedCalendar? calendar = null,
         CombinedMailbox? mailbox = null,
-        Func<string>? hotkey = null)
+        Func<string>? hotkey = null,
+        Func<IReadOnlyList<string>>? closedSections = null,
+        Action<IReadOnlyList<string>>? saveClosedSections = null)
     {
         InitializeComponent();
         _history = history;
         _calendar = calendar;
         _mailbox = mailbox;
+        _closedSections = closedSections ?? (() => []);
+        _saveClosedSections = saveClosedSections ?? (_ => { });
+
+        RestoreSections();
 
         // The hotkey is the one thing on this page that is useful before you have read anything.
         HotkeyChip.Text = hotkey?.Invoke() ?? "";
         Refresh();
+    }
+
+    // ---- sections that open and close ----
+
+    /// <summary>Each section's header, and the part of the section it opens and closes.</summary>
+    private (ToggleButton Toggle, FrameworkElement Body)[] Sections =>
+        [(DayToggle, DayBody), (WeekToggle, WeekList), (InboxToggle, InboxBody)];
+
+    /// <summary>Puts every section back open or closed as it was left, without animating.</summary>
+    private void RestoreSections()
+    {
+        var closed = _closedSections();
+        _restoring = true;
+
+        foreach (var (toggle, body) in Sections)
+        {
+            var open = !closed.Contains((string)toggle.Tag);
+            toggle.IsChecked = open;
+            body.LayoutTransform = new ScaleTransform(1, open ? 1 : 0);
+            body.Opacity = open ? 1 : 0;
+            body.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        _restoring = false;
+    }
+
+    private void OnSectionToggled(object sender, RoutedEventArgs e)
+    {
+        if (_restoring || sender is not ToggleButton toggle) return;
+
+        var body = Sections.First(s => s.Toggle == toggle).Body;
+        Animate(toggle, body, open: toggle.IsChecked == true);
+
+        _saveClosedSections([.. Sections.Where(s => s.Toggle.IsChecked != true).Select(s => (string)s.Toggle.Tag)]);
+    }
+
+    /// <summary>Grows a section's body open or shrinks it closed, rather than snapping.</summary>
+    /// <remarks>
+    /// <para>
+    /// A layout scale rather than a height animation: WPF cannot animate to a height of "as tall
+    /// as the content", and a guessed pixel height would clip a busy week or leave a gap under a
+    /// quiet day. Scaling the layout moves everything below it smoothly for free.
+    /// </para>
+    /// <para>
+    /// Closing only collapses the body once the animation has finished, and only if the section
+    /// is still meant to be closed — a second click mid-close must not be undone by the first.
+    /// </para>
+    /// </remarks>
+    private static void Animate(ToggleButton toggle, FrameworkElement body, bool open)
+    {
+        if (body.LayoutTransform is not ScaleTransform scale || scale.IsFrozen)
+        {
+            scale = new ScaleTransform(1, open ? 0 : 1);
+            body.LayoutTransform = scale;
+        }
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        if (open) body.Visibility = Visibility.Visible;
+
+        var height = new DoubleAnimation(open ? 1 : 0, SectionMotion) { EasingFunction = ease };
+        if (!open)
+        {
+            height.Completed += (_, _) =>
+            {
+                if (toggle.IsChecked != true) body.Visibility = Visibility.Collapsed;
+            };
+        }
+
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, height);
+        body.BeginAnimation(OpacityProperty, new DoubleAnimation(open ? 1 : 0, SectionMotion) { EasingFunction = ease });
     }
 
     public void Refresh()

@@ -282,6 +282,13 @@ public sealed record TeezySettings
     [System.Text.Json.Serialization.JsonPropertyName("CalendarAccounts")]
     public IReadOnlyList<Calendar.ConnectedAccount> ConnectedAccounts { get; init; } = [];
 
+    /// <summary>Dashboard sections that have been closed, by name.</summary>
+    /// <remarks>
+    /// The closed ones rather than the open ones, so a section added in a later version starts
+    /// open instead of arriving hidden behind a preference nobody set.
+    /// </remarks>
+    public IReadOnlyList<string> ClosedSections { get; init; } = [];
+
     /// <summary>Whether the assistant may read mail as well as the diary.</summary>
     /// <remarks>
     /// <para>

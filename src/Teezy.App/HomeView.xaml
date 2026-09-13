@@ -74,9 +74,9 @@
         </Border>
 
         <!--
-          The widgets, in two columns across the full width: three quarters for your day and
-          your week, one quarter for the inbox. Proportions rather than a fixed inbox width, so
-          both columns widen and narrow with the window.
+          The widgets, in two columns across the full width: about two thirds for your day and
+          your week, one third for the budget and the inbox. Proportions rather than a fixed
+          width, so both columns widen and narrow with the window.
 
           The inbox is sized to the calendar column in code, not by sharing a grid row with it.
           Sharing a row is what let a tall inbox stretch the day and open a gap above the week;
@@ -85,9 +85,9 @@
         -->
         <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="13*"/>
                 <ColumnDefinition Width="14"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="7*"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel x:Name="LeftColumn" Grid.Column="0" VerticalAlignment="Top"
@@ -216,85 +216,111 @@
                 </Border>
             </StackPanel>
 
-            <Border x:Name="InboxCard" Grid.Column="2" VerticalAlignment="Top" Style="{StaticResource CardPanel}"
-                    Padding="18,18" Visibility="Collapsed">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <StackPanel x:Name="RightColumn" Grid.Column="2" VerticalAlignment="Top">
 
+                <!--
+                  The budget's highlights, above the inbox. Empty until a source is connected,
+                  and it says so rather than showing sample figures; the Budget page is where
+                  the detail will live.
+                -->
+                <Border x:Name="BudgetCard" Style="{StaticResource CardPanel}" Padding="18,18" Height="150">
                     <Grid>
-                        <TextBlock Text="INBOX" Style="{StaticResource SectionLabel}" Margin="0"
-                                   VerticalAlignment="Center"/>
-                        <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="11.5"
-                                   Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="BUDGET" Style="{StaticResource SectionLabel}" Margin="0"/>
+
+                        <TextBlock Grid.Row="1" Margin="0,10,0,0" FontSize="12.5" TextWrapping="Wrap"
+                                   LineHeight="18" Foreground="{StaticResource Muted}"
+                                   Text="Bills due this week, and money in and out, will show here once your budget is connected."/>
+
+                        <Button Grid.Row="2" Content="Open Budget" Style="{StaticResource Quiet}"
+                                HorizontalAlignment="Left" Margin="-9,0,0,-5" Click="OnOpenBudget"/>
                     </Grid>
+                </Border>
+                <Border x:Name="InboxCard" Margin="0,14,0,0" VerticalAlignment="Top" Style="{StaticResource CardPanel}"
+                        Padding="18,18" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <ScrollViewer x:Name="InboxBody" Grid.Row="1" Margin="0,12,0,0" Padding="0,0,6,0"
-                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                  PreviewMouseWheel="OnWidgetWheel">
-                        <StackPanel>
-                            <!--
-                              A ListBox rather than an ItemsControl with a click handler on the rows.
-                              The rows are a list of things you pick one of, which is what a ListBox is
-                              for, and using it brings keyboard focus and arrow-key movement along with
-                              the mouse — the hand-rolled version was mouse-only.
-                            -->
-                            <ListBox x:Name="InboxList" Style="{StaticResource PlainList}"
-                                     ItemContainerStyle="{StaticResource InboxRowItem}"
-                                     SelectionChanged="OnMessageOpened">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ToolTip="{Binding Tip}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
+                        <Grid>
+                            <TextBlock Text="INBOX" Style="{StaticResource SectionLabel}" Margin="0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="11.5"
+                                       Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                        </Grid>
 
-                                            <Grid Width="28" Height="28" VerticalAlignment="Top">
-                                                <Border CornerRadius="9" Background="{StaticResource Hover}">
-                                                    <TextBlock Text="{Binding Initials}" FontSize="11"
-                                                               FontWeight="SemiBold" Foreground="{StaticResource Body}"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
+                        <ScrollViewer x:Name="InboxBody" Grid.Row="1" Margin="0,12,0,0" Padding="0,0,6,0"
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      PreviewMouseWheel="OnWidgetWheel">
+                            <StackPanel>
+                                <!--
+                                  A ListBox rather than an ItemsControl with a click handler on the rows.
+                                  The rows are a list of things you pick one of, which is what a ListBox is
+                                  for, and using it brings keyboard focus and arrow-key movement along with
+                                  the mouse — the hand-rolled version was mouse-only.
+                                -->
+                                <ListBox x:Name="InboxList" Style="{StaticResource PlainList}"
+                                         ItemContainerStyle="{StaticResource InboxRowItem}"
+                                         SelectionChanged="OnMessageOpened">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ToolTip="{Binding Tip}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
 
-                                                <!--
-                                                  Which mailbox it landed in, as a letter on the avatar's
-                                                  corner rather than a tag beside the name. Two accounts merge
-                                                  into one list, and "who is this from" is a different question
-                                                  from "where do I reply" — but in a quarter-width column the
-                                                  tag took the room the sender's name needed. The full name is
-                                                  on the row's tooltip.
-                                                -->
-                                                <Border Width="14" Height="14" CornerRadius="7" Margin="0,0,-4,-4"
-                                                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                        Background="{StaticResource Paper}"
-                                                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-                                                    <TextBlock Text="{Binding MailboxLetter}" FontSize="8" FontWeight="SemiBold"
+                                                <Grid Width="28" Height="28" VerticalAlignment="Top">
+                                                    <Border CornerRadius="9" Background="{StaticResource Hover}">
+                                                        <TextBlock Text="{Binding Initials}" FontSize="11"
+                                                                   FontWeight="SemiBold" Foreground="{StaticResource Body}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+
+                                                    <!--
+                                                      Which mailbox it landed in, as a letter on the avatar's
+                                                      corner rather than a tag beside the name. Two accounts merge
+                                                      into one list, and "who is this from" is a different question
+                                                      from "where do I reply" — but in a quarter-width column the
+                                                      tag took the room the sender's name needed. The full name is
+                                                      on the row's tooltip.
+                                                    -->
+                                                    <Border Width="14" Height="14" CornerRadius="7" Margin="0,0,-4,-4"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                            Background="{StaticResource Paper}"
+                                                            BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                                                        <TextBlock Text="{Binding MailboxLetter}" FontSize="8" FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource Muted}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </Grid>
+
+                                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                    <TextBlock Text="{Binding Who}" FontSize="13"
+                                                               Foreground="{StaticResource Ink}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
                                                                Foreground="{StaticResource Muted}"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
                                             </Grid>
-
-                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                                <TextBlock Text="{Binding Who}" FontSize="13"
-                                                           Foreground="{StaticResource Ink}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
-                                                           Foreground="{StaticResource Muted}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                            <TextBlock x:Name="InboxEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
-                                       Visibility="Collapsed" Text="Nothing unread."/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock x:Name="InboxEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
+                                           Visibility="Collapsed" Text="Nothing unread."/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </StackPanel>
         </Grid>
 
         <!--

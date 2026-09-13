@@ -69,6 +69,7 @@ public partial class HomeView : UserControl
 
     private readonly Func<IReadOnlyList<string>> _expandedSections;
     private readonly Action<IReadOnlyList<string>> _saveExpandedSections;
+    private readonly Action _openBudget;
 
     /// <summary>Set while widgets are put back the size they were left, so that is not saved as a change.</summary>
     private bool _restoring;
@@ -92,7 +93,8 @@ public partial class HomeView : UserControl
         CombinedMailbox? mailbox = null,
         Func<string>? hotkey = null,
         Func<IReadOnlyList<string>>? expandedSections = null,
-        Action<IReadOnlyList<string>>? saveExpandedSections = null)
+        Action<IReadOnlyList<string>>? saveExpandedSections = null,
+        Action? openBudget = null)
     {
         InitializeComponent();
         _history = history;
@@ -100,6 +102,7 @@ public partial class HomeView : UserControl
         _mailbox = mailbox;
         _expandedSections = expandedSections ?? (() => []);
         _saveExpandedSections = saveExpandedSections ?? (_ => { });
+        _openBudget = openBudget ?? (() => { });
 
         RestoreSections();
 
@@ -157,13 +160,19 @@ public partial class HomeView : UserControl
         _saveExpandedSections([.. Widgets.Where(w => w.Toggle.IsChecked == true).Select(w => (string)w.Toggle.Tag)]);
     }
 
-    /// <summary>Keeps the inbox exactly as tall as the calendar column beside it.</summary>
+    /// <summary>Keeps the right-hand column ending on exactly the same line as the calendar column.</summary>
     /// <remarks>
     /// Follows every frame of a widget growing, so the two columns move together and end on the
     /// same line throughout rather than only once the animation settles.
     /// </remarks>
-    private void OnLeftColumnSized(object sender, SizeChangedEventArgs e) =>
-        InboxCard.Height = Math.Max(e.NewSize.Height, InboxMinHeight);
+    private void OnLeftColumnSized(object sender, SizeChangedEventArgs e)
+    {
+        // The budget widget sits above the inbox in the same column, so the inbox takes the rest.
+        var above = BudgetCard.Height + InboxCard.Margin.Top;
+        InboxCard.Height = Math.Max(e.NewSize.Height - above, InboxMinHeight);
+    }
+
+    private void OnOpenBudget(object sender, RoutedEventArgs e) => _openBudget();
 
     /// <summary>Passes the wheel to the page once a widget has nothing left to scroll that way.</summary>
     /// <remarks>

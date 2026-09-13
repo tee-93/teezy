@@ -52,6 +52,7 @@ public partial class MainWindow : Window
     private DictionaryView? _dictionaryView;
     private SettingsView? _settingsView;
     private MeetingsView? _meetingsView;
+    private BudgetView? _budgetView;
 
     public MainWindow(
         HistoryStore history,
@@ -140,9 +141,16 @@ public partial class MainWindow : Window
         if (sender == NavHome) ShowHome();
         else if (sender == NavTranscripts) ShowTranscripts();
         else if (sender == NavMeetings) ShowMeetings();
+        else if (sender == NavBudget) ShowBudget();
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) ShowSettings();
+    }
+
+    private void ShowBudget()
+    {
+        _budgetView ??= new BudgetView();
+        PageHost.Content = _budgetView;
     }
 
     private void ShowMeetings()
@@ -168,7 +176,8 @@ public partial class MainWindow : Window
             _mail,
             () => _settings().Hotkey.Display,
             expandedSections: () => _settings().ExpandedSections,
-            saveExpandedSections: expanded => _saveSettings(_settings() with { ExpandedSections = expanded }));
+            saveExpandedSections: expanded => _saveSettings(_settings() with { ExpandedSections = expanded }),
+            openBudget: () => NavBudget.IsChecked = true);
         _home.Refresh();
         PageHost.Content = _home;
     }
@@ -196,6 +205,7 @@ public partial class MainWindow : Window
             case Page.Dictionary: NavDictionary.IsChecked = true; break;
             case Page.Settings: NavSettings.IsChecked = true; break;
             case Page.Meetings: NavMeetings.IsChecked = true; break;
+            case Page.Budget: NavBudget.IsChecked = true; break;
             default: NavHome.IsChecked = true; break;
         }
     }
@@ -240,4 +250,5 @@ public enum Page
     Dictionary,
     Settings,
     Meetings,
+    Budget,
 }

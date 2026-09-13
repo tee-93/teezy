@@ -246,40 +246,41 @@
                                      SelectionChanged="OnMessageOpened">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid>
+                                        <Grid ToolTip="{Binding Tip}">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <Border Width="28" Height="28" CornerRadius="9"
-                                                    Background="{StaticResource Hover}" VerticalAlignment="Top">
-                                                <TextBlock Text="{Binding Initials}" FontSize="11"
-                                                           FontWeight="SemiBold" Foreground="{StaticResource Body}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                                <!-- A grid rather than a row of text, so in a quarter-width
-                                                     column a long sender's name gives way to an ellipsis
-                                                     instead of pushing the mailbox tag off the edge. -->
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Who}" FontSize="13"
-                                                               Foreground="{StaticResource Ink}"
-                                                               TextTrimming="CharacterEllipsis"/>
 
-                                                    <!-- Which mailbox it landed in. Two accounts merge
-                                                         into one list, and "who is this from" is a
-                                                         different question from "where do I reply". -->
-                                                    <Border Grid.Column="1" Background="{StaticResource Hover}" CornerRadius="5"
-                                                            Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Mailbox}" FontSize="9.5"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="{StaticResource Faint}"/>
-                                                    </Border>
-                                                </Grid>
+                                            <Grid Width="28" Height="28" VerticalAlignment="Top">
+                                                <Border CornerRadius="9" Background="{StaticResource Hover}">
+                                                    <TextBlock Text="{Binding Initials}" FontSize="11"
+                                                               FontWeight="SemiBold" Foreground="{StaticResource Body}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!--
+                                                  Which mailbox it landed in, as a letter on the avatar's
+                                                  corner rather than a tag beside the name. Two accounts merge
+                                                  into one list, and "who is this from" is a different question
+                                                  from "where do I reply" — but in a quarter-width column the
+                                                  tag took the room the sender's name needed. The full name is
+                                                  on the row's tooltip.
+                                                -->
+                                                <Border Width="14" Height="14" CornerRadius="7" Margin="0,0,-4,-4"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                        Background="{StaticResource Paper}"
+                                                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                                                    <TextBlock Text="{Binding MailboxLetter}" FontSize="8" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource Muted}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding Who}" FontSize="13"
+                                                           Foreground="{StaticResource Ink}"
+                                                           TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
                                                            Foreground="{StaticResource Muted}"
                                                            TextTrimming="CharacterEllipsis"/>

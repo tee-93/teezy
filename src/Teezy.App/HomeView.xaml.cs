@@ -44,7 +44,16 @@ public sealed record WeekEntry(string When, string What);
 
 /// <summary>One unread message, as the inbox card shows it.</summary>
 public sealed record InboxRow(
-    string Initials, string Who, string Subject, string Mailbox, MailMessage Message);
+    string Initials, string Who, string Subject, string Mailbox, MailMessage Message)
+{
+    /// <summary>The mailbox as one letter, for the badge on the avatar.</summary>
+    public string MailboxLetter => Mailbox.Length > 0 ? Mailbox[..1] : "";
+
+    /// <summary>Who, and which mailbox by name, for whoever hovers a row the column has squeezed.</summary>
+    public string Tip => Mailbox.Length > 0
+        ? $"{Who} · {char.ToUpperInvariant(Mailbox[0])}{Mailbox[1..].ToLowerInvariant()}"
+        : Who;
+}
 
 /// <summary>The dashboard: the day said in one line, then your day, your week and the inbox, then the figures.</summary>
 /// <remarks>

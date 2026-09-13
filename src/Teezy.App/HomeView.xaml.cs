@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Input;
 using System.Windows.Media.Animation;
 
 using System.Threading.Tasks;
@@ -31,13 +32,11 @@ public sealed record UpcomingRow(string When, string What, string Where, bool Do
 }
 
 /// <summary>One day on the week card.</summary>
-public sealed record WeekRow(string Day, string Date, bool IsToday, double Dim, IReadOnlyList<WeekEntry> Entries, string More)
+public sealed record WeekRow(string Day, string Date, bool IsToday, double Dim, IReadOnlyList<WeekEntry> Entries)
 {
     public Visibility TodayMarker => IsToday ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility EmptyVisibility => Entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-
-    public Visibility MoreVisibility => More.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 }
 
 /// <summary>One thing on a day of the week card.</summary>
@@ -59,14 +58,14 @@ public partial class HomeView : UserControl
     private readonly CombinedMailbox? _mailbox;
     private IReadOnlyList<HistoryEntry> _all = [];
 
-    private readonly Func<IReadOnlyList<string>> _closedSections;
-    private readonly Action<IReadOnlyList<string>> _saveClosedSections;
+    private readonly Func<IReadOnlyList<string>> _expandedSections;
+    private readonly Action<IReadOnlyList<string>> _saveExpandedSections;
 
-    /// <summary>Set while sections are put back how they were left, so that is not saved as a change.</summary>
+    /// <summary>Set while widgets are put back the size they were left, so that is not saved as a change.</summary>
     private bool _restoring;
 
-    /// <summary>How long a section takes to open or close: long enough to be seen, short enough not to wait for.</summary>
-    private static readonly Duration SectionMotion = TimeSpan.FromMilliseconds(200);
+    /// <summary>How long a widget takes to grow or shrink: long enough to be seen, short enough not to wait for.</summary>
+    private static readonly Duration SectionMotion = TimeSpan.FromMilliseconds(220);
 
     /// <summary>When the day band was last filled, so opening Home does not re-read every time.</summary>
     /// <remarks>
@@ -83,15 +82,15 @@ public partial class HomeView : UserControl
         CombinedCalendar? calendar = null,
         CombinedMailbox? mailbox = null,
         Func<string>? hotkey = null,
-        Func<IReadOnlyList<string>>? closedSections = null,
-        Action<IReadOnlyList<string>>? saveClosedSections = null)
+        Func<IReadOnlyList<string>>? expandedSections = null,
+        Action<IReadOnlyList<string>>? saveExpandedSections = null)
     {
         InitializeComponent();
         _history = history;
         _calendar = calendar;
         _mailbox = mailbox;
-        _closedSections = closedSections ?? (() => []);
-        _saveClosedSections = saveClosedSections ?? (_ => { });
+        _expandedSections = expandedSections ?? (() => []);
+        _saveExpandedSections = saveExpandedSections ?? (_ => { });
 
         RestoreSections();
 
@@ -100,25 +99,34 @@ public partial class HomeView : UserControl
         Refresh();
     }
 
-    // ---- sections that open and close ----
+    // ---- widgets that grow and shrink ----
 
-    /// <summary>Each section's header, and the part of the section it opens and closes.</summary>
-    private (ToggleButton Toggle, FrameworkElement Body)[] Sections =>
-        [(DayToggle, DayBody), (WeekToggle, WeekList), (InboxToggle, InboxBody)];
+    /// <summary>Each widget's header, the scrolling body it resizes, and the body's two heights.</summary>
+    /// <remarks>
+    /// Fixed heights rather than "as tall as the content": a dashboard is tiles that stay where
+    /// they are, and whatever does not fit a tile scrolls inside it. Growing a widget is a view
+    /// of more of it, not a different layout — which is also what makes the change animatable.
+    /// </remarks>
+    private (ToggleButton Toggle, FrameworkElement Body, double Normal, double Larger)[] Widgets =>
+    [
+        (DayToggle, DayBody, 150, 320),
+        (WeekToggle, WeekBody, 330, 600),
+    ];
 
-    /// <summary>Puts every section back open or closed as it was left, without animating.</summary>
+    /// <summary>The inbox never gets shorter than this, even beside an empty calendar column.</summary>
+    private const double InboxMinHeight = 320;
+
+    /// <summary>Puts every widget back at the size it was left, without animating.</summary>
     private void RestoreSections()
     {
-        var closed = _closedSections();
+        var expanded = _expandedSections();
         _restoring = true;
 
-        foreach (var (toggle, body) in Sections)
+        foreach (var (toggle, body, normal, larger) in Widgets)
         {
-            var open = !closed.Contains((string)toggle.Tag);
-            toggle.IsChecked = open;
-            body.LayoutTransform = new ScaleTransform(1, open ? 1 : 0);
-            body.Opacity = open ? 1 : 0;
-            body.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+            var large = expanded.Contains((string)toggle.Tag);
+            toggle.IsChecked = large;
+            body.Height = large ? larger : normal;
         }
 
         _restoring = false;
@@ -128,47 +136,46 @@ public partial class HomeView : UserControl
     {
         if (_restoring || sender is not ToggleButton toggle) return;
 
-        var body = Sections.First(s => s.Toggle == toggle).Body;
-        Animate(toggle, body, open: toggle.IsChecked == true);
+        var (_, body, normal, larger) = Widgets.First(w => w.Toggle == toggle);
 
-        _saveClosedSections([.. Sections.Where(s => s.Toggle.IsChecked != true).Select(s => (string)s.Toggle.Tag)]);
+        body.BeginAnimation(HeightProperty, new DoubleAnimation(
+            toggle.IsChecked == true ? larger : normal,
+            SectionMotion)
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        });
+
+        _saveExpandedSections([.. Widgets.Where(w => w.Toggle.IsChecked == true).Select(w => (string)w.Toggle.Tag)]);
     }
 
-    /// <summary>Grows a section's body open or shrinks it closed, rather than snapping.</summary>
+    /// <summary>Keeps the inbox exactly as tall as the calendar column beside it.</summary>
     /// <remarks>
-    /// <para>
-    /// A layout scale rather than a height animation: WPF cannot animate to a height of "as tall
-    /// as the content", and a guessed pixel height would clip a busy week or leave a gap under a
-    /// quiet day. Scaling the layout moves everything below it smoothly for free.
-    /// </para>
-    /// <para>
-    /// Closing only collapses the body once the animation has finished, and only if the section
-    /// is still meant to be closed — a second click mid-close must not be undone by the first.
-    /// </para>
+    /// Follows every frame of a widget growing, so the two columns move together and end on the
+    /// same line throughout rather than only once the animation settles.
     /// </remarks>
-    private static void Animate(ToggleButton toggle, FrameworkElement body, bool open)
+    private void OnLeftColumnSized(object sender, SizeChangedEventArgs e) =>
+        InboxCard.Height = Math.Max(e.NewSize.Height, InboxMinHeight);
+
+    /// <summary>Passes the wheel to the page once a widget has nothing left to scroll that way.</summary>
+    /// <remarks>
+    /// A scroll area inside a scrolling page otherwise swallows the wheel even at its end, and
+    /// the page seems stuck whenever the pointer happens to be over a widget.
+    /// </remarks>
+    private void OnWidgetWheel(object sender, MouseWheelEventArgs e)
     {
-        if (body.LayoutTransform is not ScaleTransform scale || scale.IsFrozen)
+        if (sender is not ScrollViewer widget) return;
+
+        var up = e.Delta > 0;
+        var canScroll = widget.ScrollableHeight > 0
+                        && (up ? widget.VerticalOffset > 0 : widget.VerticalOffset < widget.ScrollableHeight);
+        if (canScroll) return;
+
+        e.Handled = true;
+        PageScroll.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
         {
-            scale = new ScaleTransform(1, open ? 0 : 1);
-            body.LayoutTransform = scale;
-        }
-
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-
-        if (open) body.Visibility = Visibility.Visible;
-
-        var height = new DoubleAnimation(open ? 1 : 0, SectionMotion) { EasingFunction = ease };
-        if (!open)
-        {
-            height.Completed += (_, _) =>
-            {
-                if (toggle.IsChecked != true) body.Visibility = Visibility.Collapsed;
-            };
-        }
-
-        scale.BeginAnimation(ScaleTransform.ScaleYProperty, height);
-        body.BeginAnimation(OpacityProperty, new DoubleAnimation(open ? 1 : 0, SectionMotion) { EasingFunction = ease });
+            RoutedEvent = MouseWheelEvent,
+            Source = widget,
+        });
     }
 
     public void Refresh()
@@ -220,6 +227,10 @@ public partial class HomeView : UserControl
 
         ShowToday(diary, now);
         ShowWeek(week, now);
+
+        // The week's top gap exists to separate it from the day; with no day above it, the week
+        // would start lower than the inbox beside it.
+        WeekCard.Margin = new Thickness(0, TodayCard.Visibility == Visibility.Visible ? 14 : 0, 0, 0);
         ShowInbox(mail);
     }
 
@@ -242,7 +253,6 @@ public partial class HomeView : UserControl
         var left = all.Count(e => e.IsAllDay || e.End > now);
 
         TodayList.ItemsSource = all
-            .Take(6)
             .Select(e => new UpcomingRow(
                 e.IsAllDay ? "all day" : Spoken.Clock(e.Start),
                 e.Subject,
@@ -262,9 +272,6 @@ public partial class HomeView : UserControl
         TodayEmpty.Visibility = all.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         TodayCard.Visibility = Visibility.Visible;
     }
-
-    /// <summary>The most a day shows before the rest is counted instead.</summary>
-    private const int MaxPerDay = 3;
 
     /// <summary>Sunday to Saturday, a line a day, with the days already gone faded.</summary>
     /// <remarks>
@@ -293,8 +300,7 @@ public partial class HomeView : UserControl
                     day.Date.ToString("d MMM", CultureInfo.CurrentCulture),
                     day.IsToday,
                     day.IsPast ? 0.4 : 1.0,
-                    [.. day.Events.Take(MaxPerDay).Select(e => new WeekEntry(WeekWhen(e, start, end), e.Subject))],
-                    day.Events.Count > MaxPerDay ? $"+{day.Events.Count - MaxPerDay} more" : "");
+                    [.. day.Events.Select(e => new WeekEntry(WeekWhen(e, start, end), e.Subject))]);
             })
             .ToList();
 
@@ -333,7 +339,9 @@ public partial class HomeView : UserControl
 
         var unread = mail.Messages.Where(m => m.IsUnread).ToList();
 
-        InboxList.ItemsSource = unread.Take(5).Select(Row).ToList();
+        // Twenty rather than five: the inbox scrolls inside its widget now, so the limit is how
+        // much untrusted text is worth holding for a glance, not how much fits.
+        InboxList.ItemsSource = unread.Take(20).Select(Row).ToList();
 
         InboxCount.Text = unread.Count == 0 ? "" : Plural(unread.Count, "unread", plural: "unread");
         InboxEmpty.Visibility = unread.Count == 0 ? Visibility.Visible : Visibility.Collapsed;

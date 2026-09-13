@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Teezy.Core.Tests;
 
-/// <summary>Dashboard sections staying the way they were left.</summary>
+/// <summary>Dashboard widgets staying the size they were left.</summary>
 public sealed class DashboardSettingsTests : IDisposable
 {
     private readonly string _path = Path.Combine(Path.GetTempPath(), $"teezy-settings-{Guid.NewGuid():N}.json");
@@ -11,24 +11,24 @@ public sealed class DashboardSettingsTests : IDisposable
     public void Dispose() => File.Delete(_path);
 
     [Fact]
-    public void Every_section_starts_open()
+    public void Every_widget_starts_at_its_normal_size()
     {
-        new TeezySettings().ClosedSections.ShouldBeEmpty();
+        new TeezySettings().ExpandedSections.ShouldBeEmpty();
     }
 
     [Fact]
-    public void Closed_sections_survive_a_restart()
+    public void Enlarged_widgets_survive_a_restart()
     {
-        new TeezySettings { ClosedSections = ["week", "inbox"] }.Save(_path);
+        new TeezySettings { ExpandedSections = ["week", "day"] }.Save(_path);
 
-        TeezySettings.Load(_path).ClosedSections.ShouldBe(["week", "inbox"]);
+        TeezySettings.Load(_path).ExpandedSections.ShouldBe(["week", "day"]);
     }
 
     [Fact]
-    public void A_settings_file_from_before_sections_could_close_leaves_them_all_open()
+    public void A_settings_file_from_before_widgets_could_grow_leaves_them_all_normal()
     {
         File.WriteAllText(_path, """{ "CleanupEnabled": true }""");
 
-        TeezySettings.Load(_path).ClosedSections.ShouldBeEmpty();
+        TeezySettings.Load(_path).ExpandedSections.ShouldBeEmpty();
     }
 }

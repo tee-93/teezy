@@ -584,9 +584,9 @@
     </Style>
 
     <!--
-      The header of a dashboard section, which opens and closes it. The whole header row is the
-      target, not a small chevron at its end. Checked means open: the chevron points down while
-      open and turns to point right when closed, the way every accordion and file tree reads,
+      The header of a dashboard widget, which grows and shrinks it. The whole header row is the
+      target, not a small chevron at its end. Checked means enlarged: the chevron points down to
+      offer more and turns to point up to offer less, the way a "show more" control reads,
       and it turns rather than snapping so the change is seen.
 
       The negative margin gives the hover wash room around the label without moving the label
@@ -616,13 +616,13 @@
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="False">
+                        <Trigger Property="IsChecked" Value="True">
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="Chevron"
                                                          Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                         To="-90" Duration="0:0:0.18"/>
+                                                         To="180" Duration="0:0:0.18"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>

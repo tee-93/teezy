@@ -11,12 +11,17 @@
       Nothing here joins the call. That is why it works without anyone's permission, and also
       why nobody in the meeting can tell it is running — so the page says so, every time.
     -->
-    <Grid Margin="32,26,32,0">
+    <!--
+      The whole page scrolls, not just the list. With the recorder and the progress card fixed
+      above a scrolling list, a short window squeezed the meetings into a sliver.
+    -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid Margin="32,26,32,24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0">
@@ -26,7 +31,7 @@
         </StackPanel>
 
         <!-- The recorder -->
-        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,20,22,0">
+        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,20,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -95,7 +100,7 @@
         </Border>
 
         <!-- Transcription in progress -->
-        <Border x:Name="WorkCard" Grid.Row="2" Style="{StaticResource CardPanel}" Margin="0,14,22,0"
+        <Border x:Name="WorkCard" Grid.Row="2" Style="{StaticResource CardPanel}" Margin="0,14,0,0"
                 Visibility="Collapsed">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -118,8 +123,7 @@
         </Border>
 
         <!-- Past meetings -->
-        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                      Padding="0,0,8,0" Margin="0,22,0,0">
+        <Border Grid.Row="3" Margin="0,22,0,0">
             <StackPanel>
                 <TextBlock Text="RECORDED" Style="{StaticResource SectionLabel}"/>
                 <!-- Said where the button is, not in a dialog after it: Summarise is the one thing on
@@ -167,6 +171,7 @@
                            Text="Nothing recorded yet. Start recording when a meeting begins and stop when it ends."/>
                 <Border Height="24"/>
             </StackPanel>
-        </ScrollViewer>
+        </Border>
     </Grid>
+    </ScrollViewer>
 </UserControl>

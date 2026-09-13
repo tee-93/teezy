@@ -14,8 +14,7 @@
             <ColumnDefinition Width="286"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <!-- greeting · day band · your day and the inbox · your week · figures -->
-            <RowDefinition Height="Auto"/>
+            <!-- greeting · day band · your day and week beside the inbox · figures -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -73,8 +72,13 @@
             </StackPanel>
         </Border>
 
-        <!-- Today and the inbox, side by side, in the proportions the mock-up settled on. -->
-        <Border x:Name="TodayCard" Grid.Row="2" Grid.Column="0" Style="{StaticResource CardPanel}"
+        <!--
+          Your day and your week, stacked in one column beside the inbox, in the proportions the
+          mock-up settled on. One panel rather than two grid rows: the inbox is taller than a quiet
+          day, and a row shared with it stretched the day's row and left a gap above the week.
+        -->
+        <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Top">
+        <Border x:Name="TodayCard" Style="{StaticResource CardPanel}"
                 Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
             <StackPanel>
                 <Grid Margin="0,0,0,12">
@@ -118,7 +122,7 @@
           already gone are faded rather than dropped. Every day is listed even when empty,
           because a free Thursday is exactly what someone glancing at a week is looking for.
         -->
-        <Border x:Name="WeekCard" Grid.Row="3" Grid.Column="0" Style="{StaticResource CardPanel}"
+        <Border x:Name="WeekCard" Style="{StaticResource CardPanel}"
                 Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
             <StackPanel>
                 <Grid Margin="0,0,0,10">
@@ -175,8 +179,10 @@
                 </ItemsControl>
             </StackPanel>
         </Border>
-        <!-- Beside both the day and the week, so the right-hand column does not end in a gap. -->
-        <Border x:Name="InboxCard" Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" Style="{StaticResource CardPanel}"
+        </StackPanel>
+
+        <!-- Beside the day and the week. -->
+        <Border x:Name="InboxCard" Grid.Row="2" Grid.Column="2" Style="{StaticResource CardPanel}"
                 Margin="0,14,0,0" Padding="20" Visibility="Collapsed" VerticalAlignment="Top">
             <StackPanel>
                 <Grid Margin="0,0,0,12">
@@ -239,7 +245,7 @@
           their own page there is no tall column beside them any more, and four numbers in a
           row is how a dashboard states a total.
         -->
-        <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource CardPanel}"
+        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource CardPanel}"
                 Margin="0,14,0,0" Padding="22,18" VerticalAlignment="Top">
             <Grid>
                 <Grid.ColumnDefinitions>

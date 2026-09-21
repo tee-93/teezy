@@ -109,6 +109,12 @@ public sealed class ConnectedAccounts(
         {
             return _calendars.GetOrAdd(account.Id, id => new IcsCalendar(() => tokens.ReadLink(id)));
         }
+
+        // Nor has a calendar file: its "link" is the path of the file the flow writes.
+        if (account.Source is CalendarSource.File)
+        {
+            return _calendars.GetOrAdd(account.Id, id => new FileCalendar(() => tokens.ReadLink(id)));
+        }
         if (Session(account) is not { } session) return null;
 
         return _calendars.GetOrAdd(account.Id, _ => account.Source switch
@@ -176,6 +182,23 @@ public sealed class ConnectedAccounts(
 
         var account = new ConnectedAccount(ConnectedAccount.NewId(), name, CalendarSource.Ics, profile);
         tokens.SaveLink(account.Id, IcsCalendar.Normalise(link)!);
+        return account;
+    }
+
+    /// <summary>Checks a calendar file from Power Automate, stores its path, and returns what to save.</summary>
+    /// <remarks>
+    /// Checked first for the same reason a link is: a wrong file is refused at the moment it is
+    /// chosen. The path lives beside the links in the secret store only because that is where a
+    /// calendar's address is kept; it is not secret, and — unlike a link — it never syncs, since
+    /// the file belongs to this computer's work OneDrive.
+    /// </remarks>
+    /// <exception cref="CalendarUnavailableException">The file is not a calendar view.</exception>
+    public ConnectedAccount ConnectFile(string path, string name, CalendarProfile profile)
+    {
+        FileCalendar.Check(path);
+
+        var account = new ConnectedAccount(ConnectedAccount.NewId(), name, CalendarSource.File, profile);
+        tokens.SaveLink(account.Id, path);
         return account;
     }
 

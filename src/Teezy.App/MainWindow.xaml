@@ -30,6 +30,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -115,10 +116,28 @@
         </Grid>
 
         <!-- ============================== The page ============================== -->
-        <ContentControl x:Name="PageHost" Grid.Row="1"/>
+        <!--
+          Fivebar's update bar: shown once a newer version has been downloaded and checked. The
+          close button hides the bar and nothing else: the update still installs on quit.
+        -->
+        <Border x:Name="UpdateBar" Grid.Row="1" Visibility="Collapsed" Background="{StaticResource AccentSoft}"
+                BorderBrush="{StaticResource AssistantGood}" BorderThickness="0,0,0,1" Padding="12,6">
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Style="{StaticResource Quiet}" Content="✕" Margin="6,0,0,0"
+                        ToolTip="Later: it installs next time you quit TeezyFlow" Click="OnHideUpdate"/>
+                <Button DockPanel.Dock="Right" Style="{StaticResource Primary}" Content="Restart now"
+                        Click="OnRestartToUpdate"/>
+                <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource Ink}" TextWrapping="Wrap">
+                    <Run x:Name="UpdateVersion" FontWeight="SemiBold"/>
+                    <Run Text="is ready to install. It takes a few seconds, and nothing you have dictated is lost."/>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
+        <ContentControl x:Name="PageHost" Grid.Row="2"/>
 
         <!-- ============================== Status bar ============================== -->
-        <Border Grid.Row="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"
+        <Border Grid.Row="3" Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"
                 BorderThickness="0,1,0,0" MinHeight="28" Padding="12,4">
             <DockPanel LastChildFill="False" TextBlock.FontSize="12"
                        TextBlock.Foreground="{StaticResource Muted}">

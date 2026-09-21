@@ -72,7 +72,10 @@ public partial class MainWindow : Window
         CombinedMailbox? mail = null,
         MeetingStore? meetingStore = null,
         MeetingRecorder? meetingRecorder = null,
-        IMeetingSummariser? meetingSummariser = null)
+        IMeetingSummariser? meetingSummariser = null,
+        Updater? updater = null,
+        Action? restartToUpdate = null,
+        SyncService? sync = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -94,6 +97,9 @@ public partial class MainWindow : Window
         _meetingStore = meetingStore;
         _meetingRecorder = meetingRecorder;
         _meetingSummariser = meetingSummariser;
+        _updater = updater;
+        _restartToUpdate = restartToUpdate;
+        _sync = sync;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -115,9 +121,37 @@ public partial class MainWindow : Window
             else _statusTimer.Stop();
         };
         UpdateStatus();
+
+        if (_updater is not null)
+        {
+            _updater.Changed += state => Dispatcher.BeginInvoke(() => ShowUpdate(state));
+            ShowUpdate(_updater.State);
+        }
     }
 
     private readonly System.Windows.Threading.DispatcherTimer _statusTimer;
+    private readonly Updater? _updater;
+    private readonly Action? _restartToUpdate;
+    private readonly SyncService? _sync;
+
+    /// <summary>Closed with its 'Later' button, which lasts until the next version.</summary>
+    private Version? _hiddenUpdate;
+
+    private void ShowUpdate(UpdateState state)
+    {
+        UpdateVersion.Text = $"TeezyFlow {state.Version}";
+        UpdateBar.Visibility = state.Ready && state.Version != _hiddenUpdate
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnRestartToUpdate(object sender, RoutedEventArgs e) => _restartToUpdate?.Invoke();
+
+    private void OnHideUpdate(object sender, RoutedEventArgs e)
+    {
+        _hiddenUpdate = _updater?.State.Version;
+        UpdateBar.Visibility = Visibility.Collapsed;
+    }
 
     /// <summary>The status bar: whether dictation will work right now, and how to start it.</summary>
     private void UpdateStatus()
@@ -256,7 +290,10 @@ public partial class MainWindow : Window
             microphone: _microphone,
             speaker: _speaker,
             usage: _usage,
-            calendars: _calendars);
+            calendars: _calendars,
+            updater: _updater,
+            restartToUpdate: _restartToUpdate);
+        _settingsView.AttachSync(_sync);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

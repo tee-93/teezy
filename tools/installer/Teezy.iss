@@ -101,8 +101,20 @@ Type: files; Name: "{autoprograms}\{#OldShortcut}.lnk"
 ; runs as an install step instead. nowait, because TeezyFlow stays resident in the tray.
 Filename: "{app}\{#AppExeName}"; Flags: nowait skipifsilent
 
+; An update from inside the app runs this installer silently, which skips the line above - so
+; the app passes /update=1 when it wants to come back afterwards (Restart now), and not when
+; the user chose Quit. See Updater.cs.
+Filename: "{app}\{#AppExeName}"; Flags: nowait; Check: IsRelaunchedUpdate
+
 [UninstallDelete]
 ; The program folder only. History, dictionary, settings and the model live under
 ; %LOCALAPPDATA%\Teezy and are deliberately left behind - history is the only place dictated
 ; text still exists once the app it was typed into has moved on.
 Type: dirifempty; Name: "{app}"
+
+[Code]
+// True only for an update the app started with Restart now. See the [Run] section.
+function IsRelaunchedUpdate: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:update|0}') = '1');
+end;

@@ -70,6 +70,8 @@ public partial class SettingsView : UserControl
     private readonly ISpeaker? _speaker;
     private readonly VoiceUsage? _usage;
     private readonly ConnectedAccounts? _calendars;
+    private readonly Updater? _updater;
+    private readonly Action? _restartToUpdate;
 
     /// <summary>The capture opened by the level test, or null when no test is running.</summary>
     private IAudioCapture? _preview;
@@ -95,9 +97,14 @@ public partial class SettingsView : UserControl
         ISpeaker? speaker = null,
         VoiceUsage? usage = null,
         Func<IAudioCapture>? microphone = null,
-        ConnectedAccounts? calendars = null)
+        ConnectedAccounts? calendars = null,
+        Updater? updater = null,
+        Action? restartToUpdate = null)
     {
         InitializeComponent();
+
+        _updater = updater;
+        _restartToUpdate = restartToUpdate;
 
         _read = read;
         _write = write;
@@ -121,7 +128,19 @@ public partial class SettingsView : UserControl
         // report 1.0.0 through four releases without anyone noticing it was not the truth.
         var version = typeof(SettingsView).Assembly.GetName().Version?.ToString(3) ?? "unknown version";
         var arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture;
-        AboutVersion.Text = $"TeezyFlow {version} · {arch} · .NET {Environment.Version.ToString(2)}";
+        AboutVersion.Text = $"Version {version} · {arch.ToString().ToLowerInvariant()}";
+
+        if (_updater is not null)
+        {
+            // No unsubscribe: this page lives as long as the window, which lives as long as the app.
+            _updater.Changed += s => Dispatcher.BeginInvoke(() => ShowUpdate(s));
+            ShowUpdate(_updater.State);
+        }
+        else
+        {
+            UpdateStatus.Text = "Updates only work in the installed app.";
+            UpdateButton.IsEnabled = false;
+        }
 
         Refresh();
         _loading = false;
@@ -142,6 +161,9 @@ public partial class SettingsView : UserControl
         {
             panel.Visibility = panel.Name == chosen ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        // The section head names the chosen section. Panels are named "Tab" + the section.
+        if (SectionTitle is not null) SectionTitle.Text = chosen.StartsWith("Tab") ? chosen[3..] : chosen;
 
         // Otherwise a tab opens at whatever depth the last one was scrolled to, which reads as
         // a page that has lost its top.
@@ -534,6 +556,7 @@ public partial class SettingsView : UserControl
         {
             CalendarSource.Microsoft => "Microsoft",
             CalendarSource.Google => "Google",
+            CalendarSource.File => "Calendar file from Power Automate · read-only",
             _ => "Calendar link · read-only",
         };
 
@@ -551,16 +574,9 @@ public partial class SettingsView : UserControl
 
     private void PopulateCalendar(TeezySettings settings)
     {
-        // Shown until an account from that provider is actually connected, not merely until an
-        // id is saved. A wrong id fails at sign-in, and hiding the only field that can fix it
-        // the moment it is first saved would leave editing settings.json as the only way out.
-        //
-        // Per provider, not per account. When this was "any account at all" a connected
-        // Microsoft account hid the Google box too, which left no way to enter a Google client
-        // id and so no way to ever enable its button.
-        CalendarSetup.Visibility = Connected(settings, CalendarSource.Microsoft)
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        // Microsoft's id is built in (BuiltInApps), so there is nothing to set up. The box stays in
+        // the page for anyone who wants their own registration, but is not shown.
+        CalendarSetup.Visibility = Visibility.Collapsed;
 
         MicrosoftClientIdBox.Text = settings.MicrosoftClientId ?? string.Empty;
 
@@ -568,10 +584,9 @@ public partial class SettingsView : UserControl
             ? Visibility.Collapsed
             : Visibility.Visible;
 
-        GoogleClientIdBox.Text = settings.GoogleClientId ?? string.Empty;
+        GoogleClientIdBox.Text = settings.GoogleClientId ?? BuiltInApps.GoogleClientId;
 
-        ConnectGoogleButton.IsEnabled =
-            _calendars is not null && !string.IsNullOrWhiteSpace(settings.GoogleClientId);
+        ConnectGoogleButton.IsEnabled = _calendars is not null;
 
         ShowGoogleReady();
 
@@ -579,18 +594,11 @@ public partial class SettingsView : UserControl
             .Select(a => new CalendarRow(a))
             .ToList();
 
-        ConnectMicrosoftButton.IsEnabled =
-            _calendars is not null && !string.IsNullOrWhiteSpace(settings.MicrosoftClientId);
+        ConnectMicrosoftButton.IsEnabled = _calendars is not null;
 
-        var anyClientId = !string.IsNullOrWhiteSpace(settings.MicrosoftClientId)
-                          || !string.IsNullOrWhiteSpace(settings.GoogleClientId);
-
-        // Both providers, not just Microsoft's. The same oversight as the setup boxes above,
-        // and it would have told someone setting up Google alone to add an id they had.
-        CalendarStatus.Text = (anyClientId, settings.ConnectedAccounts.Count) switch
+        CalendarStatus.Text = settings.ConnectedAccounts.Count switch
         {
-            (false, 0) => "Add an application id above to connect an account, or add a calendar link.",
-            (_, 0) => "No accounts connected. Nothing about your diary leaves this machine "
+            0 => "No accounts connected. Nothing about your diary leaves this machine "
                       + "until one is.",
 
             // Worth saying plainly, because it is the difference between this feature and the
@@ -1753,7 +1761,49 @@ public partial class SettingsView : UserControl
         Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
     }
 
-    private void OnQuit(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+    /// <summary>Opens the crash and problem log, or says there is none.</summary>
+    private void OnOpenProblemLog(object sender, RoutedEventArgs e)
+    {
+        if (File.Exists(CrashLog.Path))
+        {
+            ProblemLogNote.Visibility = Visibility.Collapsed;
+            Process.Start(new ProcessStartInfo(CrashLog.Path) { UseShellExecute = true });
+        }
+        else
+        {
+            ProblemLogNote.Visibility = Visibility.Visible;
+        }
+    }
+
+    // ---- Updates ----
+
+    /// <summary>Shows where an update has got to, in Fivebar's update row.</summary>
+    private void ShowUpdate(UpdateState s)
+    {
+        UpdateStatus.Text = s.Describe();
+
+        if (s.Ready)
+        {
+            UpdateButton.Content = "Restart now";
+            UpdateButton.Style = (Style)FindResource("Primary");
+        }
+        else
+        {
+            UpdateButton.Content = "Check for updates";
+            UpdateButton.Style = (Style)FindResource("Secondary");
+        }
+
+        UpdateButton.IsEnabled = !(s.Checking || s.Downloading);
+    }
+
+    private void OnUpdateButton(object sender, RoutedEventArgs e)
+    {
+        if (_updater?.State.Ready == true) _restartToUpdate?.Invoke();
+        else _ = _updater?.CheckAsync(manual: true);
+    }
+
+    /// <summary>Quits through the app, which installs a waiting update on the way out.</summary>
+    private void OnQuit(object sender, RoutedEventArgs e) => ((App)Application.Current).Quit();
 
     /// <summary>Releases what this page was holding when it is navigated away from.</summary>
     /// <remarks>

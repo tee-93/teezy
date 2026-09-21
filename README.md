@@ -9,8 +9,9 @@ had focus. Hold a *different* key and it does what you said instead: opens an ap
 volume, skips a track, locks the PC, and can answer you out loud. It also records a meeting and
 transcribes it once the call is over. **Local by default** — after the one-time model download,
 dictation, commands, meeting transcription, your dictionary and the built-in voice all run
-on-device and stay there. Five optional cloud tiers are the exception — four Claude, one
-ElevenLabs — every one of them off until you switch it on, and every one on your own API key.
+on-device and stay there. Six optional tiers are the exception — four Claude, one ElevenLabs,
+and an encrypted sync file in your own OneDrive — every one of them off until you switch it on.
+The only request TeezyFlow makes by itself is a check for updates against this repository.
 
 Everything dictated is kept, searchable, in an app window with usage stats — because the
 text goes into *someone else's* app, and when that app eats it, mangles it, or you simply
@@ -129,6 +130,79 @@ Three details that are easy to get wrong, and are not:
   the flag is present.
 
 Starting at sign-in loads the model — about 1.6 s and ~900 MB resident, once.
+
+### Updates
+
+TeezyFlow updates itself the way Fivebar does. It checks this repository's releases 45 seconds
+after launch and every four hours, downloads a newer `TeezyFlow-Setup.exe` in the background,
+and then says so: a bar under the tabs — *"TeezyFlow 1.13.0 is ready to install… Restart now"* —
+a line in the tray menu, and one tray notification. **Restart now** installs silently and starts
+TeezyFlow again; if it is never pressed, the update installs the next time you quit. Settings ▸
+About has **Check for updates**.
+
+- **A download is only run if it matches.** GitHub publishes each asset's SHA-256; the
+  installer is checked against it and against its size, and anything else is deleted.
+- **No SmartScreen prompt on an update.** A file the app downloads itself carries no
+  mark-of-the-web, unlike one from a browser.
+- **Only the installed copy updates.** A build run from the repo or `dist\` never replaces
+  the installed app.
+- **No switch to turn it off,** as in Fivebar: an app that is always running is exactly the one
+  that never gets updated by hand.
+
+The first version with this (1.13.0) has to be installed by hand once; every later one arrives
+by itself.
+
+### Your other computers
+
+**Settings ▸ Sync** keeps your keys, settings and dictionary the same on every computer,
+through one encrypted file in a folder they can all see — a `TeezyFlow` folder in OneDrive is
+ideal. Choose the folder and a passphrase on the first computer; on each of the others, choose
+the same folder and type the same passphrase, and that computer takes the setup.
+
+- **What travels:** the Anthropic and ElevenLabs keys, the Google client secret, the Gmail app
+  password, calendar links, hotkeys, the cleanup and assistant choices, writing styles and
+  per-app rules, the voice, and the dictionary.
+- **What stays:** the microphone, the thread count tuned to that processor, where the model
+  lives, and signed-in accounts — sign in to Microsoft or Google once on each computer (the
+  app ids are built in, so there is nothing to paste). A calendar file from Power Automate
+  stays on the computer it was added on.
+- **The file is unreadable without the passphrase:** PBKDF2-SHA256 at 600,000 iterations,
+  then AES-256-GCM. The passphrase is kept on each computer under DPAPI, so it is typed once
+  per machine — and it cannot be recovered. Forget it and the answer is to turn sync off
+  everywhere and start again.
+- **The newest file wins, whole.** Two computers changing different things while both are
+  offline would lose one set of changes. For one person with a few machines that is simpler to
+  trust than a merge.
+
+**Why the keys are not simply built in:** the repository and its releases are public, and a
+key compiled into a public installer is a key anyone can pull out and spend. The Microsoft and
+Google *app ids* are built in (`BuiltInApps.cs`) because they are identifiers shown on every
+sign-in page, not secrets.
+
+### A work calendar that allows nothing else
+
+When a work calendar can be neither signed in to (the organisation will not consent to an app
+it has not approved) nor published (IT has switched publishing off), and the laptop runs the
+New Outlook (which has no local interface to read), **Power Automate** is usually still open:
+it is Microsoft's own tool, running inside your own account. A flow writes the diary to a file
+in your work OneDrive every 15 minutes; TeezyFlow on the work laptop reads that file. The
+calendar never leaves the company, and nobody's permission is needed.
+
+1. In the work OneDrive on the laptop, make a folder `TeezyFlow` and an empty file in it called
+   `calendar.json` (New ▸ Text document, then rename it).
+2. Go to **make.powerautomate.com**, signed in with the work account. **Create ▸ Scheduled cloud
+   flow**, name it *TeezyFlow calendar*, repeat every **15 minutes**.
+3. **New step ▸ Office 365 Outlook ▸ Get calendar view of events (V3).** Calendar id:
+   *Calendar*. Start time: the expression `utcNow()`. End time: the expression
+   `addDays(utcNow(), 14)`.
+4. **New step ▸ OneDrive for Business ▸ Update file.** File: pick `/TeezyFlow/calendar.json`.
+   File content: the expression `string(body('Get_calendar_view_of_events_(V3)'))`.
+5. **Save**, then **Test ▸ Manually**. `calendar.json` should fill with your week.
+6. In TeezyFlow on the work laptop: **Settings ▸ Accounts ▸ Or read a calendar file ▸ Choose…**,
+   pick that `calendar.json`, **Add file**.
+
+If saving the flow says a connector is blocked by your organisation's data policy, this route is
+closed as well. If the file stops changing, the flow has stopped — its run history says why.
 
 ---
 

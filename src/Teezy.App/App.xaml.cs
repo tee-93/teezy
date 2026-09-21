@@ -74,8 +74,12 @@ public partial class App : Application
     private FileSystemWatcher? _dictWatcher;
     private SingleInstance? _instance;
     private Forms.ToolStripMenuItem? _downloadItem;
+    private Forms.ToolStripMenuItem? _updateItem;
+    private readonly Updater _updater = new();
+    private bool _toldAboutUpdate;
     private HistoryStore? _history;
     private ISecretStore? _secrets;
+    private SyncService? _sync;
     private ClaudeFormatter? _claude;
     private MainWindow? _main;
     private WindowsAudioCapture? _audio;
@@ -114,6 +118,10 @@ public partial class App : Application
         _assistantHud = new AssistantWindow();
         BuildTray();
 
+        // After the tray, so a ready update has somewhere to say so.
+        _updater.Changed += state => Dispatch(() => OnUpdateChanged(state));
+        _updater.Start();
+
         _transcriber = new ParakeetTranscriber(
             _settings.ModelPath,
             new SpeechOptions
@@ -141,7 +149,20 @@ public partial class App : Application
         // to record a combination.
         _hotkeySource = new WindowsHotkeySource();
 
-        _secrets = new WindowsSecretStore();
+        // Wrapped so sync hears about every key saved, from wherever it was saved.
+        var secrets = new NotifyingSecretStore(new WindowsSecretStore());
+        _secrets = secrets;
+
+        // Early, so a newer setup from another computer is in place before anything below
+        // reads a setting or a key.
+        _sync = new SyncService(
+            () => _settings,
+            updated => ApplySettings(updated),
+            _secrets,
+            DictionaryStore.DefaultPath,
+            [ApiKeyName, ElevenLabsKeyName, GoogleSecretName, GmailPasswordName]);
+        secrets.Changed += name => Dispatch(() => _sync?.SecretChanged(name));
+        _sync.Start();
 
         // Composed so the offline rules always run and their output is the floor: the LLM is
         // asked to improve an already-clean string, and every failure path returns it.
@@ -177,9 +198,9 @@ public partial class App : Application
 
         _calendars = new ConnectedAccounts(
             new TokenStore(_secrets),
-            () => _settings.MicrosoftClientId,
+            () => _settings.MicrosoftClientId is { Length: > 0 } ms ? ms : BuiltInApps.MicrosoftClientId,
             () => _settings.ReadMailEnabled,
-            () => _settings.GoogleClientId,
+            () => _settings.GoogleClientId is { Length: > 0 } g ? g : BuiltInApps.GoogleClientId,
             () => _secrets.Read(GoogleSecretName));
 
         // Deliberately a second Claude client rather than a flag on the first. This one is
@@ -428,6 +449,10 @@ public partial class App : Application
             Font = new System.Drawing.Font(
                 System.Drawing.SystemFonts.MenuFont!, System.Drawing.FontStyle.Bold),
         };
+        // Hidden until an update has been downloaded and checked. Top of the menu, because it
+        // is the one item that is news.
+        _updateItem = new Forms.ToolStripMenuItem(string.Empty, null, (_, _) => RestartToUpdate()) { Visible = false };
+        menu.Items.Add(_updateItem);
         menu.Items.Add(open);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Settings…", null, (_, _) => ShowMainWindow(Page.Settings));
@@ -441,10 +466,46 @@ public partial class App : Application
         menu.Items.Add(_downloadItem);
 
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Quit TeezyFlow", null, (_, _) => Shutdown());
+        menu.Items.Add("Quit TeezyFlow", null, (_, _) => Quit());
         TrayMenu.Apply(menu);
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ShowMainWindow();
+    }
+
+    // ---- Updates ----
+
+    /// <summary>A newer version was downloaded and checked, or a check came and went.</summary>
+    /// <remarks>
+    /// TeezyFlow lives in the tray and is rarely quit, so "it installs when you quit" alone
+    /// could mean never. The tray says so once per run, and offers the restart in its menu.
+    /// </remarks>
+    private void OnUpdateChanged(UpdateState state)
+    {
+        if (_updateItem is not null)
+        {
+            _updateItem.Visible = state.Ready;
+            _updateItem.Text = $"Restart to update to {state.Version}";
+        }
+
+        if (state.Ready && !_toldAboutUpdate)
+        {
+            _toldAboutUpdate = true;
+            Notify($"TeezyFlow {state.Version} is ready. It installs when you quit, or restart now from the tray menu.",
+                Forms.ToolTipIcon.Info);
+        }
+    }
+
+    /// <summary>Installs the ready update now and comes back afterwards.</summary>
+    private void RestartToUpdate()
+    {
+        if (_updater.Install(relaunch: true)) Shutdown();
+    }
+
+    /// <summary>Quit, installing a ready update on the way out, as Fivebar does.</summary>
+    internal void Quit()
+    {
+        _updater.Install(relaunch: false);
+        Shutdown();
     }
 
     /// <summary>Opens the history and insights window, or brings it back to the front.</summary>
@@ -477,7 +538,10 @@ public partial class App : Application
             mail: _mail,
             meetingStore: _meetingStore,
             meetingRecorder: _meetingRecorder,
-            meetingSummariser: _meetingSummariser);
+            meetingSummariser: _meetingSummariser,
+            updater: _updater,
+            restartToUpdate: RestartToUpdate,
+            sync: _sync);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -531,6 +595,9 @@ public partial class App : Application
         }
 
         SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
+
+        // Last, so a change is saved here before it is sent anywhere else.
+        _sync?.LocalChanged();
     }
 
     private void SetTrayState(string text, bool ready)
@@ -564,6 +631,8 @@ public partial class App : Application
         _meetingRecorder?.Dispose();
         _session?.Dispose();
         _speaker?.Dispose();
+        _updater.Dispose();
+        _sync?.Dispose();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
         TrayIcons.Dispose();
         base.OnExit(e);

@@ -95,6 +95,9 @@ public partial class App
 
         _dictWatcher.Changed += (_, _) =>
         {
+            // The dictionary travels with sync; whatever changed it, the other computers should hear.
+            Dispatch(() => _sync?.LocalChanged());
+
             // Editors commonly write a save in several steps, so one Ctrl+S can raise two or
             // three events and the file may be briefly locked. Settle first, and treat a
             // locked file as "try again on the next event" rather than as an error.

@@ -15,10 +15,13 @@ machine does with what it can see.
 - **Everything is local until you switch something on.** Speech recognition, the command
   vocabulary, your dictionary, your history, meeting transcription and the built-in Windows voice
   all run on-device.
-- **Five optional tiers leave the machine**, each off by default, each on your own API key or
-  your own account, and each listed below.
+- **Six optional tiers leave the machine**, each off by default, each on your own API key, your
+  own account or your own storage, and each listed below.
 - **No analytics, no telemetry, no crash reporting, no advertising, no tracking of any kind.**
-  TeezyFlow does not phone home, and there is no build of it that does.
+  TeezyFlow does not phone home, and there is no build of it that does. The one request it
+  makes by itself is **a check for updates**: shortly after it starts and every four hours, it
+  asks GitHub for this repository's latest release. That tells GitHub your IP address and the
+  version you run — as any download does — and sends nothing about you or your use of it.
 
 ## What stays on your computer, always
 
@@ -66,6 +69,14 @@ transcript is sent so Claude can write a summary and the follow-up tasks. It is 
 it happens for that meeting, when you ask, and at no other time. The recording itself is never
 sent, and the PDF is made on your computer. Like calendar and mail answers, the request is given
 no tools, because a transcript is other people's words.
+
+**6. Sync between your computers (your own folder).** If you turn on Settings ▸ Sync, your API
+keys, the Google client secret, the Gmail app password, calendar links, your preferences and your
+dictionary are written to one file in a folder you choose — usually your own OneDrive, so it is
+stored by Microsoft under your account. The file is **encrypted with a passphrase only you know**
+(PBKDF2-SHA256, 600,000 iterations, then AES-256-GCM), so OneDrive, and anyone who obtains the
+file, sees only scrambled data. Your dictation history, meetings, signed-in account tokens and
+audio are never in it. Turning sync off stops it; delete the file to remove it.
 
 Requests to Anthropic and ElevenLabs are subject to those companies' own terms and privacy
 policies, under your own account with them.

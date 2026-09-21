@@ -1,5 +1,6 @@
 using Teezy.Core.Hotkeys;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Teezy.Core.Abstractions;
 
@@ -279,7 +280,7 @@ public sealed record TeezySettings
     /// anyone who had already signed in — a worse outcome than an out-of-date word on disk.
     /// </para>
     /// </remarks>
-    [System.Text.Json.Serialization.JsonPropertyName("CalendarAccounts")]
+    [System.Text.Json.Serialization.JsonPropertyName(AccountsJsonName)]
     public IReadOnlyList<Calendar.ConnectedAccount> ConnectedAccounts { get; init; } = [];
 
     /// <summary>Dashboard widgets shown at their larger size, by name.</summary>
@@ -328,6 +329,72 @@ public sealed record TeezySettings
     /// record-and-transcribe cycle.
     /// </summary>
     public int MinimumHoldMilliseconds { get; init; } = 200;
+
+    /// <summary>
+    /// The folder holding the sync file, on this computer. Null when sync is off.
+    /// </summary>
+    /// <remarks>
+    /// Local to each machine, like everything in <see cref="LocalOnly"/>: the same OneDrive
+    /// folder has a different path on every computer it syncs to.
+    /// </remarks>
+    public string? SyncFolder { get; init; }
+
+    /// <summary>The saved-at time of the last sync file this computer applied or wrote.</summary>
+    /// <remarks>What stops a computer re-applying its own write, or an older file over a newer one.</remarks>
+    public DateTimeOffset? SyncAppliedAt { get; init; }
+
+    /// <summary>The name accounts are saved under — older than the property's own name.</summary>
+    private const string AccountsJsonName = "CalendarAccounts";
+
+    /// <summary>
+    /// Settings that belong to this computer rather than to the person, and never travel.
+    /// </summary>
+    /// <remarks>
+    /// The microphone and its name, the thread count tuned to this CPU, where this machine keeps
+    /// the model, and the sync plumbing itself. Signed-in accounts are handled separately in
+    /// <see cref="WithPortable"/>: each computer signs in for itself, but a calendar link needs
+    /// no sign-in and travels.
+    /// </remarks>
+    public static readonly IReadOnlySet<string> LocalOnly = new HashSet<string>(StringComparer.Ordinal)
+    {
+        nameof(InputDeviceId), nameof(InputDeviceName), nameof(NumThreads), nameof(ModelPath),
+        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt),
+    };
+
+    /// <summary>Everything that should be the same on every computer, as JSON.</summary>
+    public JsonObject ToPortable()
+    {
+        var node = JsonSerializer.SerializeToNode(this, Json)!.AsObject();
+        foreach (var name in LocalOnly) node.Remove(name);
+
+        node[AccountsJsonName] = JsonSerializer.SerializeToNode(
+            ConnectedAccounts.Where(a => a.Source == Calendar.CalendarSource.Ics).ToList(), Json);
+        return node;
+    }
+
+    /// <summary>These settings with another computer's portable ones laid over them.</summary>
+    /// <remarks>
+    /// Local-only settings are kept as they are. Accounts are merged: this computer's own
+    /// sign-ins stay, and the calendar links come from the other computer.
+    /// </remarks>
+    public TeezySettings WithPortable(JsonObject portable)
+    {
+        var node = JsonSerializer.SerializeToNode(this, Json)!.AsObject();
+
+        foreach (var (name, value) in portable)
+        {
+            if (LocalOnly.Contains(name) || name == AccountsJsonName) continue;
+            node[name] = value?.DeepClone();
+        }
+
+        var links = portable[AccountsJsonName]?.Deserialize<List<Calendar.ConnectedAccount>>(Json) ?? [];
+        var merged = ConnectedAccounts.Where(a => a.Source != Calendar.CalendarSource.Ics)
+            .Concat(links.Where(a => a.Source == Calendar.CalendarSource.Ics))
+            .ToList();
+        node[AccountsJsonName] = JsonSerializer.SerializeToNode(merged, Json);
+
+        return Migrate(node.Deserialize<TeezySettings>(Json) ?? this);
+    }
 
     public static string DefaultPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

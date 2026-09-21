@@ -8,6 +8,12 @@ public enum CalendarSource
 
     /// <summary>A calendar published as an ICS link, read without signing in to anything.</summary>
     Ics,
+
+    /// <summary>
+    /// Events read from a file on this computer — written there by a Power Automate flow, for a
+    /// work calendar that can neither be signed in to nor published.
+    /// </summary>
+    File,
 }
 
 /// <summary>One thing in the diary, reduced to what an answer needs.</summary>

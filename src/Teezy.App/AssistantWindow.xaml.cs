@@ -166,6 +166,21 @@ public partial class AssistantWindow : Window
     /// <summary>Drives the meter while listening.</summary>
     public void SetLevel(float level) => _level = level;
 
+    /// <summary>
+    /// Closes the pill if it is still waiting for a result that is no longer coming.
+    /// </summary>
+    /// <remarks>
+    /// A hold with nothing said — silence, or a tap shorter than the minimum hold — ends the
+    /// session without ever reaching the assistant, so no outcome arrives to settle the pill,
+    /// and it sat on "Thinking" until the next command. A real outcome is always raised before
+    /// the session goes idle and reaches this window first, by which point the pill is Settled
+    /// and this does nothing.
+    /// </remarks>
+    public void DismissIfWaiting()
+    {
+        if (_phase is Phase.Listening or Phase.Working) Dismiss();
+    }
+
     public void Dismiss()
     {
         if (_phase == Phase.Hidden) return;

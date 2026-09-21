@@ -55,8 +55,12 @@ public partial class App
                 _assistantHud!.ShowWorking();
                 break;
 
-            // Idle and Error are not dismissals: the outcome arrives separately and the pill
-            // stays up long enough to be read, then retires itself.
+            // Idle is not a dismissal when there is an outcome: it arrives first, and the pill
+            // stays up long enough to be read, then retires itself. When nothing was said there
+            // is no outcome at all, and the pill must not wait for one.
+            case DictationState.Idle:
+                _assistantHud!.DismissIfWaiting();
+                break;
         }
     }
 

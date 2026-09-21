@@ -9,7 +9,7 @@
       the screen.
     -->
     <ScrollViewer x:Name="PageScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <Grid Margin="32,26,32,24">
+    <Grid Margin="28,24,28,24">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
@@ -22,31 +22,25 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="Greeting" Grid.Row="0" Grid.Column="0" Style="{StaticResource H1}"
-                   Text="Welcome back"/>
-        <TextBlock x:Name="Subtitle" Grid.Row="0" Grid.Column="0" Margin="0,38,0,0"
-                   Foreground="{StaticResource Muted}" FontSize="13"/>
+        <!-- The greeting is the one place in the app that uses the brand face. -->
+        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+            <TextBlock x:Name="Greeting" Style="{StaticResource Display}" Text="Welcome back"
+                       TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="Subtitle" Style="{StaticResource Lede}" Margin="0,2,0,0"/>
+        </StackPanel>
 
-        <!--
-          The hotkey, where the eye lands first on a page you opened to check something.
-
-          A fixed height with a matching radius, not CornerRadius 999 on an auto-sized box: the
-          stadium shape only looks right when the radius is exactly half the height, and letting
-          the content decide the height made the ends into lopsided ellipses.
-        -->
-        <Border Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top"
-                Height="30" CornerRadius="15" Padding="12,0" Background="{StaticResource Card}"
-                BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Hold" Foreground="{StaticResource Muted}" FontSize="12"
-                           VerticalAlignment="Center"/>
-                <Border Background="{StaticResource Hover}" CornerRadius="6" Margin="8,0,0,0"
-                        Padding="8,3" VerticalAlignment="Center">
-                    <TextBlock x:Name="HotkeyChip" Foreground="{StaticResource Ink}" FontSize="11.5"
-                               FontWeight="SemiBold"/>
-                </Border>
-            </StackPanel>
-        </Border>
+        <!-- The hotkey, where the eye lands first on a page you opened to check something. -->
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="16,8,0,0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top">
+            <TextBlock Text="Hold" FontSize="12" Foreground="{StaticResource Muted}"
+                       VerticalAlignment="Center"/>
+            <Border Style="{StaticResource KeyCap}" Margin="6,0" VerticalAlignment="Center">
+                <TextBlock x:Name="HotkeyChip" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{StaticResource Ink}"/>
+            </Border>
+            <TextBlock Text="to dictate" FontSize="12" Foreground="{StaticResource Muted}"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
 
         <!--
           The day, said in one line, across the top. The page opens with the assistant telling
@@ -58,19 +52,18 @@
           and an empty band is worse than no band.
         -->
         <Border x:Name="SummaryBand" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                Style="{StaticResource CardPanel}" Padding="20" Margin="0,22,0,0"
-                Visibility="Collapsed"
-                Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentSoft}">
-            <StackPanel Orientation="Horizontal">
-                <Border Width="34" Height="34" CornerRadius="11" VerticalAlignment="Center"
-                        Background="{StaticResource AccentWash}">
-                    <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
-                          Width="18" Height="18"/>
-                </Border>
-                <TextBlock x:Name="SummaryText" Style="{StaticResource H2}" FontSize="17"
-                           TextWrapping="Wrap" LineHeight="24" Margin="15,0,0,0"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
+                Style="{StaticResource CardPanel}" Margin="0,12,0,0"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Path Data="{StaticResource MarkGeometry}" Fill="{StaticResource Accent}" Stretch="Uniform"
+                      Width="18" Height="18" VerticalAlignment="Center"/>
+                <TextBlock x:Name="SummaryText" Grid.Column="1" Style="{StaticResource H2}"
+                           TextWrapping="Wrap" Margin="12,0,0,0" VerticalAlignment="Center"/>
+            </Grid>
         </Border>
 
         <!--
@@ -83,18 +76,17 @@
           taking its height from the column means the two always end on the same line, and the
           inbox scrolls inside itself for whatever does not fit.
         -->
-        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,14,0,0">
+        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="13*"/>
-                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="7*"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel x:Name="LeftColumn" Grid.Column="0" VerticalAlignment="Top"
                         SizeChanged="OnLeftColumnSized">
 
-                <Border x:Name="TodayCard" Style="{StaticResource CardPanel}" Padding="20,18"
-                        Visibility="Collapsed">
+                <Border x:Name="TodayCard" Style="{StaticResource CardPanel}" Visibility="Collapsed">
                     <StackPanel>
                         <ToggleButton x:Name="DayToggle" Style="{StaticResource SectionToggle}" Tag="day"
                                       ToolTip="Show more or less of today"
@@ -102,33 +94,36 @@
                             <Grid>
                                 <TextBlock Text="YOUR DAY" Style="{StaticResource SectionLabel}" Margin="0"
                                            VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TodayCount" HorizontalAlignment="Right" FontSize="11.5"
-                                           Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TodayCount" HorizontalAlignment="Right" FontSize="12"
+                                           Foreground="{StaticResource Faint}" VerticalAlignment="Center"
+                                           Typography.NumeralAlignment="Tabular"/>
                             </Grid>
                         </ToggleButton>
 
-                        <ScrollViewer x:Name="DayBody" Margin="0,14,0,0" Height="150" Padding="0,0,10,0"
+                        <ScrollViewer x:Name="DayBody" Margin="0,12,0,0" Height="150" Padding="0,0,8,0"
                                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                       PreviewMouseWheel="OnWidgetWheel">
                             <StackPanel>
                                 <ItemsControl x:Name="TodayList">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="0,0,0,11" Opacity="{Binding Dim}">
+                                            <Grid Margin="0,0,0,8" Opacity="{Binding Dim}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="60"/>
-                                                    <ColumnDefinition Width="3"/>
+                                                    <ColumnDefinition Width="64"/>
+                                                    <ColumnDefinition Width="4"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding When}" FontSize="12.5"
-                                                           Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding When}" FontSize="12"
+                                                           Foreground="{StaticResource Muted}" VerticalAlignment="Center"
+                                                           Typography.NumeralAlignment="Tabular"/>
+                                                <!-- A quiet rule for each entry; the accent marks only the one on now. -->
                                                 <Border Grid.Column="1" Width="{Binding RailWidth}" CornerRadius="2" MinHeight="26"
-                                                        Background="{StaticResource AccentWash}"/>
-                                                <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding What}" FontSize="13.5" TextDecorations="{Binding Strike}"
+                                                        HorizontalAlignment="Left" Background="{Binding Rail}"/>
+                                                <StackPanel Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding What}" TextDecorations="{Binding Strike}"
                                                                Foreground="{StaticResource Ink}"
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Where}" FontSize="11.5" Margin="0,2,0,0"
+                                                    <TextBlock Text="{Binding Where}" FontSize="12" Margin="0,1,0,0"
                                                                Foreground="{StaticResource Muted}"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
@@ -136,7 +131,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <TextBlock x:Name="TodayEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
+                                <TextBlock x:Name="TodayEmpty" Style="{StaticResource Hint}" Margin="0"
                                            Visibility="Collapsed" Text="Nothing else in your diary today."/>
                             </StackPanel>
                         </ScrollViewer>
@@ -149,7 +144,7 @@
                   are faded rather than dropped. Every day is listed even when empty, because a
                   free Thursday is exactly what someone glancing at a week is looking for.
                 -->
-                <Border x:Name="WeekCard" Style="{StaticResource CardPanel}" Margin="0,14,0,0" Padding="20,18"
+                <Border x:Name="WeekCard" Style="{StaticResource CardPanel}" Margin="0,12,0,0"
                         Visibility="Collapsed">
                     <StackPanel>
                         <ToggleButton x:Name="WeekToggle" Style="{StaticResource SectionToggle}" Tag="week"
@@ -158,45 +153,48 @@
                             <Grid>
                                 <TextBlock Text="YOUR WEEK" Style="{StaticResource SectionLabel}" Margin="0"
                                            VerticalAlignment="Center"/>
-                                <TextBlock x:Name="WeekCount" HorizontalAlignment="Right" FontSize="11.5"
-                                           Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="WeekCount" HorizontalAlignment="Right" FontSize="12"
+                                           Foreground="{StaticResource Faint}" VerticalAlignment="Center"
+                                           Typography.NumeralAlignment="Tabular"/>
                             </Grid>
                         </ToggleButton>
 
-                        <ScrollViewer x:Name="WeekBody" Margin="0,12,0,0" Height="330" Padding="0,0,10,0"
+                        <ScrollViewer x:Name="WeekBody" Margin="0,12,0,0" Height="330" Padding="0,0,8,0"
                                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                       PreviewMouseWheel="OnWidgetWheel">
                             <ItemsControl x:Name="WeekList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0"
-                                                Padding="0,9" Opacity="{Binding Dim}">
+                                                Padding="0,8" Opacity="{Binding Dim}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="104"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                                                    <Border Width="3" Height="14" CornerRadius="2" Margin="0,2,7,0"
-                                                            Background="{StaticResource AccentWash}"
+                                                    <Border Width="3" Height="14" CornerRadius="2" Margin="0,1,6,0"
+                                                            Background="{StaticResource Accent}"
                                                             Visibility="{Binding TodayMarker}"/>
-                                                    <TextBlock Text="{Binding Day}" FontSize="12.5" FontWeight="SemiBold"
+                                                    <TextBlock Text="{Binding Day}" FontSize="12" FontWeight="SemiBold"
                                                                Foreground="{StaticResource Ink}"/>
-                                                    <TextBlock Text="{Binding Date}" FontSize="11.5" Margin="6,1,0,0"
-                                                               Foreground="{StaticResource Faint}"/>
+                                                    <TextBlock Text="{Binding Date}" FontSize="11" Margin="6,1,0,0"
+                                                               Foreground="{StaticResource Faint}"
+                                                               Typography.NumeralAlignment="Tabular"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1">
                                                     <ItemsControl ItemsSource="{Binding Entries}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Grid Margin="0,0,0,3">
+                                                                <Grid Margin="0,0,0,2">
                                                                     <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="90"/>
+                                                                        <ColumnDefinition Width="88"/>
                                                                         <ColumnDefinition Width="*"/>
                                                                     </Grid.ColumnDefinitions>
                                                                     <TextBlock Text="{Binding When}" FontSize="12"
-                                                                               Foreground="{StaticResource Muted}"/>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding What}" FontSize="12.5"
+                                                                               Foreground="{StaticResource Muted}"
+                                                                               Typography.NumeralAlignment="Tabular"/>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding What}" FontSize="12"
                                                                                Foreground="{StaticResource Ink}"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                 </Grid>
@@ -221,9 +219,9 @@
                 <!--
                   The budget's highlights, above the inbox. Empty until a source is connected,
                   and it says so rather than showing sample figures; the Budget page is where
-                  the detail will live.
+                  the detail will live. The height is read in code to size the inbox below.
                 -->
-                <Border x:Name="BudgetCard" Style="{StaticResource CardPanel}" Padding="18,18" Height="150">
+                <Border x:Name="BudgetCard" Style="{StaticResource CardPanel}" Height="150">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -233,16 +231,15 @@
 
                         <TextBlock Text="BUDGET" Style="{StaticResource SectionLabel}" Margin="0"/>
 
-                        <TextBlock Grid.Row="1" Margin="0,10,0,0" FontSize="12.5" TextWrapping="Wrap"
-                                   LineHeight="18" Foreground="{StaticResource Muted}"
+                        <TextBlock Grid.Row="1" Style="{StaticResource Hint}" Margin="0,8,0,0"
                                    Text="Bills due this week, and money in and out, will show here once your budget is connected."/>
 
                         <Button Grid.Row="2" Content="Open Budget" Style="{StaticResource Quiet}"
-                                HorizontalAlignment="Left" Margin="-9,0,0,-5" Click="OnOpenBudget"/>
+                                HorizontalAlignment="Left" Margin="-7,0,0,-3" Click="OnOpenBudget"/>
                     </Grid>
                 </Border>
-                <Border x:Name="InboxCard" Margin="0,14,0,0" VerticalAlignment="Top" Style="{StaticResource CardPanel}"
-                        Padding="18,18" Visibility="Collapsed">
+                <Border x:Name="InboxCard" Margin="0,12,0,0" VerticalAlignment="Top" Style="{StaticResource CardPanel}"
+                        Visibility="Collapsed">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -252,8 +249,9 @@
                         <Grid>
                             <TextBlock Text="INBOX" Style="{StaticResource SectionLabel}" Margin="0"
                                        VerticalAlignment="Center"/>
-                            <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="11.5"
-                                       Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="12"
+                                       Foreground="{StaticResource Faint}" VerticalAlignment="Center"
+                                       Typography.NumeralAlignment="Tabular"/>
                         </Grid>
 
                         <ScrollViewer x:Name="InboxBody" Grid.Row="1" Margin="0,12,0,0" Padding="0,0,6,0"
@@ -278,9 +276,9 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <Grid Width="28" Height="28" VerticalAlignment="Top">
-                                                    <Border CornerRadius="9" Background="{StaticResource Hover}">
+                                                    <Border CornerRadius="14" Background="{StaticResource Selected}">
                                                         <TextBlock Text="{Binding Initials}" FontSize="11"
-                                                                   FontWeight="SemiBold" Foreground="{StaticResource Body}"
+                                                                   FontWeight="SemiBold" Foreground="{StaticResource Ink}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
 
@@ -292,21 +290,24 @@
                                                       tag took the room the sender's name needed. The full name is
                                                       on the row's tooltip.
                                                     -->
-                                                    <Border Width="14" Height="14" CornerRadius="7" Margin="0,0,-4,-4"
+                                                    <!-- A small disc cut into the corner, the way a status
+                                                         badge sits on an avatar: the card's own colour as a
+                                                         ring, so it reads as notched out rather than on top. -->
+                                                    <Border CornerRadius="7" Width="14" Height="14" Margin="0,0,-4,-4"
                                                             HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                            Background="{StaticResource Paper}"
-                                                            BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-                                                        <TextBlock Text="{Binding MailboxLetter}" FontSize="8" FontWeight="SemiBold"
-                                                                   Foreground="{StaticResource Muted}"
+                                                            Background="{StaticResource Raised}"
+                                                            BorderBrush="{StaticResource Card}" BorderThickness="2">
+                                                        <TextBlock Text="{Binding MailboxLetter}" FontSize="8" FontWeight="Bold"
+                                                                   Foreground="{StaticResource Body}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
 
-                                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                                    <TextBlock Text="{Binding Who}" FontSize="13"
+                                                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Who}"
                                                                Foreground="{StaticResource Ink}"
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Subject}" FontSize="11.5" Margin="0,2,0,0"
+                                                    <TextBlock Text="{Binding Subject}" FontSize="12" Margin="0,1,0,0"
                                                                Foreground="{StaticResource Muted}"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
@@ -314,7 +315,7 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                                <TextBlock x:Name="InboxEmpty" FontSize="12.5" Foreground="{StaticResource Muted}"
+                                <TextBlock x:Name="InboxEmpty" Style="{StaticResource Hint}" Margin="0"
                                            Visibility="Collapsed" Text="Nothing unread."/>
                             </StackPanel>
                         </ScrollViewer>
@@ -324,38 +325,45 @@
         </Grid>
 
         <!--
-          The dictation figures, as one strip rather than a sidebar. Four numbers in a row is how
-          a dashboard states a total, and it closes the page off under the widgets.
+          The dictation figures, as one strip rather than a sidebar: one card split by lines,
+          four numbers in a row, closing the page off under the widgets.
         -->
-        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource CardPanel}"
-                Margin="0,14,0,0" Padding="22,18" VerticalAlignment="Top">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,20,0,0">
+            <TextBlock Text="DICTATION" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource CardPanel}" Padding="0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock x:Name="TotalWords" Style="{StaticResource StatNumber}" FontSize="28"/>
-                    <TextBlock Text="total words" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1">
-                    <TextBlock x:Name="Wpm" Style="{StaticResource StatNumber}" FontSize="28"/>
-                    <TextBlock Text="words / min" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                    <TextBlock x:Name="Streak" Style="{StaticResource StatNumber}" FontSize="28"/>
-                    <TextBlock x:Name="StreakCaption" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                </StackPanel>
-                <StackPanel Grid.Column="3">
-                    <TextBlock x:Name="TimeSaved" Style="{StaticResource StatNumber}" FontSize="28"
-                               Foreground="{StaticResource AccentDeep}"/>
-                    <TextBlock Text="saved vs typing" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+                    <StackPanel Grid.Column="0" Margin="16,0">
+                        <TextBlock x:Name="TotalWords" Style="{StaticResource StatNumber}"/>
+                        <TextBlock Text="total words" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{StaticResource Hairline}"/>
+                    <StackPanel Grid.Column="2" Margin="16,0">
+                        <TextBlock x:Name="Wpm" Style="{StaticResource StatNumber}"/>
+                        <TextBlock Text="words / min" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Border Grid.Column="3" Background="{StaticResource Hairline}"/>
+                    <StackPanel Grid.Column="4" Margin="16,0">
+                        <TextBlock x:Name="Streak" Style="{StaticResource StatNumber}"/>
+                        <TextBlock x:Name="StreakCaption" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Border Grid.Column="5" Background="{StaticResource Hairline}"/>
+                    <StackPanel Grid.Column="6" Margin="16,0">
+                        <TextBlock x:Name="TimeSaved" Style="{StaticResource StatNumber}"/>
+                        <TextBlock Text="saved vs typing" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </StackPanel>
 
     </Grid>
     </ScrollViewer>

@@ -387,52 +387,47 @@ than quietly changing a number and leaving you no faster.
 
 ## Look and feel
 
-Warm paper and ink against a cool, saturated accent: a serif for display type, a humanist
-sans for everything else. Quiet enough to live in the tray all day without competing with
-whatever the user is actually working on.
+TeezyFlow is a Teezy Labs product and looks like one. **It uses Fivebar's design system**,
+value for value: cool blue-grey panels in four steps of elevation (`#141619` strip, `#1b1d21`
+page, `#25282d` panel, `#2e3238` / `#363b42` raised and selected), one-pixel `#3a3f46` lines
+instead of shadows, Segoe UI at 13 px, 4 px buttons and inputs, 8 px cards, small uppercase
+section labels, tabular figures, and a 3 px accent bar for whatever is selected. Shadows are
+kept for things that float — the pills and dropdowns. The source of truth for those values is
+Fivebar's `src\renderer\src\styles.css`; keep them in step rather than tuning them here.
+
+**The family shares everything but its colour.** Fivebar is orange; TeezyFlow is teal
+(`#2BB3A3`), the way Word and Excel share a look but not a colour. Text on the accent is dark:
+white on this teal is about 2.6:1, dark ink over 7:1. **Red is reserved** — it means recording
+and appears nowhere else.
+
+The window is Fivebar's shell: a dark strip across the top with the mark and the pages as
+tabs (the active tab takes the page colour and sits over the strip's line, so it reads as the
+top of its page), Settings on the right, and a status bar along the bottom that says whether
+dictation will work right now and which keys start it. Outfit Bold, the Teezy Labs display
+face, appears in exactly two places: the home greeting and the wordmark.
 
 `Theme.xaml` is the whole design system — palette, type scale, and templates for every
-control the app uses. **Views must not contain literal colours**; there are none left. That
-is not tidiness for its own sake: it is what lets the tray icon, the floating meter and four
-pages be recoloured together and stay one product.
+control the app uses. **Views must not contain literal colours**, and code that draws its own
+visuals reads them through `Brand`, which looks them up in the theme rather than keeping a
+second copy. A second copy is exactly what went wrong before: `Brand.cs` was still the old
+light palette months after the window went dark.
 
-**The accent is taken from the mark, not chosen next to it.** `Accent` `#014AFD` is the blue
-the sound waves are drawn in and `AccentInk` `#041945` is the navy of the speech bubble, so
-the app cannot drift away from its own logo. Both pairings were checked rather than eyeballed
-— white on `Accent` is 6.2:1 and `AccentInk` on `AccentSoft` is 14.6:1, clearing AA for body
-text and not merely for the large type they mostly carry.
+Dark only, for now. Every lookup is `StaticResource`; a light theme following Windows, as
+Fivebar does, means moving the views to `DynamicResource` first.
 
-The mark's amber sparkle is deliberately **not** in the general palette. It lives as
-`MarkSparkle`, for the logo alone: promoting the one warm note in the brand to a UI accent
-would set it beside the recording red, which is precisely what the palette is arranged to
-prevent. The brand art itself is in `Logo\`.
+**The mark is four rounded bars at different heights — a voice level.** It is built the way
+Fivebar's is: flat bars, the same bar-to-gap ratio and corner, no tile, no gradient. Fivebar's
+bars stand full height and are cut on a diagonal; these rise and fall, because this product is
+a voice. The assistant pill animates the mark itself — the two middle bars are the voice meter
+while it listens. The wordmark is lowercase `teezyflow` in Outfit Bold with `flow` in the
+accent, as Fivebar writes `five` + `bar`.
 
-**Red is reserved.** It means recording and appears nowhere else, which is why the accent is
-a blue — a warm accent would compete with the one signal the user must read instantly.
-
-WPF ships dated chrome, so the controls are re-templated: switches instead of tick boxes for
-preferences, a segmented control where two options are two shapes of one thing, a slim
-overlay scrollbar, and a custom combo box. Stock WPF controls were the single biggest thing
-making this look like a tool rather than a product.
-
-The mark is speech flowing into a text bubble and coming out cleaned up. It is authored in
-`Logo\teezy-icon.svg`, and `Theme.xaml` carries the same coordinates so the artwork and the
-app can be diffed by eye.
-
-**There are two of it, and that is not a compromise.** `MarkImage` is the logo as drawn,
-used where there is room for it: the first-run window and the empty state. `MarkGeometry` is
-a silhouette of the bubble with the text lines knocked out, used for the nav rail, the tray
-and the `.ico`. At 16 px the bubble's stroke lands on two thirds of a pixel, the three waves
-collapse into each other, and the sparkle and cursor vanish — a shrunken logo is a grey
-smudge, so the small sizes get a drawing that was designed to be small.
-
-**Nothing redraws the mark a second time.** The tray used to be hand-written GDI+ rectangles
-that happened to match the XAML, and they matched only while someone remembered to change
-both. `TrayIcons` now renders the real resource out of the dictionary, and
-`tools/make-icon.ps1` loads `Theme.xaml` and renders the same one — including the tile inset,
-corner radius and glyph scale, which live in the dictionary rather than in either renderer.
-Neither hardcodes the glyph's bounds either: they take them from the geometry, so re-drawing
-the mark re-centres it.
+**One drawing, every size, and nothing redraws it.** `MarkGeometry` in `Theme.xaml` is used at
+16 px in the tray and at 256 px in Explorer; its proportions are Fivebar's small-size ones,
+because at 16 px a thinner gap closes up. `TrayIcons` renders that resource at runtime, and
+`tools/make-icon.ps1` loads `Theme.xaml` and renders the same one into the `.ico`. Neither
+hardcodes the glyph's bounds: they take them from the geometry, so re-drawing the mark
+re-centres it. The old speech-bubble artwork is still in `Logo\` for reference.
 
 **`Teezy.ico` is the one binary asset, and it is generated rather than drawn.** Windows reads
 the icon from the PE file, not from the running process — so Explorer, the Start Menu,

@@ -32,8 +32,11 @@ public partial class AssistantWindow : Window
     private const int WS_EX_TOOLWINDOW = 0x00000080;
 
     /// <summary>Bar widths at rest — the mark exactly as it ships.</summary>
-    private const double Bar1Rest = 28;
-    private const double Bar2Rest = 20;
+    private const double Bar1Rest = 100;
+    private const double Bar2Rest = 74;
+
+    /// <summary>The two middle bars while working: short, so the pulse reads as typing.</summary>
+    private const double BarWorking = 40;
 
     private enum Phase { Hidden, Listening, Working, Settled }
 
@@ -307,7 +310,10 @@ public partial class AssistantWindow : Window
         Bar1.BeginAnimation(OpacityProperty, null);
         Bar2.BeginAnimation(OpacityProperty, null);
 
-        Bar1.Opacity = Bar2.Opacity = 1;
+        BarA.BeginAnimation(OpacityProperty, null);
+        BarB.BeginAnimation(OpacityProperty, null);
+
+        Bar1.Opacity = Bar2.Opacity = BarA.Opacity = BarB.Opacity = 1;
         Bar1.Width = Bar1Rest;
         Bar2.Width = Bar2Rest;
         Tick.Opacity = 0;
@@ -318,7 +324,7 @@ public partial class AssistantWindow : Window
         Bar1.BeginAnimation(WidthProperty, null);
         Bar2.BeginAnimation(WidthProperty, null);
         Bar1.Opacity = Bar2.Opacity = 1;
-        Bar1.Width = Bar2.Width = 11;
+        Bar1.Width = Bar2.Width = BarWorking;
         Tick.Opacity = 0;
     }
 
@@ -336,8 +342,8 @@ public partial class AssistantWindow : Window
                 _lastLevel += (_level - _lastLevel) * rate;
 
                 var ripple = 0.5 + 0.5 * Math.Sin(_t * 6.2);
-                Bar1.Width = 12 + 18 * _lastLevel * (0.75 + 0.25 * ripple);
-                Bar2.Width = 10 + 16 * _lastLevel * (0.75 + 0.25 * (1 - ripple));
+                Bar1.Width = 40 + 60 * _lastLevel * (0.75 + 0.25 * ripple);
+                Bar2.Width = 30 + 44 * _lastLevel * (0.75 + 0.25 * (1 - ripple));
 
                 Breathe.ScaleX = Breathe.ScaleY = 1 + 0.05 * _lastLevel;
                 Glow.Opacity = 0.35 + 0.55 * _lastLevel;
@@ -345,7 +351,7 @@ public partial class AssistantWindow : Window
 
             case Phase.Working:
                 // A typing indicator, not a spinner. Spinners say "wait"; this says "working".
-                Bar1.Width = Bar2.Width = 11;
+                Bar1.Width = Bar2.Width = BarWorking;
                 Bar1.Opacity = 0.3 + 0.7 * (0.5 + 0.5 * Math.Sin(_t * 3.4));
                 Bar2.Opacity = 0.3 + 0.7 * (0.5 + 0.5 * Math.Sin(_t * 3.4 + Math.PI));
                 Breathe.ScaleX = Breathe.ScaleY = 1 + 0.018 * (0.5 + 0.5 * Math.Sin(_t * 3.4));
@@ -364,6 +370,8 @@ public partial class AssistantWindow : Window
         var fade = new DoubleAnimation(1, 0, Ms(130));
         Bar1.BeginAnimation(OpacityProperty, fade);
         Bar2.BeginAnimation(OpacityProperty, fade);
+        BarA.BeginAnimation(OpacityProperty, fade);
+        BarB.BeginAnimation(OpacityProperty, fade);
 
         Tick.Opacity = 1;
         Tick.BeginAnimation(Shape.StrokeDashOffsetProperty,

@@ -2,32 +2,31 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="{StaticResource UiFont}" FontSize="13">
-    <Grid Margin="32,26,32,0">
+    <Grid Margin="28,24,28,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <Grid>
                 <TextBlock Text="Dictionary" Style="{StaticResource H1}"/>
                 <Button x:Name="OpenFileButton" Content="Open as text file"
-                        Style="{StaticResource Quiet}" FontSize="12"
+                        Style="{StaticResource Quiet}"
                         HorizontalAlignment="Right" VerticalAlignment="Center"
                         Click="OnOpenFile"/>
             </Grid>
-            <TextBlock Margin="0,4,0,0" Foreground="{StaticResource Muted}" TextWrapping="Wrap"
+            <TextBlock Style="{StaticResource Lede}" Margin="0,4,0,0"
                        Text="Names and jargon the model keeps getting wrong. Corrections are applied after transcription, so they are guaranteed — unlike hints, which only improve the odds."/>
         </StackPanel>
 
         <!-- Add -->
-        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,20,0,16">
+        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,0,0,12">
             <StackPanel>
                 <!-- Segmented, because these are two shapes of the same thing rather than
                      two unrelated options. -->
-                <Border Background="{StaticResource Sunken}" CornerRadius="10" Padding="3"
-                        HorizontalAlignment="Left" Margin="0,0,0,18">
+                <Border Style="{StaticResource SegmentGroup}" HorizontalAlignment="Left" Margin="0,0,0,14">
                     <StackPanel Orientation="Horizontal">
                         <RadioButton x:Name="KindCorrection" Content="Fix a mishearing" IsChecked="True"
                                      Style="{StaticResource Segment}" GroupName="Kind" Checked="OnKindChanged"/>
@@ -50,9 +49,11 @@
                                  TextChanged="OnDraftChanged" KeyDown="OnDraftKeyDown"/>
                     </StackPanel>
 
-                    <TextBlock x:Name="Arrow" Grid.Column="1" Text="→" FontSize="16" Margin="13,25,13,0"
-                               Foreground="{StaticResource Faint}" VerticalAlignment="Top"
-                               Height="38" TextAlignment="Center" LineHeight="38"/>
+                    <!-- Sits on the fields' line: label (11 px + 8 margin) above, field 30 high. -->
+                    <TextBlock x:Name="Arrow" Grid.Column="1" Text="→" Margin="10,0,10,0"
+                               Foreground="{StaticResource Muted}"
+                               VerticalAlignment="Bottom" Height="30" LineHeight="30"
+                               LineStackingStrategy="BlockLineHeight" TextAlignment="Center"/>
 
                     <StackPanel Grid.Column="2">
                         <TextBlock x:Name="WriteLabel" Text="WRITE" Style="{StaticResource SectionLabel}"/>
@@ -61,12 +62,12 @@
                     </StackPanel>
 
                     <Button x:Name="AddButton" Grid.Column="3" Content="Add" Click="OnAdd"
-                            Style="{StaticResource Primary}" Margin="12,25,0,0" Height="38"
-                            VerticalAlignment="Top" IsDefault="True"/>
+                            Style="{StaticResource Primary}" Margin="8,0,0,0" Height="30" MinWidth="64"
+                            VerticalAlignment="Bottom" IsDefault="True"/>
                 </Grid>
 
                 <!-- Live warning about the entry being typed, before it is added. -->
-                <Border x:Name="DraftWarning" Visibility="Collapsed" Margin="0,14,0,0" Padding="12,10"
+                <Border x:Name="DraftWarning" Visibility="Collapsed" Margin="0,12,0,0"
                         Style="{StaticResource CautionPanel}">
                     <TextBlock x:Name="DraftWarningText" TextWrapping="Wrap"
                                Foreground="{StaticResource CautionInk}" FontSize="12"/>
@@ -77,15 +78,15 @@
         <!-- Entries -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
             <StackPanel>
-                <TextBlock x:Name="CountLabel" Style="{StaticResource SectionLabel}"/>
+                <TextBlock x:Name="CountLabel" Style="{StaticResource SectionLabel}"
+                           Typography.NumeralAlignment="Tabular"/>
 
-                <Border x:Name="ListCard" Background="{StaticResource Card}" CornerRadius="12"
-                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                <Border x:Name="ListCard" Style="{StaticResource ListCard}">
                     <ItemsControl x:Name="Entries">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border x:Name="Row" Padding="16,12" Background="Transparent"
-                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
+                                <Border x:Name="Row" Padding="12,8" Background="Transparent"
+                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -95,7 +96,7 @@
 
                                         <CheckBox Grid.Column="0" Style="{StaticResource Tick}"
                                                   IsChecked="{Binding IsEnabled, Mode=OneWay}"
-                                                  Click="OnToggle" Tag="{Binding}" Margin="0,2,13,0"
+                                                  Click="OnToggle" Tag="{Binding}" Margin="0,1,12,0"
                                                   VerticalAlignment="Top"
                                                   ToolTip="Disabled entries stay in the file but stop firing"/>
 
@@ -107,27 +108,30 @@
                                                            Visibility="{Binding HearVisibility}"/>
                                                 <TextBlock Text="{Binding Write}" Foreground="{StaticResource Ink}"
                                                            FontWeight="SemiBold"/>
-                                                <Border Background="{StaticResource AccentSoft}" CornerRadius="4"
-                                                        Padding="6,1" Margin="10,0,0,0"
+                                                <Border Style="{StaticResource Tag}" Margin="8,0,0,0"
+                                                        VerticalAlignment="Center"
                                                         Visibility="{Binding TermTagVisibility}">
-                                                    <TextBlock Text="hint only" FontSize="10.5"
-                                                               Foreground="{StaticResource AccentInk}"/>
+                                                    <TextBlock Text="hint only" Style="{StaticResource TagText}"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="11.5"
-                                                       Foreground="{StaticResource CautionInk}" Margin="0,5,0,0"
+                                            <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="12"
+                                                       Foreground="{StaticResource CautionInk}" Margin="0,4,0,0"
                                                        Visibility="{Binding WarningVisibility}"/>
                                         </StackPanel>
 
                                         <Button Grid.Column="2" Content="Delete" Style="{StaticResource Quiet}"
-                                                FontSize="12" Click="OnDelete" Tag="{Binding}"
+                                                Click="OnDelete" Tag="{Binding}" Margin="8,-2,0,0"
                                                 VerticalAlignment="Top" Opacity="0" x:Name="DeleteButton"/>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>
+                                    <!-- The first row has no line above it: the card's edge is enough. -->
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                                        <Setter TargetName="Row" Property="BorderThickness" Value="0"/>
+                                    </DataTrigger>
                                     <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
                                         <Setter TargetName="DeleteButton" Property="Opacity" Value="1"/>
-                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Raised}"/>
                                     </Trigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
@@ -135,14 +139,12 @@
                     </ItemsControl>
                 </Border>
 
-                <Border x:Name="EmptyState" Visibility="Collapsed" Padding="30,40"
-                        Background="{StaticResource Card}" CornerRadius="12"
-                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                <Border x:Name="EmptyState" Visibility="Collapsed" Style="{StaticResource CardPanel}"
+                        Padding="24,40">
                     <StackPanel HorizontalAlignment="Center">
-                        <TextBlock Text="No entries yet" FontSize="15" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" Foreground="{StaticResource Ink}"/>
-                        <TextBlock Margin="0,5,0,0" HorizontalAlignment="Center" TextAlignment="Center"
-                                   Foreground="{StaticResource Muted}" MaxWidth="420" TextWrapping="Wrap"
+                        <TextBlock Text="No entries yet" Style="{StaticResource H2}" HorizontalAlignment="Center"/>
+                        <TextBlock Style="{StaticResource Hint}" HorizontalAlignment="Center" TextAlignment="Center"
+                                   MaxWidth="420"
                                    Text="Add a name the model keeps mangling. Corrections run after transcription, so the spelling is guaranteed rather than merely likely."/>
                     </StackPanel>
                 </Border>

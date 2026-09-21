@@ -11,87 +11,89 @@
       application eats it, mangles it, or you simply want it again, this is the only place it
       still exists — which is why the list is the page rather than a panel on it.
     -->
-    <Grid Margin="32,26,32,0">
+    <Grid Margin="28,24,28,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="Transcripts" Style="{StaticResource H1}"/>
-            <TextBlock x:Name="Subtitle" Style="{StaticResource Lede}" Margin="0,6,0,0"/>
+            <TextBlock x:Name="Subtitle" Style="{StaticResource Lede}" Margin="0,4,0,0"/>
         </StackPanel>
 
-        <Border Grid.Row="1" Margin="0,20,22,14" Height="38"
-                Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"
-                BorderThickness="1" CornerRadius="10">
+        <Border Grid.Row="1" Style="{StaticResource FieldBox}" Margin="0,0,18,12">
             <Grid>
                 <Path Data="M10,3 A7,7 0 1 1 10,17 A7,7 0 1 1 10,3 M15,15 L20,20"
-                      Stroke="{StaticResource Faint}" StrokeThickness="1.8" Fill="Transparent"
-                      Width="15" Height="15" Stretch="Uniform"
-                      HorizontalAlignment="Left" Margin="13,0,0,0" VerticalAlignment="Center"/>
-                <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent"
-                         VerticalContentAlignment="Center" Margin="36,0,12,0"
-                         Foreground="{StaticResource Ink}" TextChanged="OnSearchChanged"/>
+                      Stroke="{StaticResource Muted}" StrokeThickness="1.6" Fill="Transparent"
+                      Width="14" Height="14" Stretch="Uniform"
+                      HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                <TextBox x:Name="SearchBox" Style="{StaticResource BareText}" Margin="20,0,0,0"
+                         CaretBrush="{StaticResource Ink}" TextChanged="OnSearchChanged"/>
                 <TextBlock x:Name="SearchHint" Text="Search everything you have dictated"
                            Foreground="{StaticResource Faint}" IsHitTestVisible="False"
-                           VerticalAlignment="Center" Margin="37,0,0,0"/>
+                           VerticalAlignment="Center" Margin="23,0,0,0"/>
             </Grid>
         </Border>
 
         <!-- History -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0" Margin="0,0,0,0">
+                      HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
             <StackPanel>
                 <ItemsControl x:Name="Groups">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="0,0,0,22">
+                            <StackPanel Margin="0,0,0,12">
                                 <TextBlock Text="{Binding Header}" Style="{StaticResource SectionLabel}"/>
-                                <Border Background="{StaticResource Card}" CornerRadius="12"
-                                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                                <Border Style="{StaticResource ListCard}">
                                     <ItemsControl ItemsSource="{Binding Items}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border x:Name="Row" Padding="16,13" Background="Transparent"
-                                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
+                                                <Border x:Name="Row" Padding="12,8" Background="Transparent"
+                                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="76"/>
+                                                            <ColumnDefinition Width="68"/>
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
 
-                                                        <TextBlock Grid.Column="0" Text="{Binding Time}"
-                                                                   Foreground="{StaticResource Faint}"
+                                                        <TextBlock Grid.Column="0" Text="{Binding Time}" FontSize="12"
+                                                                   Foreground="{StaticResource Muted}"
+                                                                   Typography.NumeralAlignment="Tabular"
                                                                    VerticalAlignment="Top" Margin="0,1,0,0"/>
 
                                                         <StackPanel Grid.Column="1">
                                                             <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
                                                                        Foreground="{StaticResource Ink}"
-                                                                       LineHeight="20"/>
-                                                            <TextBlock Text="{Binding Meta}" FontSize="11"
-                                                                       Foreground="{StaticResource Faint}"
-                                                                       Margin="0,5,0,0"/>
+                                                                       LineHeight="19"/>
+                                                            <TextBlock Text="{Binding Meta}" FontSize="12"
+                                                                       Foreground="{StaticResource Muted}"
+                                                                       Typography.NumeralAlignment="Tabular"
+                                                                       Margin="0,2,0,0"/>
                                                         </StackPanel>
 
                                                         <StackPanel x:Name="Actions" Grid.Column="2"
                                                                     Orientation="Horizontal" Opacity="0"
-                                                                    VerticalAlignment="Top">
+                                                                    VerticalAlignment="Top" Margin="8,-2,0,0">
                                                             <Button Content="Copy" Style="{StaticResource Quiet}"
-                                                                    FontSize="12" Click="OnCopy" Tag="{Binding}"/>
+                                                                    Click="OnCopy" Tag="{Binding}"/>
                                                             <Button Content="Delete" Style="{StaticResource Quiet}"
-                                                                    FontSize="12" Click="OnDelete" Tag="{Binding}"/>
+                                                                    Click="OnDelete" Tag="{Binding}"/>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Border>
                                                 <DataTemplate.Triggers>
+                                                    <!-- The first row has no line above it: the card's edge is enough. -->
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                                                        <Setter TargetName="Row" Property="BorderThickness" Value="0"/>
+                                                    </DataTrigger>
                                                     <!-- Actions stay hidden until hover, so a long list reads
                                                          as text rather than as rows of buttons. -->
                                                     <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="Actions" Property="Opacity" Value="1"/>
-                                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Hover}"/>
+                                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Raised}"/>
                                                     </Trigger>
                                                 </DataTemplate.Triggers>
                                             </DataTemplate>
@@ -104,18 +106,15 @@
                 </ItemsControl>
 
                 <!-- Empty state -->
-                <Border x:Name="EmptyState" Visibility="Collapsed" Padding="30,44"
-                        Background="{StaticResource Card}" CornerRadius="12"
-                        BorderBrush="{StaticResource Hairline}" BorderThickness="1">
+                <Border x:Name="EmptyState" Visibility="Collapsed" Style="{StaticResource CardPanel}"
+                        Padding="24,40">
                     <StackPanel HorizontalAlignment="Center">
-                        <!-- The full logo. An empty state is all space, so this is the one
-                             place in the window the mark gets to be read properly. -->
-                        <Image Source="{StaticResource MarkImage}" Height="64" Stretch="Uniform"
+                        <Image Source="{StaticResource MarkImage}" Width="36" Height="36" Stretch="Uniform"
                                HorizontalAlignment="Center"/>
                         <TextBlock x:Name="EmptyTitle" Text="Nothing dictated yet" Style="{StaticResource H2}"
-                                   Margin="0,16,0,0" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="EmptyHint" Margin="0,5,0,0" HorizontalAlignment="Center"
-                                   Foreground="{StaticResource Muted}" TextAlignment="Center"/>
+                                   Margin="0,14,0,0" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="EmptyHint" Style="{StaticResource Hint}" HorizontalAlignment="Center"
+                                   TextAlignment="Center" MaxWidth="420"/>
                     </StackPanel>
                 </Border>
                 <Border Height="24"/>

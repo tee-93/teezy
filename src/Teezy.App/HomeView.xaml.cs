@@ -29,6 +29,9 @@ public sealed record UpcomingRow(string When, string What, string Where, bool Do
 
     /// <summary>The one happening right now gets the marker; everything else is a plain rule.</summary>
     public double RailWidth => Now ? 4 : 3;
+
+    /// <summary>The accent is kept for the one on now; the rest are a plain line.</summary>
+    public Brush Rail => Brand.Brush(Now ? "Accent" : "Hairline");
 }
 
 /// <summary>One day on the week card.</summary>
@@ -248,7 +251,7 @@ public partial class HomeView : UserControl
 
         // The week's top gap exists to separate it from the day; with no day above it, the week
         // would start lower than the inbox beside it.
-        WeekCard.Margin = new Thickness(0, TodayCard.Visibility == Visibility.Visible ? 14 : 0, 0, 0);
+        WeekCard.Margin = new Thickness(0, TodayCard.Visibility == Visibility.Visible ? 12 : 0, 0, 0);
         ShowInbox(mail);
     }
 

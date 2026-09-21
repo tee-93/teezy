@@ -3,109 +3,112 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="{StaticResource UiFont}" FontSize="13">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
-        <StackPanel Margin="32,26,32,28">
+        <StackPanel Margin="28,24,28,24">
 
             <TextBlock Text="Insights" Style="{StaticResource H1}"/>
-            <TextBlock x:Name="Subtitle" Margin="0,4,0,0" Foreground="{StaticResource Muted}"/>
+            <TextBlock x:Name="Subtitle" Style="{StaticResource Lede}" Margin="0,4,0,0"/>
 
-            <!-- Headline numbers -->
-            <Grid Margin="0,22,0,0">
+            <!-- Headline numbers: the label, the figure, then what it means. -->
+            <Grid Margin="0,20,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="1.5*"/>
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0" Style="{StaticResource CardPanel}">
                     <StackPanel>
+                        <TextBlock Text="WORDS PER MINUTE" Style="{StaticResource SectionLabel}"/>
                         <TextBlock x:Name="Wpm" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="WORDS PER MINUTE" Style="{StaticResource SectionLabel}" Margin="0,6,0,0"/>
-                        <TextBlock x:Name="WpmHint" FontSize="11.5" TextWrapping="Wrap"
-                                   Foreground="{StaticResource Muted}"/>
+                        <TextBlock x:Name="WpmHint" Style="{StaticResource StatCaption}" TextWrapping="Wrap"
+                                   Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Column="2" Style="{StaticResource CardPanel}">
                     <StackPanel>
+                        <TextBlock Text="DICTIONARY FIXES" Style="{StaticResource SectionLabel}"/>
                         <TextBlock x:Name="Fixes" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="DICTIONARY FIXES" Style="{StaticResource SectionLabel}" Margin="0,6,0,0"/>
-                        <TextBlock x:Name="FixesHint" FontSize="11.5" TextWrapping="Wrap"
-                                   Foreground="{StaticResource Muted}"/>
+                        <TextBlock x:Name="FixesHint" Style="{StaticResource StatCaption}" TextWrapping="Wrap"
+                                   Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Column="4" Style="{StaticResource CardPanel}">
                     <StackPanel>
+                        <TextBlock Text="TOTAL WORDS DICTATED" Style="{StaticResource SectionLabel}"/>
                         <TextBlock x:Name="TotalWords" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="TOTAL WORDS DICTATED" Style="{StaticResource SectionLabel}" Margin="0,6,0,0"/>
-                        <TextBlock x:Name="TotalWordsHint" FontSize="11.5" TextWrapping="Wrap"
-                                   Foreground="{StaticResource Muted}"/>
+                        <TextBlock x:Name="TotalWordsHint" Style="{StaticResource StatCaption}" TextWrapping="Wrap"
+                                   Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <!-- Where it goes -->
-            <Grid Margin="0,14,0,0">
+            <Grid Margin="0,12,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="1.35*"/>
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0" Style="{StaticResource CardPanel}">
                     <StackPanel>
-                        <Grid Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,12">
                             <TextBlock Text="Where it goes" Style="{StaticResource H2}"/>
                             <TextBlock x:Name="AppCount" Style="{StaticResource StatCaption}"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Typography.NumeralAlignment="Tabular"/>
                         </Grid>
                         <ItemsControl x:Name="AppBars">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,11">
+                                    <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="104"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="44"/>
                                         </Grid.ColumnDefinitions>
 
                                         <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                   Foreground="{StaticResource Ink}"
+                                                   Foreground="{StaticResource Body}"
                                                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
 
-                                        <Border Grid.Column="1" Height="9" CornerRadius="5"
-                                                Background="{StaticResource AccentSoft}"
+                                        <Border Grid.Column="1" Height="6" CornerRadius="2"
+                                                Background="{StaticResource Sunken}"
                                                 HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                                            <Border HorizontalAlignment="Left" CornerRadius="5"
+                                            <Border HorizontalAlignment="Left" CornerRadius="2"
                                                     Background="{StaticResource Accent}"
                                                     Width="{Binding BarWidth}"/>
                                         </Border>
 
-                                        <TextBlock Grid.Column="2" Text="{Binding Label}" Margin="12,0,0,0"
+                                        <TextBlock Grid.Column="2" Text="{Binding Label}"
                                                    Foreground="{StaticResource Muted}" FontSize="12"
-                                                   VerticalAlignment="Center"/>
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                   Typography.NumeralAlignment="Tabular"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock x:Name="AppsEmpty" Visibility="Collapsed"
-                                   Foreground="{StaticResource Faint}"
-                                   Text="Nothing dictated yet."/>
+                        <TextBlock x:Name="AppsEmpty" Visibility="Collapsed" Style="{StaticResource Hint}"
+                                   Margin="0" Text="Nothing dictated yet."/>
                     </StackPanel>
                 </Border>
 
                 <!-- Streak -->
                 <Border Grid.Column="2" Style="{StaticResource CardPanel}">
                     <StackPanel>
-                        <Grid Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,12">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="StreakNumber" Style="{StaticResource H2}"/>
+                                <TextBlock x:Name="StreakNumber" Style="{StaticResource H2}"
+                                           Typography.NumeralAlignment="Tabular"/>
                                 <TextBlock Text=" day streak" Style="{StaticResource H2}"/>
                             </StackPanel>
                             <TextBlock x:Name="LongestStreak" Style="{StaticResource StatCaption}"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Typography.NumeralAlignment="Tabular"/>
                         </Grid>
 
                         <!-- 26 weeks of activity, built in code. -->
@@ -114,7 +117,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel x:Name="DayLabels" Grid.Column="0" Margin="0,0,7,0"/>
+                            <StackPanel x:Name="DayLabels" Grid.Column="0" Margin="0,0,6,0"/>
                             <ItemsControl x:Name="Heatmap" Grid.Column="1">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -124,7 +127,7 @@
                             </ItemsControl>
                         </Grid>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                             <TextBlock Text="Less" Foreground="{StaticResource Faint}" FontSize="11"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <StackPanel x:Name="Legend" Orientation="Horizontal"/>
@@ -136,91 +139,97 @@
             </Grid>
 
             <!-- Where the wait goes. The card that turns "it feels slow" into a stage. -->
-            <Border x:Name="SpeedCard" Style="{StaticResource CardPanel}" Margin="0,18,0,0"
+            <Border x:Name="SpeedCard" Style="{StaticResource CardPanel}" Margin="0,12,0,0"
                     Visibility="Collapsed">
                 <StackPanel>
                     <Grid>
                         <StackPanel>
+                            <TextBlock Text="TYPICAL WAIT AFTER YOU LET GO" Style="{StaticResource SectionLabel}"/>
                             <TextBlock x:Name="SpeedHeadline" Style="{StaticResource StatNumber}"/>
-                            <TextBlock Text="TYPICAL WAIT AFTER YOU LET GO"
-                                       Style="{StaticResource SectionLabel}" Margin="0,6,0,0"/>
                         </StackPanel>
                         <TextBlock x:Name="SpeedRealtime" Style="{StaticResource StatCaption}"
-                                   HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                                   HorizontalAlignment="Right" VerticalAlignment="Top"
+                                   Typography.NumeralAlignment="Tabular"/>
                     </Grid>
 
-                    <ItemsControl x:Name="StageBars" Margin="0,16,0,0">
+                    <ItemsControl x:Name="StageBars" Margin="0,12,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,0,0,9">
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="96"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="64"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                               Foreground="{StaticResource Body}" FontSize="12.5"
+                                               Foreground="{StaticResource Body}"
                                                VerticalAlignment="Center"/>
-                                    <Border Grid.Column="1" Height="9" CornerRadius="5"
+                                    <Border Grid.Column="1" Height="6" CornerRadius="2"
                                             Background="{StaticResource Sunken}"
                                             HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                                        <Border HorizontalAlignment="Left" CornerRadius="5"
+                                        <Border HorizontalAlignment="Left" CornerRadius="2"
                                                 Background="{StaticResource Accent}"
                                                 Width="{Binding BarWidth}"/>
                                     </Border>
-                                    <TextBlock Grid.Column="2" Text="{Binding Label}" Margin="12,0,0,0"
+                                    <TextBlock Grid.Column="2" Text="{Binding Label}"
                                                Foreground="{StaticResource Muted}" FontSize="12"
-                                               VerticalAlignment="Center"/>
+                                               HorizontalAlignment="Right" VerticalAlignment="Center"
+                                               Typography.NumeralAlignment="Tabular"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock x:Name="SpeedNote" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="SpeedNote" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <!-- What the Claude tier has cost. Hidden entirely when it has never run, so
                  someone using Teezy offline never sees a card about money. -->
-            <Border x:Name="SpendCard" Style="{StaticResource CardPanel}" Margin="0,18,0,0"
+            <Border x:Name="SpendCard" Style="{StaticResource CardPanel}" Margin="0,12,0,0"
                     Visibility="Collapsed">
                 <StackPanel>
                     <Grid>
                         <StackPanel>
+                            <TextBlock Text="CLEANUP THIS MONTH" Style="{StaticResource SectionLabel}"/>
                             <TextBlock x:Name="SpendMonth" Style="{StaticResource StatNumber}"/>
-                            <TextBlock Text="CLEANUP THIS MONTH" Style="{StaticResource SectionLabel}"
-                                       Margin="0,6,0,0"/>
                         </StackPanel>
                         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top">
                             <TextBlock x:Name="SpendTotal" Style="{StaticResource StatCaption}"
-                                       HorizontalAlignment="Right"/>
+                                       HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
                             <TextBlock x:Name="SpendTokens" Style="{StaticResource StatCaption}"
-                                       HorizontalAlignment="Right" Margin="0,5,0,0"/>
+                                       HorizontalAlignment="Right" Margin="0,4,0,0"
+                                       Typography.NumeralAlignment="Tabular"/>
                         </StackPanel>
                     </Grid>
 
-                    <ItemsControl x:Name="ModelRows" Margin="0,16,0,0">
+                    <ItemsControl x:Name="ModelRows" Margin="0,12,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,0,0,7">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="150"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                               Foreground="{StaticResource Body}" FontSize="12.5"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Detail}"
-                                               Foreground="{StaticResource Muted}" FontSize="12"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding Cost}"
-                                               Foreground="{StaticResource Ink}" FontSize="12.5"/>
-                                </Grid>
+                                <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0" Padding="0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                   Foreground="{StaticResource Body}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Detail}"
+                                                   Foreground="{StaticResource Muted}" FontSize="12"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                   Typography.NumeralAlignment="Tabular"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Cost}" Margin="12,0,0,0"
+                                                   Foreground="{StaticResource Ink}" HorizontalAlignment="Right"
+                                                   Typography.NumeralAlignment="Tabular"/>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock x:Name="SpendNote" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                    <TextBlock x:Name="SpendNote" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
         </StackPanel>

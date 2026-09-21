@@ -1427,6 +1427,7 @@ public partial class SettingsView : UserControl
         var name = new TextBlock
         {
             Text = rule.App,
+            Margin = new Thickness(0, 0, 8, 0),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
             Foreground = (System.Windows.Media.Brush)FindResource("Ink"),
@@ -1448,9 +1449,9 @@ public partial class SettingsView : UserControl
         var instruction = new TextBox
         {
             Text = rule.Instruction ?? string.Empty,
-            VerticalContentAlignment = VerticalAlignment.Center,
+            Style = (Style)FindResource("Field"),
+            VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 0),
-            Height = 30,
             ToolTip = "An extra line for this app only. Replaces the global one.",
         };
         instruction.LostFocus += (_, _) =>
@@ -1711,7 +1712,7 @@ public partial class SettingsView : UserControl
     {
         var loaded = _transcriber?.IsLoaded == true;
 
-        ModelDot.Fill = new SolidColorBrush(loaded ? Brand.Accent : Brand.Faint);
+        ModelDot.Fill = loaded ? Brand.Accent : Brand.Faint;
         ModelStatus.Text = loaded
             ? $"Parakeet TDT 0.6B v2 · ready in {_transcriber!.LoadTime.TotalSeconds:F1} s"
             : "Not loaded yet.";

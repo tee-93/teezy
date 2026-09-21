@@ -18,8 +18,8 @@ namespace Teezy.App;
 /// tray cannot disagree with the window, whatever the mark becomes next.
 /// </para>
 /// <para>
-/// It is the small glyph, not the full logo: at 16 px the bubble's stroke lands on two thirds
-/// of a pixel and the waves collapse into each other. See the note on <c>MarkGeometry</c>.
+/// The mark stands on its own, with no tile behind it — the same rule as Fivebar's. What
+/// changes with state is only its colour.
 /// </para>
 /// </remarks>
 internal static class TrayIcons
@@ -35,33 +35,21 @@ internal static class TrayIcons
     /// </summary>
     private const int Size = 32;
 
-    /// <summary>Armed and ready.</summary>
-    /// <remarks>
-    /// The gradient tile, read from the theme rather than from <see cref="Brand"/>. Brand's copy
-    /// of the accent had already drifted a shade from Theme.xaml's, which is precisely the
-    /// tray-disagrees-with-taskbar problem the tile metrics live in one file to avoid.
-    /// </remarks>
-    public static System.Drawing.Icon Ready => _ready ??= Draw(Tile());
+    /// <summary>Armed and ready: the mark in its own colour.</summary>
+    public static System.Drawing.Icon Ready => _ready ??= Draw(Resource<Color>("MarkColor"));
 
     /// <summary>Model loading or not installed — a hold would do nothing yet.</summary>
-    public static System.Drawing.Icon Busy => _busy ??= Draw(new SolidColorBrush(Brand.Muted));
+    public static System.Drawing.Icon Busy => _busy ??= Draw(Resource<SolidColorBrush>("Muted").Color);
 
     /// <summary>Microphone open.</summary>
-    public static System.Drawing.Icon Recording => _recording ??= Draw(new SolidColorBrush(Brand.Record));
+    public static System.Drawing.Icon Recording => _recording ??= Draw(Resource<SolidColorBrush>("Record").Color);
 
-    /// <summary>The two-stop tile, on the same diagonal the pill uses.</summary>
-    private static Brush Tile() => new LinearGradientBrush(
-        (Color)Application.Current.FindResource("MarkTileStart"),
-        (Color)Application.Current.FindResource("MarkTileEnd"),
-        new Point(0, 0),
-        new Point(1, 1));
+    private static T Resource<T>(string key) => (T)Application.Current.FindResource(key);
 
-    private static System.Drawing.Icon Draw(Brush background)
+    private static System.Drawing.Icon Draw(Color colour)
     {
-        var glyph = (Geometry)Application.Current.FindResource("MarkGeometry");
-        var inset = (double)Application.Current.FindResource("MarkTileInset");
-        var radius = (double)Application.Current.FindResource("MarkTileRadius");
-        var fill = (double)Application.Current.FindResource("MarkGlyphFill");
+        var glyph = Resource<Geometry>("MarkGeometry");
+        var fill = Resource<double>("MarkGlyphFill");
 
         // Everything in the resource dictionary is authored on a 100x100 grid.
         const double s = Size / 100.0;
@@ -69,10 +57,6 @@ internal static class TrayIcons
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            var tile = new Rect(inset * s, inset * s, Size - 2 * inset * s, Size - 2 * inset * s);
-            dc.DrawGeometry(background, null,
-                new RectangleGeometry(tile, radius * s, radius * s));
-
             // Centred from the geometry's own bounds rather than from remembered numbers, so
             // re-drawing the glyph re-centres it instead of quietly sitting off to one side.
             var bounds = glyph.Bounds;
@@ -88,7 +72,7 @@ internal static class TrayIcons
                         (Size - bounds.Height * k) / 2 - bounds.Y * k),
                 },
             };
-            dc.DrawGeometry(Brushes.White, null, placed);
+            dc.DrawGeometry(new SolidColorBrush(colour), null, placed);
         }
 
         var rendered = new RenderTargetBitmap(Size, Size, 96, 96, PixelFormats.Pbgra32);

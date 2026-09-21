@@ -12,39 +12,38 @@
       worse than one that says it has nothing yet.
     -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="32,26,32,24">
+        <StackPanel Margin="28,24,28,24">
             <TextBlock Text="Budget" Style="{StaticResource H1}"/>
-            <TextBlock Style="{StaticResource Lede}" Margin="0,6,0,0" TextWrapping="Wrap"
+            <TextBlock Style="{StaticResource Lede}" Margin="0,4,0,0"
                        Text="Bills coming up, and money in and out, gathered from where they already live."/>
 
-            <Border Style="{StaticResource CardPanel}" Margin="0,20,0,0"
-                    Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentSoft}">
+            <!-- A notice, not a card with figures: there is nothing to show until a source is set up. -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,20,0,0">
                 <StackPanel>
                     <TextBlock Text="Nothing is connected yet" Style="{StaticResource H2}"/>
-                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="19" Foreground="{StaticResource Body}"
+                    <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{StaticResource Body}"
                                Text="Cashew stays where your budget is kept. TeezyFlow will read from it, and from the bills that arrive in your email, and show the highlights here and on the dashboard. Until a source is set up these cards stay empty rather than guess."/>
                 </StackPanel>
             </Border>
 
             <!-- The same proportions as the dashboard, so the two pages read as one design. -->
-            <Grid Margin="0,14,0,0">
+            <Grid Margin="0,12,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="13*"/>
-                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="7*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="20,18">
+                <Border Grid.Column="0" Style="{StaticResource CardPanel}">
                     <StackPanel>
-                        <TextBlock Text="DUE THIS WEEK" Style="{StaticResource SectionLabel}" Margin="0,0,0,12"/>
-                        <TextBlock FontSize="12.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"
-                                   Text="No bills to show yet."/>
+                        <TextBlock Text="DUE THIS WEEK" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0" Text="No bills to show yet."/>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="20,18">
+                <Border Grid.Column="2" Style="{StaticResource CardPanel}">
                     <StackPanel>
-                        <TextBlock Text="THIS MONTH" Style="{StaticResource SectionLabel}" Margin="0,0,0,12"/>
+                        <TextBlock Text="THIS MONTH" Style="{StaticResource SectionLabel}"/>
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -56,21 +55,29 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Money in" Foreground="{StaticResource Body}" Margin="0,0,0,8"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="—" Foreground="{StaticResource Faint}"/>
-                            <TextBlock Grid.Row="1" Text="Money out" Foreground="{StaticResource Body}" Margin="0,0,0,8"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="—" Foreground="{StaticResource Faint}"/>
-                            <TextBlock Grid.Row="2" Text="Left over" Foreground="{StaticResource Ink}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="—" Foreground="{StaticResource Faint}"/>
+                            <TextBlock Grid.Row="0" Text="Money in" Foreground="{StaticResource Body}" Margin="0,0,0,6"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="—" Foreground="{StaticResource Faint}"
+                                       HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                            <TextBlock Grid.Row="1" Text="Money out" Foreground="{StaticResource Body}" Margin="0,0,0,6"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="—" Foreground="{StaticResource Faint}"
+                                       HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                            <Border Grid.Row="2" Grid.ColumnSpan="2" BorderBrush="{StaticResource Hairline}"
+                                    BorderThickness="0,1,0,0" Padding="0,6,0,0">
+                                <Grid>
+                                    <TextBlock Text="Left over" Foreground="{StaticResource Ink}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="—" Foreground="{StaticResource Faint}"
+                                               HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0" Padding="20,18">
+            <Border Style="{StaticResource CardPanel}" Margin="0,12,0,0">
                 <StackPanel>
-                    <TextBlock Text="RECENT MONEY IN AND OUT" Style="{StaticResource SectionLabel}" Margin="0,0,0,12"/>
-                    <TextBlock FontSize="12.5" Foreground="{StaticResource Muted}" Text="Nothing to show yet."/>
+                    <TextBlock Text="RECENT" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0" Text="Nothing to show yet."/>
                 </StackPanel>
             </Border>
         </StackPanel>

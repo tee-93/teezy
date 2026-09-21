@@ -97,7 +97,7 @@ public partial class App : Application
                 """
                 TeezyFlow is already running.
 
-                Look for the speech bubble in the system tray — click the ^ arrow
+                Look for the teal bars in the system tray — click the ^ arrow
                 next to the clock if you cannot see it.
                 """,
                 "TeezyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -442,6 +442,7 @@ public partial class App : Application
 
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit TeezyFlow", null, (_, _) => Shutdown());
+        TrayMenu.Apply(menu);
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ShowMainWindow();
     }

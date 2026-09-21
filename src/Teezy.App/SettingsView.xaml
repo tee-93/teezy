@@ -1,27 +1,27 @@
 <UserControl x:Class="Teezy.App.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             FontFamily="{StaticResource UiFont}" FontSize="13">
+             FontFamily="{StaticResource UiFont}">
     <!--
-      Tabs rather than one long scroll. Eight cards down a single page meant the microphone
+      Sections rather than one long scroll. Eight cards down a single page meant the microphone
       picker and the model settings were found by scrolling past everything else, and the page
       grew every time a feature landed.
 
-      The header and the tab strip sit outside the ScrollViewer so they stay put; only the
-      chosen tab's panel scrolls.
+      Laid out as Fivebar's Settings dialog: the list of sections down the left on the darker
+      ground, the chosen section's panel on the right. The list sits outside the ScrollViewer so
+      it stays put; only the chosen section's panel scrolls.
     -->
-    <Grid Margin="38,30,38,0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" MaxWidth="760" HorizontalAlignment="Left">
-            <TextBlock Text="Settings" Style="{StaticResource H1}"/>
-            <TextBlock Style="{StaticResource Lede}" Margin="0,6,0,0"
-                       Text="Local by default. Dictation, commands, the dictionary and the Windows voice never leave this machine — only the optional tiers below do, and only once you switch them on."/>
+        <Border Grid.Column="0" Background="{StaticResource Sunken}"
+                BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,1,0" Padding="12,20">
+            <StackPanel>
+                <TextBlock Text="Settings" Style="{StaticResource H1}" Margin="8,0,0,14"/>
 
-            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                 <RadioButton x:Name="TabButtonDictation" Style="{StaticResource SettingsTab}"
                              GroupName="SettingsTabs" Content="Dictation" IsChecked="True"
                              Tag="TabDictation" Checked="OnTabChosen"/>
@@ -36,744 +36,721 @@
                 <RadioButton Style="{StaticResource SettingsTab}" GroupName="SettingsTabs"
                              Content="About" Tag="TabAbout" Checked="OnTabChosen"/>
             </StackPanel>
-            <Border Height="1" Background="{StaticResource Hairline}"/>
-        </StackPanel>
+        </Border>
 
-        <ScrollViewer x:Name="TabScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      Padding="0,0,10,0">
-            <Grid x:Name="TabHost" MaxWidth="760" HorizontalAlignment="Left" Margin="0,20,0,36">
+        <ScrollViewer x:Name="TabScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <Grid x:Name="TabHost" MaxWidth="760" HorizontalAlignment="Left" Margin="28,22,28,28">
 
                 <StackPanel x:Name="TabDictation">
-            <!-- Hero: the hotkey, because it is the only setting most people ever change. -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,24,0,0" Padding="26">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Border Width="42" Height="42" CornerRadius="13" Background="{StaticResource Accent}">
-                            <Path Data="{StaticResource MarkGeometry}" Fill="White" Stretch="Uniform"
-                                  Width="23" Height="23"/>
-                        </Border>
-                        <StackPanel Margin="15,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="Push to talk" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>
-                            <TextBlock x:Name="HotkeyDisplay" Style="{StaticResource Display}" FontSize="26"/>
-                        </StackPanel>
-                    </StackPanel>
+                    <TextBlock Style="{StaticResource Lede}" Margin="0,0,0,16"
+                               Text="Local by default. Dictation, commands, the dictionary and the Windows voice never leave this machine — only the optional tiers below do, and only once you switch them on."/>
 
-                    <TextBlock x:Name="HotkeyHint" Style="{StaticResource Hint}" Margin="0,14,0,0"
-                               Text="Hold every key together, speak, then let go."/>
-
-                    <Grid Margin="0,14,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="KeyPicker" Grid.Column="0" SelectionChanged="OnHotkeyPreset"/>
-                        <Button x:Name="RecordButton" Grid.Column="1" Content="Record my own"
-                                Style="{StaticResource Secondary}" Margin="10,0,0,0" Height="38"
-                                Click="OnRecordHotkey"/>
-                    </Grid>
-
-                    <Border x:Name="HotkeyWarning" Style="{StaticResource CautionPanel}"
-                            Visibility="Collapsed" Margin="0,14,0,0">
-                        <TextBlock x:Name="HotkeyWarningText" TextWrapping="Wrap"
-                                   Foreground="{StaticResource CautionInk}" FontSize="12"/>
-                    </Border>
-                </StackPanel>
-            </Border>
-            <!-- Smarter cleanup. Off by default: switching it on ends the offline guarantee. -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <Grid Margin="0,0,0,4">
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                            <TextBlock Text="Smarter cleanup with Claude" Style="{StaticResource H2}"/>
-                            <TextBlock Style="{StaticResource Hint}"
-                                       Text="A second pass that fixes grammar, formats lists and honours spoken corrections. Needs your own Anthropic API key, and sends each transcript to the API."/>
-                        </StackPanel>
-                        <CheckBox x:Name="LlmBox" Style="{StaticResource Switch}"
-                                  HorizontalAlignment="Right" VerticalAlignment="Center"
-                                  Click="OnLlmToggled"/>
-                    </Grid>
-
-                    <StackPanel x:Name="LlmDetail" Visibility="Collapsed">
-                        <Border Style="{StaticResource CautionPanel}" Margin="0,14,0,0">
-                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
-                                       Text="One of the two things in TeezyFlow that leave your machine. Transcripts are sent to the Anthropic API, billed to your own account — a Claude Pro or Max subscription does not cover it. Roughly $0.60 a month at 400 dictations, and it adds about a second to each one."/>
-                        </Border>
-
-                        <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}" Margin="0,16,0,10"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- PasswordBox, not TextBox: the key must not be shoulder-readable,
-                                 and WPF never puts its contents in the visual tree as text. -->
-                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
-                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                                <PasswordBox x:Name="ApiKeyBox" BorderThickness="0" Background="Transparent"
-                                             VerticalContentAlignment="Center" Margin="12,0"
-                                             PasswordChar="•" FontSize="13"
-                                             PasswordChanged="OnApiKeyTyped"/>
-                            </Border>
-
-                            <Button x:Name="SaveKeyButton" Grid.Column="1" Content="Save key"
-                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
-                                    IsEnabled="False" Click="OnSaveApiKey"/>
-                        </Grid>
-
-                        <Grid Margin="0,10,0,0">
-                            <TextBlock x:Name="KeyStatus" Style="{StaticResource Hint}" Margin="0"
-                                       HorizontalAlignment="Left"/>
-                            <Button x:Name="ForgetKeyButton" Content="Forget key" Style="{StaticResource Quiet}"
-                                    HorizontalAlignment="Right" Visibility="Collapsed" Click="OnForgetApiKey"/>
-                        </Grid>
-
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
-                                   Text="Create a key at console.anthropic.com. It is encrypted for your Windows account and never written to settings.json."/>
-
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                                <TextBlock Text="Model" Foreground="{StaticResource Ink}"/>
-                                <TextBlock x:Name="ModelCost" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                            <ComboBox x:Name="LlmModelPicker" Width="180" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" SelectionChanged="OnLlmModelChanged"/>
-                        </Grid>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                                <TextBlock Text="Writing style" Foreground="{StaticResource Ink}"/>
-                                <TextBlock x:Name="StyleHint" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                            <ComboBox x:Name="StylePicker" Width="180" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" SelectionChanged="OnStyleChanged"/>
-                        </Grid>
-
-                        <TextBlock Text="AND ALWAYS" Style="{StaticResource SectionLabel}"
-                                   Margin="0,16,0,7"/>
-                        <Border Background="{StaticResource Sunken}" CornerRadius="9"
-                                BorderBrush="{StaticResource Hairline}" BorderThickness="1">
-                            <TextBox x:Name="StyleInstructionBox" BorderThickness="0"
-                                     Background="Transparent" MinHeight="34" Padding="12,8"
-                                     FontSize="13" TextWrapping="Wrap" AcceptsReturn="False"
-                                     LostFocus="OnStyleInstructionChanged"/>
-                        </Border>
-                        <TextBlock Style="{StaticResource Hint}"
-                                   Text="One line of your own, added to every request — “British spelling”, “never use em dashes”. It rides on every utterance, so keep it short."/>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                                <TextBlock Text="Give up after" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="Past this, TeezyFlow types the offline result instead. Text appearing beats a slower tidy-up."/>
-                            </StackPanel>
-                            <ComboBox x:Name="LlmTimeoutPicker" Width="180" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" SelectionChanged="OnChanged"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                            <Button x:Name="TestButton" Content="Test it" Style="{StaticResource Secondary}"
-                                    Click="OnTestLlm"/>
-                            <TextBlock x:Name="TestResult" Style="{StaticResource Hint}" Margin="12,0,0,0"
-                                       VerticalAlignment="Center" MaxWidth="440"/>
-                        </StackPanel>
-
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                        <TextBlock Text="PER-APP RULES" Style="{StaticResource SectionLabel}"
-                                   Margin="0,16,0,0"/>
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
-                                   Text="A style that applies only where the text is going, so an email and a chat message do not have to share one setting. First match wins; anything with no rule uses the style above."/>
-
-                        <StackPanel x:Name="RuleRows" Margin="0,10,0,0"/>
-
-                        <TextBlock x:Name="NoRules" Style="{StaticResource Hint}" Margin="0,8,0,0"
-                                   Text="No rules yet. Add one below — the list offers the apps you have already dictated into."/>
-
-                        <Grid Margin="0,14,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="NewRuleApp" Grid.Column="0" IsEditable="True"
-                                      VerticalAlignment="Center"/>
-                            <Button x:Name="AddRuleButton" Grid.Column="1" Content="Add rule"
-                                    Style="{StaticResource Secondary}" Margin="10,0,0,0"
-                                    Click="OnAddRule"/>
-                        </Grid>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-                </StackPanel>
-
-                <StackPanel x:Name="TabAssistant" Visibility="Collapsed">
-            <!-- Assistant. A second combination, off until asked for. -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <TextBlock Text="Assistant" Style="{StaticResource H2}" Margin="0,0,0,4"/>
-                    <TextBlock Style="{StaticResource Hint}"
-                               Text="Hold a second combination and speak a command instead of dictating — open an app, change the volume, skip a track, lock the PC. Runs on this machine like everything else."/>
-
-                    <Grid Margin="0,14,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="AssistantPicker" Grid.Column="0"
-                                  SelectionChanged="OnAssistantPreset"/>
-                        <Button x:Name="AssistantRecordButton" Grid.Column="1"
-                                Content="Record my own" Style="{StaticResource Secondary}"
-                                Margin="10,0,0,0" Height="38" Click="OnRecordAssistantHotkey"/>
-                    </Grid>
-
-                    <TextBlock x:Name="AssistantHint" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
-
-                    <Border x:Name="AssistantWarning" Style="{StaticResource CautionPanel}"
-                            Visibility="Collapsed" Margin="0,12,0,0">
-                        <TextBlock x:Name="AssistantWarningText" TextWrapping="Wrap"
-                                   Foreground="{StaticResource CautionInk}" FontSize="12"/>
-                    </Border>
-
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                    <Grid Margin="0,16,0,0">
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                            <TextBlock Text="Ask Claude what it didn’t understand"
-                                       Foreground="{StaticResource Ink}"/>
-                            <TextBlock Style="{StaticResource Hint}"
-                                       Text="The commands above stay on this machine and cost nothing. Only what they cannot place is sent to Claude, which can then still only choose from the same list — or answer you in a sentence."/>
-                        </StackPanel>
-                        <CheckBox x:Name="AssistantLlmBox" Style="{StaticResource Switch}"
-                                  HorizontalAlignment="Right" VerticalAlignment="Center"
-                                  Click="OnAssistantLlmToggled"/>
-                    </Grid>
-
-                    <StackPanel x:Name="AssistantLlmDetail" Visibility="Collapsed">
-                        <Border Style="{StaticResource CautionPanel}" Margin="0,14,0,0">
-                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
-                                       Text="Unrecognised commands are sent to the Anthropic API, billed to your own account, using the same key as the cleanup tier. It never sees your screen, your clipboard or your documents — only the words you just spoke."/>
-                        </Border>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                                <TextBlock Text="Model" Foreground="{StaticResource Ink}"/>
-                                <TextBlock x:Name="AssistantModelCost" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                            <ComboBox x:Name="AssistantModelPicker" Width="180" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" SelectionChanged="OnAssistantModelChanged"/>
-                        </Grid>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                                <TextBlock Text="Read answers out loud" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="Answers only — never the confirmations, which you can read faster than they can be said. Uses the voice already on this machine, so it is free and works offline. It is not a lovely voice."/>
-                            </StackPanel>
-                            <CheckBox x:Name="SpeakBox" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" VerticalAlignment="Center"
-                                      Click="OnSpeakToggled"/>
-                        </Grid>
-
-                        <StackPanel x:Name="VoiceDetail" Visibility="Collapsed">
-                            <Grid Margin="0,14,0,0">
-                                <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                                    <TextBlock Text="Voice by" Foreground="{StaticResource Ink}"/>
-                                    <TextBlock x:Name="VoiceProviderHint" Style="{StaticResource Hint}"/>
+                    <!-- The hotkey first, because it is the only setting most people ever change. -->
+                    <Border Style="{StaticResource CardPanel}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="32" Height="32" CornerRadius="6" Background="{StaticResource AccentSoft}"
+                                        VerticalAlignment="Center">
+                                    <Path Data="{StaticResource MarkGeometry}" Fill="{StaticResource AccentInk}"
+                                          Stretch="Uniform" Width="16" Height="16"/>
+                                </Border>
+                                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="PUSH TO TALK" Style="{StaticResource SectionLabel}" Margin="0,0,0,2"/>
+                                    <TextBlock x:Name="HotkeyDisplay" Style="{StaticResource H1}"/>
                                 </StackPanel>
-                                <ComboBox x:Name="VoiceProviderPicker" Width="180"
-                                          HorizontalAlignment="Right" VerticalAlignment="Center"
-                                          SelectionChanged="OnVoiceProviderChanged"/>
+                            </StackPanel>
+
+                            <TextBlock x:Name="HotkeyHint" Style="{StaticResource Hint}" Margin="0,12,0,0"
+                                       Text="Hold every key together, speak, then let go."/>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="KeyPicker" Grid.Column="0" SelectionChanged="OnHotkeyPreset"/>
+                                <Button x:Name="RecordButton" Grid.Column="1" Content="Record my own"
+                                        Style="{StaticResource Secondary}" Margin="8,0,0,0"
+                                        Click="OnRecordHotkey"/>
                             </Grid>
 
-                            <StackPanel x:Name="ElevenLabsDetail" Visibility="Collapsed">
-                                <TextBlock Text="ELEVENLABS API KEY" Style="{StaticResource SectionLabel}"
-                                           Margin="0,16,0,10"/>
+                            <Border x:Name="HotkeyWarning" Style="{StaticResource CautionPanel}"
+                                    Visibility="Collapsed" Margin="0,12,0,0">
+                                <TextBlock x:Name="HotkeyWarningText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Smarter cleanup. Off by default: switching it on ends the offline guarantee. -->
+                    <Border Style="{StaticResource CardPanel}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                    <TextBlock Text="Smarter cleanup with Claude" Style="{StaticResource H2}"/>
+                                    <TextBlock Style="{StaticResource Hint}"
+                                               Text="A second pass that fixes grammar, formats lists and honours spoken corrections. Needs your own Anthropic API key, and sends each transcript to the API."/>
+                                </StackPanel>
+                                <CheckBox x:Name="LlmBox" Style="{StaticResource Switch}"
+                                          HorizontalAlignment="Right" VerticalAlignment="Center"
+                                          Click="OnLlmToggled"/>
+                            </Grid>
+
+                            <StackPanel x:Name="LlmDetail" Visibility="Collapsed">
+                                <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
+                                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
+                                               Text="One of the two things in TeezyFlow that leave your machine. Transcripts are sent to the Anthropic API, billed to your own account — a Claude Pro or Max subscription does not cover it. Roughly $0.60 a month at 400 dictations, and it adds about a second to each one."/>
+                                </Border>
+
+                                <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}" Margin="0,16,0,4"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
-                                            BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                                        <PasswordBox x:Name="ElevenKeyBox" BorderThickness="0" Background="Transparent"
-                                                     VerticalContentAlignment="Center" Margin="12,0"
-                                                     PasswordChar="•" FontSize="13"
-                                                     PasswordChanged="OnElevenKeyTyped"/>
+
+                                    <!-- PasswordBox, not TextBox: the key must not be shoulder-readable,
+                                         and WPF never puts its contents in the visual tree as text. -->
+                                    <Border Grid.Column="0" Style="{StaticResource FieldBox}">
+                                        <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource BareText}"
+                                                     PasswordChar="•" PasswordChanged="OnApiKeyTyped"/>
                                     </Border>
-                                    <Button x:Name="SaveElevenKeyButton" Grid.Column="1" Content="Save key"
-                                            Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
-                                            IsEnabled="False" Click="OnSaveElevenKey"/>
+
+                                    <Button x:Name="SaveKeyButton" Grid.Column="1" Content="Save key"
+                                            Style="{StaticResource Primary}" Margin="8,0,0,0"
+                                            IsEnabled="False" Click="OnSaveApiKey"/>
                                 </Grid>
 
-                                <Grid Margin="0,10,0,0">
-                                    <TextBlock x:Name="ElevenKeyStatus" Style="{StaticResource Hint}" Margin="0"
-                                               HorizontalAlignment="Left"/>
-                                    <Button x:Name="ForgetElevenKeyButton" Content="Forget key"
-                                            Style="{StaticResource Quiet}" HorizontalAlignment="Right"
-                                            Visibility="Collapsed" Click="OnForgetElevenKey"/>
+                                <Grid Margin="0,8,0,0">
+                                    <TextBlock x:Name="KeyStatus" Style="{StaticResource Hint}" Margin="0"
+                                               HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Button x:Name="ForgetKeyButton" Content="Forget key" Style="{StaticResource Quiet}"
+                                            HorizontalAlignment="Right" Visibility="Collapsed" Click="OnForgetApiKey"/>
                                 </Grid>
 
-                                <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
-                                    <TextBlock x:Name="VoiceUsageText" TextWrapping="Wrap"
-                                               Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                                           Text="Create a key at console.anthropic.com. It is encrypted for your Windows account and never written to settings.json."/>
+
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                                <Grid Margin="0,16,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                        <TextBlock Text="Model" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock x:Name="ModelCost" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="LlmModelPicker" Width="180" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center" SelectionChanged="OnLlmModelChanged"/>
+                                </Grid>
+
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                        <TextBlock Text="Writing style" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock x:Name="StyleHint" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="StylePicker" Width="180" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center" SelectionChanged="OnStyleChanged"/>
+                                </Grid>
+
+                                <TextBlock Text="AND ALWAYS" Style="{StaticResource SectionLabel}" Margin="0,16,0,4"/>
+                                <!-- Grows with the text: a long instruction wraps rather than scrolls. -->
+                                <Border Style="{StaticResource FieldBox}" Height="Auto" MinHeight="30">
+                                    <TextBox x:Name="StyleInstructionBox" Style="{StaticResource BareText}"
+                                             Padding="0,6" TextWrapping="Wrap" AcceptsReturn="False"
+                                             LostFocus="OnStyleInstructionChanged"/>
                                 </Border>
-                            </StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="One line of your own, added to every request — “British spelling”, “never use em dashes”. It rides on every utterance, so keep it short."/>
 
-                            <Grid Margin="0,14,0,0">
+                                <Grid Margin="0,16,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                        <TextBlock Text="Give up after" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="Past this, TeezyFlow types the offline result instead. Text appearing beats a slower tidy-up."/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="LlmTimeoutPicker" Width="180" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                                </Grid>
+
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                    <Button x:Name="TestButton" Content="Test it" Style="{StaticResource Secondary}"
+                                            Click="OnTestLlm"/>
+                                    <TextBlock x:Name="TestResult" Style="{StaticResource Hint}" Margin="12,0,0,0"
+                                               VerticalAlignment="Center" MaxWidth="440"/>
+                                </StackPanel>
+
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                                <TextBlock Text="PER-APP RULES" Style="{StaticResource SectionLabel}" Margin="0,16,0,4"/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0"
+                                           Text="A style that applies only where the text is going, so an email and a chat message do not have to share one setting. First match wins; anything with no rule uses the style above."/>
+
+                                <StackPanel x:Name="RuleRows" Margin="0,12,0,0"/>
+
+                                <TextBlock x:Name="NoRules" Style="{StaticResource Hint}" Margin="0"
+                                           Text="No rules yet. Add one below — the list offers the apps you have already dictated into."/>
+
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="NewRuleApp" Grid.Column="0" IsEditable="True"
+                                              VerticalAlignment="Center"/>
+                                    <Button x:Name="AddRuleButton" Grid.Column="1" Content="Add rule"
+                                            Style="{StaticResource Secondary}" Margin="8,0,0,0"
+                                            Click="OnAddRule"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="TabAssistant" Visibility="Collapsed">
+                    <!-- Assistant. A second combination, off until asked for. -->
+                    <Border Style="{StaticResource CardPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Assistant" Style="{StaticResource H2}"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="Hold a second combination and speak a command instead of dictating — open an app, change the volume, skip a track, lock the PC. Runs on this machine like everything else."/>
+
+                            <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="VoicePicker" Grid.Column="0"
-                                          SelectionChanged="OnVoiceChanged"/>
-                                <Button x:Name="VoiceTestButton" Grid.Column="1" Content="Hear it"
-                                        Style="{StaticResource Secondary}" Margin="10,0,0,0"
-                                        Height="38" Click="OnHearVoice"/>
+                                <ComboBox x:Name="AssistantPicker" Grid.Column="0"
+                                          SelectionChanged="OnAssistantPreset"/>
+                                <Button x:Name="AssistantRecordButton" Grid.Column="1"
+                                        Content="Record my own" Style="{StaticResource Secondary}"
+                                        Margin="8,0,0,0" Click="OnRecordAssistantHotkey"/>
                             </Grid>
 
-                            <TextBlock x:Name="VoiceHint" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+                            <TextBlock x:Name="AssistantHint" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
 
+                            <Border x:Name="AssistantWarning" Style="{StaticResource CautionPanel}"
+                                    Visibility="Collapsed" Margin="0,12,0,0">
+                                <TextBlock x:Name="AssistantWarningText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                            </Border>
+
+                            <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                            <Grid Margin="0,16,0,0">
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                    <TextBlock Text="Ask Claude what it didn’t understand"
+                                               Foreground="{StaticResource Ink}"/>
+                                    <TextBlock Style="{StaticResource Hint}"
+                                               Text="The commands above stay on this machine and cost nothing. Only what they cannot place is sent to Claude, which can then still only choose from the same list — or answer you in a sentence."/>
+                                </StackPanel>
+                                <CheckBox x:Name="AssistantLlmBox" Style="{StaticResource Switch}"
+                                          HorizontalAlignment="Right" VerticalAlignment="Center"
+                                          Click="OnAssistantLlmToggled"/>
+                            </Grid>
+
+                            <StackPanel x:Name="AssistantLlmDetail" Visibility="Collapsed">
+                                <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
+                                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}" FontSize="12"
+                                               Text="Unrecognised commands are sent to the Anthropic API, billed to your own account, using the same key as the cleanup tier. It never sees your screen, your clipboard or your documents — only the words you just spoke."/>
+                                </Border>
+
+                                <Grid Margin="0,16,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                        <TextBlock Text="Model" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock x:Name="AssistantModelCost" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="AssistantModelPicker" Width="180" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center" SelectionChanged="OnAssistantModelChanged"/>
+                                </Grid>
+
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                        <TextBlock Text="Read answers out loud" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="Answers only — never the confirmations, which you can read faster than they can be said. Uses the voice already on this machine, so it is free and works offline. It is not a lovely voice."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="SpeakBox" Style="{StaticResource Switch}"
+                                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Click="OnSpeakToggled"/>
+                                </Grid>
+
+                                <StackPanel x:Name="VoiceDetail" Visibility="Collapsed">
+                                    <Grid Margin="0,12,0,0">
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                            <TextBlock Text="Voice by" Foreground="{StaticResource Ink}"/>
+                                            <TextBlock x:Name="VoiceProviderHint" Style="{StaticResource Hint}"/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="VoiceProviderPicker" Width="180"
+                                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                  SelectionChanged="OnVoiceProviderChanged"/>
+                                    </Grid>
+
+                                    <StackPanel x:Name="ElevenLabsDetail" Visibility="Collapsed">
+                                        <TextBlock Text="ELEVENLABS API KEY" Style="{StaticResource SectionLabel}"
+                                                   Margin="0,16,0,4"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource FieldBox}">
+                                                <PasswordBox x:Name="ElevenKeyBox" Style="{StaticResource BareText}"
+                                                             PasswordChar="•" PasswordChanged="OnElevenKeyTyped"/>
+                                            </Border>
+                                            <Button x:Name="SaveElevenKeyButton" Grid.Column="1" Content="Save key"
+                                                    Style="{StaticResource Primary}" Margin="8,0,0,0"
+                                                    IsEnabled="False" Click="OnSaveElevenKey"/>
+                                        </Grid>
+
+                                        <Grid Margin="0,8,0,0">
+                                            <TextBlock x:Name="ElevenKeyStatus" Style="{StaticResource Hint}" Margin="0"
+                                                       HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                            <Button x:Name="ForgetElevenKeyButton" Content="Forget key"
+                                                    Style="{StaticResource Quiet}" HorizontalAlignment="Right"
+                                                    Visibility="Collapsed" Click="OnForgetElevenKey"/>
+                                        </Grid>
+
+                                        <Border Style="{StaticResource CautionPanel}" Margin="0,8,0,0">
+                                            <TextBlock x:Name="VoiceUsageText" TextWrapping="Wrap"
+                                                       Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="VoicePicker" Grid.Column="0"
+                                                  SelectionChanged="OnVoiceChanged"/>
+                                        <Button x:Name="VoiceTestButton" Grid.Column="1" Content="Hear it"
+                                                Style="{StaticResource Secondary}" Margin="8,0,0,0"
+                                                Click="OnHearVoice"/>
+                                    </Grid>
+
+                                    <TextBlock x:Name="VoiceHint" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel x:Name="TabAccounts" Visibility="Collapsed">
-            <!-- Calendar. Under the assistant because it is only ever reached by asking the
-                 assistant something, and means nothing on its own. -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <TextBlock Text="Calendar" Style="{StaticResource H2}" Margin="0,0,0,4"/>
-                    <TextBlock Style="{StaticResource Hint}"
-                               Text="Connect an account and the assistant can answer “what’s next” and “what’s on today”. TeezyFlow asks for read-only access, so it cannot move or cancel anything, and you sign in on Microsoft’s own page — no password is ever typed into TeezyFlow."/>
+                    <!-- Calendar. Beside the assistant because it is only ever reached by asking the
+                         assistant something, and means nothing on its own. -->
+                    <Border Style="{StaticResource CardPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Calendar" Style="{StaticResource H2}"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="Connect an account and the assistant can answer “what’s next” and “what’s on today”. TeezyFlow asks for read-only access, so it cannot move or cancel anything, and you sign in on Microsoft’s own page — no password is ever typed into TeezyFlow."/>
 
-                    <!-- Only shown while there is nothing to sign in with. Once an id is saved
-                         this is setup detail that never needs looking at again. -->
-                    <StackPanel x:Name="CalendarSetup" Visibility="Collapsed">
-                        <TextBlock Text="MICROSOFT APPLICATION ID" Style="{StaticResource SectionLabel}"
-                                   Margin="0,16,0,10"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
-                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                                <TextBox x:Name="MicrosoftClientIdBox" BorderThickness="0"
-                                         Background="Transparent" VerticalContentAlignment="Center"
-                                         Margin="12,0" FontSize="13"
-                                         TextChanged="OnMicrosoftClientIdTyped"/>
-                            </Border>
-                            <Button x:Name="SaveMicrosoftClientIdButton" Grid.Column="1" Content="Save"
-                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
-                                    IsEnabled="False" Click="OnSaveMicrosoftClientId"/>
-                        </Grid>
+                            <!-- Only shown while there is nothing to sign in with. Once an id is saved
+                                 this is setup detail that never needs looking at again. -->
+                            <StackPanel x:Name="CalendarSetup" Visibility="Collapsed">
+                                <TextBlock Text="MICROSOFT APPLICATION ID" Style="{StaticResource SectionLabel}"
+                                           Margin="0,16,0,4"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource FieldBox}">
+                                        <TextBox x:Name="MicrosoftClientIdBox" Style="{StaticResource BareText}"
+                                                 TextChanged="OnMicrosoftClientIdTyped"/>
+                                    </Border>
+                                    <Button x:Name="SaveMicrosoftClientIdButton" Grid.Column="1" Content="Save"
+                                            Style="{StaticResource Primary}" Margin="8,0,0,0"
+                                            IsEnabled="False" Click="OnSaveMicrosoftClientId"/>
+                                </Grid>
 
-                        <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
-                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
-                                       FontSize="12"
-                                       Text="TeezyFlow has no Microsoft registration of its own yet, so it uses yours. In the Azure portal, register an application, add a Mobile and desktop redirect of http://localhost, turn on “Allow public client flows”, and add the delegated permissions Calendars.Read and offline_access. The application id is not a secret."/>
-                        </Border>
-                    </StackPanel>
-
-                    <ItemsControl x:Name="CalendarAccountList" Margin="0,14,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{StaticResource Sunken}" CornerRadius="9"
-                                        BorderBrush="{StaticResource Hairline}" BorderThickness="1"
-                                        Padding="12,10" Margin="0,0,0,8">
-                                    <Grid>
-                                        <StackPanel VerticalAlignment="Center" Margin="0,0,200,0">
-                                            <TextBlock Text="{Binding DisplayName}"
-                                                       Foreground="{StaticResource Ink}"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Hint}"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                                                    VerticalAlignment="Center">
-                                            <!-- OneTime, and the change handled in code like
-                                                 every other picker here. A TwoWay binding
-                                                 writes back while the row is still being set
-                                                 up, which is not a user choice and must not
-                                                 be saved as one. -->
-                                            <ComboBox Width="104" Height="30"
-                                                      ItemsSource="{Binding Profiles}"
-                                                      SelectedItem="{Binding Profile, Mode=OneTime}"
-                                                      SelectionChanged="OnCalendarProfileChanged"/>
-                                            <Button Content="Disconnect" Style="{StaticResource Quiet}"
-                                                    Margin="8,0,0,0" Click="OnDisconnectCalendar"/>
-                                        </StackPanel>
-                                    </Grid>
+                                <Border Style="{StaticResource CautionPanel}" Margin="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
+                                               FontSize="12"
+                                               Text="TeezyFlow has no Microsoft registration of its own yet, so it uses yours. In the Azure portal, register an application, add a Mobile and desktop redirect of http://localhost, turn on “Allow public client flows”, and add the delegated permissions Calendars.Read and offline_access. The application id is not a secret."/>
                                 </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <StackPanel x:Name="GoogleSetup" Visibility="Collapsed">
-                        <TextBlock Text="GOOGLE CLIENT ID" Style="{StaticResource SectionLabel}"
-                                   Margin="0,16,0,10"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
-                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                                <TextBox x:Name="GoogleClientIdBox" BorderThickness="0"
-                                         Background="Transparent" VerticalContentAlignment="Center"
-                                         Margin="12,0" FontSize="13"
-                                         TextChanged="OnGoogleClientTyped"/>
-                            </Border>
-                            <Button x:Name="SaveGoogleClientButton" Grid.Column="1" Content="Save"
-                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
-                                    IsEnabled="False" Click="OnSaveGoogleClient"/>
-                        </Grid>
-
-                        <!-- Labelled. Unlabelled it read as a gap between the id row and the
-                             note below it, and an id saved without a secret fails much later,
-                             at sign-in, with a message about client_secret. -->
-                        <TextBlock Text="CLIENT SECRET" Style="{StaticResource SectionLabel}"
-                                   Margin="0,14,0,10"/>
-                        <Border Background="{StaticResource Sunken}" CornerRadius="9"
-                                BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                            <PasswordBox x:Name="GoogleSecretBox" BorderThickness="0" Background="Transparent"
-                                         VerticalContentAlignment="Center" Margin="12,0"
-                                         PasswordChar="•" FontSize="13"
-                                         PasswordChanged="OnGoogleClientTyped"/>
-                        </Border>
-
-                        <TextBlock x:Name="GoogleSecretHint" Style="{StaticResource Hint}"
-                                   Margin="0,8,0,0"/>
-
-                        <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
-                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
-                                       FontSize="12"
-                                       Text="In the Google Cloud console: create a project, enable the Google Calendar API, then create an OAuth client of type Desktop app. Paste the client ID above and its secret below. Then publish the consent screen — an app left in Testing gets sign-ins that expire after seven days, and you would be reconnecting every week."/>
-                        </Border>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <Button x:Name="ConnectMicrosoftButton" Content="Connect a Microsoft account"
-                                Style="{StaticResource Secondary}" Height="38"
-                                Click="OnConnectMicrosoft"/>
-                        <Button x:Name="ConnectGoogleButton" Content="Connect a Google account"
-                                Style="{StaticResource Secondary}" Height="38" Margin="10,0,0,0"
-                                Click="OnConnectGoogle"/>
-                    </StackPanel>
-
-                    <!--
-                      A calendar published as a link, for an account that cannot be signed in to —
-                      most often a work tenant that blocks third-party apps. No application id and
-                      no sign-in: the link itself is the permission, which is why it is stored
-                      encrypted and never shown again once saved.
-                    -->
-                    <TextBlock Text="OR ADD A CALENDAR LINK" Style="{StaticResource SectionLabel}"
-                               Margin="0,18,0,10"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Background="{StaticResource Sunken}" CornerRadius="9"
-                                BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                            <TextBox x:Name="CalendarLinkBox" BorderThickness="0" Background="Transparent"
-                                     VerticalContentAlignment="Center" Margin="12,0" FontSize="13"
-                                     TextChanged="OnCalendarLinkTyped"/>
-                        </Border>
-                        <Button x:Name="AddCalendarLinkButton" Grid.Column="1" Content="Add link"
-                                Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
-                                IsEnabled="False" Click="OnAddCalendarLink"/>
-                    </Grid>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" TextWrapping="Wrap"
-                               Text="For a work calendar you can’t sign in to. In Outlook on the web: Settings ▸ Calendar ▸ Shared calendars ▸ Publish a calendar, choose “Can view all details”, then copy the ICS link. Anyone with the link can read that calendar, so TeezyFlow stores it encrypted and never shows it again."/>
-
-                    <TextBlock x:Name="CalendarStatus" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
-
-                    <!-- Its own switch, not a consequence of connecting. Reading someone's mail
-                         is a bigger step than reading their diary. -->
-                    <StackPanel x:Name="MailDetail" Visibility="Collapsed">
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                                <TextBlock Text="Read my email too" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="Lets the assistant answer “any new email” and “what came in today”. Read-only: it cannot send, delete or even mark anything as read. TeezyFlow never opens a link or loads an image from a message, and anything it can’t answer itself goes to Claude with no ability to act — only to reply. Asked for at sign-in, so it is never granted quietly."/>
                             </StackPanel>
-                            <CheckBox x:Name="ReadMailBox" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" VerticalAlignment="Center"
-                                      Click="OnReadMailToggled"/>
-                        </Grid>
 
-                        <TextBlock x:Name="MailHint" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                            <ItemsControl x:Name="CalendarAccountList" Margin="0,12,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource Sunken}" CornerRadius="4"
+                                                BorderBrush="{StaticResource Hairline}" BorderThickness="1"
+                                                Padding="12,8" Margin="0,0,0,8">
+                                            <Grid>
+                                                <StackPanel VerticalAlignment="Center" Margin="0,0,200,0">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               Foreground="{StaticResource Ink}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center">
+                                                    <!-- OneTime, and the change handled in code like
+                                                         every other picker here. A TwoWay binding
+                                                         writes back while the row is still being set
+                                                         up, which is not a user choice and must not
+                                                         be saved as one. -->
+                                                    <ComboBox Width="104"
+                                                              ItemsSource="{Binding Profiles}"
+                                                              SelectedItem="{Binding Profile, Mode=OneTime}"
+                                                              SelectionChanged="OnCalendarProfileChanged"/>
+                                                    <Button Content="Disconnect" Style="{StaticResource Quiet}"
+                                                            Margin="8,0,0,0" Click="OnDisconnectCalendar"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                        <TextBlock Text="GMAIL" Style="{StaticResource SectionLabel}"
-                                   Margin="0,18,0,6"/>
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
-                                   Text="Gmail is read over IMAP with an app password, not through Google sign-in — Google treats reading mail as a restricted permission that needs its app review, and an app password needs no Cloud project at all. Turn on 2-Step Verification, then create an app password at myaccount.google.com → Security → App passwords."/>
+                            <StackPanel x:Name="GoogleSetup" Visibility="Collapsed">
+                                <TextBlock Text="GOOGLE CLIENT ID" Style="{StaticResource SectionLabel}"
+                                           Margin="0,16,0,4"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource FieldBox}">
+                                        <TextBox x:Name="GoogleClientIdBox" Style="{StaticResource BareText}"
+                                                 TextChanged="OnGoogleClientTyped"/>
+                                    </Border>
+                                    <Button x:Name="SaveGoogleClientButton" Grid.Column="1" Content="Save"
+                                            Style="{StaticResource Primary}" Margin="8,0,0,0"
+                                            IsEnabled="False" Click="OnSaveGoogleClient"/>
+                                </Grid>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="{StaticResource Sunken}" CornerRadius="9"
-                                    BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                                <TextBox x:Name="GmailAddressBox" BorderThickness="0"
-                                         Background="Transparent" VerticalContentAlignment="Center"
-                                         Margin="12,0" FontSize="13" TextChanged="OnGmailTyped"/>
+                                <!-- Labelled. Unlabelled it read as a gap between the id row and the
+                                     note below it, and an id saved without a secret fails much later,
+                                     at sign-in, with a message about client_secret. -->
+                                <TextBlock Text="CLIENT SECRET" Style="{StaticResource SectionLabel}"
+                                           Margin="0,12,0,4"/>
+                                <Border Style="{StaticResource FieldBox}">
+                                    <PasswordBox x:Name="GoogleSecretBox" Style="{StaticResource BareText}"
+                                                 PasswordChar="•" PasswordChanged="OnGoogleClientTyped"/>
+                                </Border>
+
+                                <TextBlock x:Name="GoogleSecretHint" Style="{StaticResource Hint}"
+                                           Margin="0,8,0,0"/>
+
+                                <Border Style="{StaticResource CautionPanel}" Margin="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
+                                               FontSize="12"
+                                               Text="In the Google Cloud console: create a project, enable the Google Calendar API, then create an OAuth client of type Desktop app. Paste the client ID above and its secret below. Then publish the consent screen — an app left in Testing gets sign-ins that expire after seven days, and you would be reconnecting every week."/>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="ConnectMicrosoftButton" Content="Connect a Microsoft account"
+                                        Style="{StaticResource Secondary}"
+                                        Click="OnConnectMicrosoft"/>
+                                <Button x:Name="ConnectGoogleButton" Content="Connect a Google account"
+                                        Style="{StaticResource Secondary}" Margin="8,0,0,0"
+                                        Click="OnConnectGoogle"/>
+                            </StackPanel>
+
+                            <!--
+                              A calendar published as a link, for an account that cannot be signed in to —
+                              most often a work tenant that blocks third-party apps. No application id and
+                              no sign-in: the link itself is the permission, which is why it is stored
+                              encrypted and never shown again once saved.
+                            -->
+                            <TextBlock Text="OR ADD A CALENDAR LINK" Style="{StaticResource SectionLabel}"
+                                       Margin="0,16,0,4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource FieldBox}">
+                                    <TextBox x:Name="CalendarLinkBox" Style="{StaticResource BareText}"
+                                             TextChanged="OnCalendarLinkTyped"/>
+                                </Border>
+                                <Button x:Name="AddCalendarLinkButton" Grid.Column="1" Content="Add link"
+                                        Style="{StaticResource Primary}" Margin="8,0,0,0"
+                                        IsEnabled="False" Click="OnAddCalendarLink"/>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="For a work calendar you can’t sign in to. In Outlook on the web: Settings ▸ Calendar ▸ Shared calendars ▸ Publish a calendar, choose “Can view all details”, then copy the ICS link. Anyone with the link can read that calendar, so TeezyFlow stores it encrypted and never shows it again."/>
+
+                            <TextBlock x:Name="CalendarStatus" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+
+                            <!-- Its own switch, not a consequence of connecting. Reading someone's mail
+                                 is a bigger step than reading their diary. -->
+                            <StackPanel x:Name="MailDetail" Visibility="Collapsed">
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                                <Grid Margin="0,16,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                        <TextBlock Text="Read my email too" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="Lets the assistant answer “any new email” and “what came in today”. Read-only: it cannot send, delete or even mark anything as read. TeezyFlow never opens a link or loads an image from a message, and anything it can’t answer itself goes to Claude with no ability to act — only to reply. Asked for at sign-in, so it is never granted quietly."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ReadMailBox" Style="{StaticResource Switch}"
+                                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Click="OnReadMailToggled"/>
+                                </Grid>
+
+                                <TextBlock x:Name="MailHint" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+
+                                <TextBlock Text="GMAIL" Style="{StaticResource SectionLabel}" Margin="0,16,0,4"/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                                           Text="Gmail is read over IMAP with an app password, not through Google sign-in — Google treats reading mail as a restricted permission that needs its app review, and an app password needs no Cloud project at all. Turn on 2-Step Verification, then create an app password at myaccount.google.com → Security → App passwords."/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource FieldBox}">
+                                        <TextBox x:Name="GmailAddressBox" Style="{StaticResource BareText}"
+                                                 TextChanged="OnGmailTyped"/>
+                                    </Border>
+                                    <Button x:Name="SaveGmailButton" Grid.Column="1" Content="Save"
+                                            Style="{StaticResource Primary}" Margin="8,0,0,0"
+                                            IsEnabled="False" Click="OnSaveGmail"/>
+                                </Grid>
+
+                                <Border Style="{StaticResource FieldBox}" Margin="0,8,0,0">
+                                    <PasswordBox x:Name="GmailPasswordBox" Style="{StaticResource BareText}"
+                                                 PasswordChar="•" PasswordChanged="OnGmailTyped"/>
+                                </Border>
+
+                                <Grid Margin="0,8,0,0">
+                                    <TextBlock x:Name="GmailStatus" Style="{StaticResource Hint}" Margin="0"
+                                               HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Button x:Name="ForgetGmailButton" Content="Forget"
+                                            Style="{StaticResource Quiet}" HorizontalAlignment="Right"
+                                            Visibility="Collapsed" Click="OnForgetGmail"/>
+                                </Grid>
+
+                                <Border Style="{StaticResource CautionPanel}" Margin="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
+                                               FontSize="12"
+                                               Text="An app password is not read-only — Google does not offer a narrower one, so it is full access to the mailbox. TeezyFlow opens the inbox read-only, never marks anything as read and never deletes anything, but here that is this app's own restraint rather than a limit Google enforces. Revoke it any time on the same Google page, without touching TeezyFlow."/>
+                                </Border>
+                            </StackPanel>
+
+                            <Border x:Name="CalendarWarning" Style="{StaticResource CautionPanel}"
+                                    Visibility="Collapsed" Margin="0,12,0,0">
+                                <TextBlock x:Name="CalendarWarningText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource CautionInk}" FontSize="12"/>
                             </Border>
-                            <Button x:Name="SaveGmailButton" Grid.Column="1" Content="Save"
-                                    Style="{StaticResource Primary}" Margin="10,0,0,0" Height="38"
-                                    IsEnabled="False" Click="OnSaveGmail"/>
-                        </Grid>
-
-                        <Border Background="{StaticResource Sunken}" CornerRadius="9" Margin="0,8,0,0"
-                                BorderBrush="{StaticResource Hairline}" BorderThickness="1" Height="38">
-                            <PasswordBox x:Name="GmailPasswordBox" BorderThickness="0"
-                                         Background="Transparent" VerticalContentAlignment="Center"
-                                         Margin="12,0" PasswordChar="•" FontSize="13"
-                                         PasswordChanged="OnGmailTyped"/>
-                        </Border>
-
-                        <Grid Margin="0,10,0,0">
-                            <TextBlock x:Name="GmailStatus" Style="{StaticResource Hint}" Margin="0"
-                                       HorizontalAlignment="Left"/>
-                            <Button x:Name="ForgetGmailButton" Content="Forget"
-                                    Style="{StaticResource Quiet}" HorizontalAlignment="Right"
-                                    Visibility="Collapsed" Click="OnForgetGmail"/>
-                        </Grid>
-
-                        <Border Style="{StaticResource CautionPanel}" Margin="0,12,0,0">
-                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource CautionInk}"
-                                       FontSize="12"
-                                       Text="An app password is not read-only — Google does not offer a narrower one, so it is full access to the mailbox. TeezyFlow opens the inbox read-only, never marks anything as read and never deletes anything, but here that is this app's own restraint rather than a limit Google enforces. Revoke it any time on the same Google page, without touching TeezyFlow."/>
-                        </Border>
-                    </StackPanel>
-
-                    <Border x:Name="CalendarWarning" Style="{StaticResource CautionPanel}"
-                            Visibility="Collapsed" Margin="0,12,0,0">
-                        <TextBlock x:Name="CalendarWarningText" TextWrapping="Wrap"
-                                   Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                        </StackPanel>
                     </Border>
-                </StackPanel>
-            </Border>
-
                 </StackPanel>
 
                 <StackPanel x:Name="TabAudio" Visibility="Collapsed">
-            <!-- Microphone. Directly under the hotkey because between them they are the whole
-                 input path, and a wrong device here looks exactly like a bad recogniser. -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <TextBlock Text="Microphone" Style="{StaticResource H2}" Margin="0,0,0,4"/>
-                    <TextBlock Style="{StaticResource Hint}"
-                               Text="Windows picks one for you, and on a laptop that is often the built-in array — which hears the room as well as you, and transcribes it. If dictation keeps mishearing you, this is the first thing to check."/>
+                    <!-- Microphone. Between it and the hotkey is the whole input path, and a wrong
+                         device here looks exactly like a bad recogniser. -->
+                    <Border Style="{StaticResource CardPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Microphone" Style="{StaticResource H2}"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="Windows picks one for you, and on a laptop that is often the built-in array — which hears the room as well as you, and transcribes it. If dictation keeps mishearing you, this is the first thing to check."/>
 
-                    <ComboBox x:Name="MicPicker" Margin="0,14,0,0"
-                              SelectionChanged="OnMicrophoneChanged"/>
+                            <ComboBox x:Name="MicPicker" Margin="0,12,0,0"
+                                      SelectionChanged="OnMicrophoneChanged"/>
 
-                    <TextBlock x:Name="MicInUse" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                            <TextBlock x:Name="MicInUse" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
 
-                    <Border x:Name="MicWarning" Style="{StaticResource CautionPanel}"
-                            Visibility="Collapsed" Margin="0,12,0,0">
-                        <TextBlock x:Name="MicWarningText" TextWrapping="Wrap"
-                                   Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                            <Border x:Name="MicWarning" Style="{StaticResource CautionPanel}"
+                                    Visibility="Collapsed" Margin="0,12,0,0">
+                                <TextBlock x:Name="MicWarningText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource CautionInk}" FontSize="12"/>
+                            </Border>
+
+                            <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                            <TextBlock Text="CHECK IT IS HEARING YOU" Style="{StaticResource SectionLabel}"
+                                       Margin="0,16,0,4"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
+                                       Text="Opens the microphone and shows what it is picking up. Speak at your normal dictating volume — the bar should reach halfway and beyond."/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button x:Name="MicTestButton" Grid.Column="0" Content="Start test"
+                                        Style="{StaticResource Secondary}" Click="OnTestMicrophone"/>
+
+                                <!-- No border on the track: the fill is sized to the track's own
+                                     width, and a line inside it would push the full bar out. -->
+                                <Border x:Name="MicLevelTrack" Grid.Column="1" Height="6" CornerRadius="2"
+                                        Background="{StaticResource Raised}"
+                                        Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <!-- Sized in code-behind: a fill needs the track's measured width,
+                                         which only exists after layout. -->
+                                    <Border x:Name="MicLevelFill" Width="0" CornerRadius="2"
+                                            HorizontalAlignment="Left" Background="{StaticResource Accent}"/>
+                                </Border>
+                            </Grid>
+
+                            <TextBlock x:Name="MicTestStatus" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                        </StackPanel>
                     </Border>
-
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                    <TextBlock Text="CHECK IT IS HEARING YOU" Style="{StaticResource SectionLabel}"
-                               Margin="0,16,0,0"/>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
-                               Text="Opens the microphone and shows what it is picking up. Speak at your normal dictating volume — the bar should reach halfway and beyond."/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button x:Name="MicTestButton" Grid.Column="0" Content="Start test"
-                                Style="{StaticResource Secondary}" Click="OnTestMicrophone"/>
-
-                        <Border x:Name="MicLevelTrack" Grid.Column="1" Height="10" CornerRadius="5"
-                                Background="{StaticResource Sunken}" BorderThickness="1"
-                                BorderBrush="{StaticResource Hairline}"
-                                Margin="14,0,0,0" VerticalAlignment="Center">
-                            <!-- Sized in code-behind: a fill needs the track's measured width,
-                                 which only exists after layout. -->
-                            <Border x:Name="MicLevelFill" Width="0" CornerRadius="5"
-                                    HorizontalAlignment="Left" Background="{StaticResource Accent}"/>
-                        </Border>
-                    </Grid>
-
-                    <TextBlock x:Name="MicTestStatus" Style="{StaticResource Hint}" Margin="0,10,0,0"/>
-                </StackPanel>
-            </Border>
                 </StackPanel>
 
                 <StackPanel x:Name="TabAdvanced" Visibility="Collapsed">
-            <!-- Behaviour -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <TextBlock Text="Behaviour" Style="{StaticResource H2}" Margin="0,0,0,4"/>
+                    <!-- Behaviour -->
+                    <Border Style="{StaticResource CardPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Behaviour" Style="{StaticResource H2}"/>
 
-                    <StackPanel x:Name="Switches">
-                        <Grid Margin="0,14,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                                <TextBlock Text="Start TeezyFlow when I sign in" Foreground="{StaticResource Ink}"/>
-                                <TextBlock x:Name="AutostartNote" Style="{StaticResource Hint}"
-                                           Visibility="Collapsed"/>
+                            <StackPanel x:Name="Switches">
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                        <TextBlock Text="Start TeezyFlow when I sign in" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock x:Name="AutostartNote" Style="{StaticResource Hint}"
+                                                   Visibility="Collapsed"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="AutostartBox" Style="{StaticResource Switch}"
+                                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Click="OnAutostartChanged"/>
+                                </Grid>
+
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,12,0,0"/>
+
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                        <TextBlock Text="Tidy up what I say" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="Removes ums and ahs, fixes spacing, honours “scratch that”. Your dictionary is applied either way."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="CleanupBox" Style="{StaticResource Switch}"
+                                              HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnChanged"/>
+                                </Grid>
+
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,12,0,0"/>
+
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                        <TextBlock Text="Show the level meter" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="A small bar at the bottom of the screen while you are talking."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="HudBox" Style="{StaticResource Switch}"
+                                              HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnChanged"/>
+                                </Grid>
+
+                                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,12,0,0"/>
+
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
+                                        <TextBlock Text="Play a tone" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="A short rising note when recording opens, falling when it closes."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="SoundBox" Style="{StaticResource Switch}"
+                                              HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnChanged"/>
+                                </Grid>
                             </StackPanel>
-                            <CheckBox x:Name="AutostartBox" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" VerticalAlignment="Center"
-                                      Click="OnAutostartChanged"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,15,0,0"/>
-
-                        <Grid Margin="0,15,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                                <TextBlock Text="Tidy up what I say" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="Removes ums and ahs, fixes spacing, honours “scratch that”. Your dictionary is applied either way."/>
-                            </StackPanel>
-                            <CheckBox x:Name="CleanupBox" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnChanged"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,15,0,0"/>
-
-                        <Grid Margin="0,15,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                                <TextBlock Text="Show the level meter" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="A small bar at the bottom of the screen while you are talking."/>
-                            </StackPanel>
-                            <CheckBox x:Name="HudBox" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnChanged"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{StaticResource Hairline}" Margin="0,15,0,0"/>
-
-                        <Grid Margin="0,15,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,60,0">
-                                <TextBlock Text="Play a tone" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="A short rising note when recording opens, falling when it closes."/>
-                            </StackPanel>
-                            <CheckBox x:Name="SoundBox" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnChanged"/>
-                        </Grid>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-            <!-- Speech model -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <TextBlock Text="Speech model" Style="{StaticResource H2}" Margin="0,0,0,12"/>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse x:Name="ModelDot" Width="9" Height="9" VerticalAlignment="Center"
-                                 Margin="0,0,9,0" Fill="{StaticResource Faint}"/>
-                        <TextBlock x:Name="ModelStatus" Foreground="{StaticResource Ink}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <TextBlock x:Name="ModelPath" Style="{StaticResource Hint}"
-                               FontFamily="{StaticResource MonoFont}" FontSize="11" Margin="18,6,0,0"/>
-
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
-
-                    <Grid Margin="0,16,0,0">
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,120,0">
-                            <TextBlock Text="Inference threads" Foreground="{StaticResource Ink}"/>
-                            <TextBlock Style="{StaticResource Hint}"
-                                       Text="Four measured fastest on this machine; eight measured slower. More is not better here."/>
                         </StackPanel>
-                        <ComboBox x:Name="ThreadPicker" Width="86" HorizontalAlignment="Right"
-                                  VerticalAlignment="Center" SelectionChanged="OnChanged"/>
-                    </Grid>
-
-                    <Grid Margin="0,16,0,0">
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                            <TextBlock Text="Decoding" Foreground="{StaticResource Ink}"/>
-                            <TextBlock x:Name="DecodingHint" Style="{StaticResource Hint}"/>
-                        </StackPanel>
-                        <ComboBox x:Name="DecodingPicker" Width="180" HorizontalAlignment="Right"
-                                  VerticalAlignment="Center" SelectionChanged="OnDecodingChanged"/>
-                    </Grid>
-
-                    <!-- Only meaningful under beam search, so hidden under greedy rather than
-                         shown greyed out next to a setting that would do nothing. -->
-                    <StackPanel x:Name="BeamOptions" Visibility="Collapsed">
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,120,0">
-                                <TextBlock Text="Candidates kept" Foreground="{StaticResource Ink}"/>
-                                <TextBlock Style="{StaticResource Hint}"
-                                           Text="How many transcripts beam search weighs before choosing. More is slower and rarely better past four."/>
-                            </StackPanel>
-                            <ComboBox x:Name="BeamPicker" Width="86" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" SelectionChanged="OnChanged"/>
-                        </Grid>
-
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
-                                <TextBlock Text="Hint strength" Foreground="{StaticResource Ink}"/>
-                                <TextBlock x:Name="HotwordHint" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                            <ComboBox x:Name="HotwordPicker" Width="180" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" SelectionChanged="OnChanged"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <Border Style="{StaticResource CautionPanel}" Margin="0,16,0,0">
-                        <TextBlock Foreground="{StaticResource CautionInk}" TextWrapping="Wrap"
-                                   Text="Decoding settings are compiled into the recogniser, so they take effect when TeezyFlow next starts."/>
                     </Border>
 
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="0,18,0,0"/>
+                    <!-- Speech model -->
+                    <Border Style="{StaticResource CardPanel}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Speech model" Style="{StaticResource H2}" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="TUNE FOR THIS MACHINE" Style="{StaticResource SectionLabel}"
-                               Margin="0,16,0,0"/>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
-                               Text="Times the recogniser at several thread counts and keeps the fastest. Dictation pauses while it runs, and it takes under a minute."/>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="ModelDot" Width="8" Height="8" VerticalAlignment="Center"
+                                         Margin="0,0,8,0" Fill="{StaticResource Faint}"/>
+                                <TextBlock x:Name="ModelStatus" Foreground="{StaticResource Ink}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
 
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Name="CheckMachineButton" Content="Check this machine"
-                                Style="{StaticResource Secondary}" Click="OnCheckMachine"/>
-                        <TextBlock x:Name="CheckProgress" Style="{StaticResource Hint}"
-                                   Margin="12,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
+                            <TextBlock x:Name="ModelPath" Style="{StaticResource Hint}"
+                                       FontFamily="{StaticResource MonoFont}" FontSize="11" Margin="16,4,0,0"/>
 
-                    <TextBlock x:Name="CheckResult" Style="{StaticResource Hint}" Margin="0,10,0,0"
-                               Visibility="Collapsed"/>
-                </StackPanel>
-            </Border>
+                            <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                            <Grid Margin="0,16,0,0">
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,120,0">
+                                    <TextBlock Text="Inference threads" Foreground="{StaticResource Ink}"/>
+                                    <TextBlock Style="{StaticResource Hint}"
+                                               Text="Four measured fastest on this machine; eight measured slower. More is not better here."/>
+                                </StackPanel>
+                                <ComboBox x:Name="ThreadPicker" Width="86" HorizontalAlignment="Right"
+                                          VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                            </Grid>
+
+                            <Grid Margin="0,12,0,0">
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                    <TextBlock Text="Decoding" Foreground="{StaticResource Ink}"/>
+                                    <TextBlock x:Name="DecodingHint" Style="{StaticResource Hint}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="DecodingPicker" Width="180" HorizontalAlignment="Right"
+                                          VerticalAlignment="Center" SelectionChanged="OnDecodingChanged"/>
+                            </Grid>
+
+                            <!-- Only meaningful under beam search, so hidden under greedy rather than
+                                 shown greyed out next to a setting that would do nothing. -->
+                            <StackPanel x:Name="BeamOptions" Visibility="Collapsed">
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,120,0">
+                                        <TextBlock Text="Candidates kept" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="How many transcripts beam search weighs before choosing. More is slower and rarely better past four."/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="BeamPicker" Width="86" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                                </Grid>
+
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,190,0">
+                                        <TextBlock Text="Hint strength" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock x:Name="HotwordHint" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="HotwordPicker" Width="180" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center" SelectionChanged="OnChanged"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Style="{StaticResource CautionPanel}" Margin="0,16,0,0">
+                                <TextBlock Foreground="{StaticResource CautionInk}" TextWrapping="Wrap" FontSize="12"
+                                           Text="Decoding settings are compiled into the recogniser, so they take effect when TeezyFlow next starts."/>
+                            </Border>
+
+                            <Border Height="1" Background="{StaticResource Hairline}" Margin="0,16,0,0"/>
+
+                            <TextBlock Text="TUNE FOR THIS MACHINE" Style="{StaticResource SectionLabel}"
+                                       Margin="0,16,0,4"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
+                                       Text="Times the recogniser at several thread counts and keeps the fastest. Dictation pauses while it runs, and it takes under a minute."/>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="CheckMachineButton" Content="Check this machine"
+                                        Style="{StaticResource Secondary}" Click="OnCheckMachine"/>
+                                <TextBlock x:Name="CheckProgress" Style="{StaticResource Hint}"
+                                           Margin="12,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <TextBlock x:Name="CheckResult" Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel x:Name="TabAbout" Visibility="Collapsed">
-            <!-- About -->
-            <Border Style="{StaticResource CardPanel}" Margin="0,14,0,0">
-                <StackPanel>
-                    <TextBlock Text="About" Style="{StaticResource H2}" Margin="0,0,0,12"/>
-                    <TextBlock x:Name="AboutVersion" Foreground="{StaticResource Body}"/>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
-                               Text="Speech by NVIDIA Parakeet TDT 0.6B, converted to ONNX and quantised to int8 by csukuangfj, run through sherpa-onnx. Model weights are CC-BY-4.0; sherpa-onnx is Apache-2.0; ONNX Runtime and NAudio are MIT."/>
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <Button Content="Open data folder" Style="{StaticResource Secondary}"
-                                Click="OnOpenDataFolder"/>
-                        <Button x:Name="QuitButton" Content="Quit TeezyFlow" Style="{StaticResource Quiet}"
-                                Margin="8,0,0,0" Click="OnQuit"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+                    <!-- About -->
+                    <Border Style="{StaticResource CardPanel}">
+                        <StackPanel>
+                            <TextBlock Text="About" Style="{StaticResource H2}" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="AboutVersion" Foreground="{StaticResource Body}"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                       Text="Speech by NVIDIA Parakeet TDT 0.6B, converted to ONNX and quantised to int8 by csukuangfj, run through sherpa-onnx. Model weights are CC-BY-4.0; sherpa-onnx is Apache-2.0; ONNX Runtime and NAudio are MIT."/>
+                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                <Button Content="Open data folder" Style="{StaticResource Secondary}"
+                                        Click="OnOpenDataFolder"/>
+                                <Button x:Name="QuitButton" Content="Quit TeezyFlow" Style="{StaticResource Quiet}"
+                                        Margin="8,0,0,0" Click="OnQuit"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Grid>
         </ScrollViewer>

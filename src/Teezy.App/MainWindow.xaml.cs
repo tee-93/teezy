@@ -18,7 +18,7 @@ using Teezy.Speech;
 
 namespace Teezy.App;
 
-/// <summary>The app window: history, insights and settings behind a nav rail.</summary>
+/// <summary>The app window: pages as tabs along a top strip, and a status bar.</summary>
 /// <remarks>
 /// Teezy works entirely from the tray, so this window is never required — it is opened, read
 /// and closed. Closing it therefore hides rather than exits, and the pages rebuild their
@@ -99,11 +99,44 @@ public partial class MainWindow : Window
         // carries every size, so Windows can pick the right one per context. Assigning a
         // single rendered bitmap here would give the taskbar one size to scale from.
         ShowHome();
+
+        var version = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "unknown version";
+        var arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+        StatusVersion.Text = $"TeezyFlow {version} · {arch}";
+
+        // The model loads in the background after launch, so the status bar has to notice when
+        // it finishes. It checks only while the window is showing: a window nobody is looking at
+        // should not be doing work.
+        _statusTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _statusTimer.Tick += (_, _) => UpdateStatus();
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible) { UpdateStatus(); _statusTimer.Start(); }
+            else _statusTimer.Stop();
+        };
+        UpdateStatus();
+    }
+
+    private readonly System.Windows.Threading.DispatcherTimer _statusTimer;
+
+    /// <summary>The status bar: whether dictation will work right now, and how to start it.</summary>
+    private void UpdateStatus()
+    {
+        var loaded = _transcriber?.IsLoaded == true;
+        StatusDot.Fill = loaded ? Brand.Accent : Brand.Faint;
+        StatusModel.Text = loaded ? "Ready" : "Loading the speech model…";
+
+        var settings = _settings();
+        StatusHotkeys.Text = settings.AssistantHotkey.IsEmpty
+            ? $"Hold {settings.Hotkey.Display} to dictate"
+            : $"Hold {settings.Hotkey.Display} to dictate, {settings.AssistantHotkey.Display} for the assistant";
     }
 
     /// <summary>Re-reads everything the current page shows. Used when the window is opened.</summary>
     public void RefreshCurrentPage()
     {
+        UpdateStatus();
+
         switch (PageHost.Content)
         {
             case HomeView home: home.Refresh(); break;

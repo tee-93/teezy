@@ -21,6 +21,8 @@
                 Height="{StaticResource PillHeight}"
                 HorizontalAlignment="Center"
                 Background="{StaticResource PillGlass}"
+                BorderBrush="{StaticResource PillEdge}"
+                BorderThickness="1"
                 RenderTransformOrigin="0.5,0.5">
 
             <Border.RenderTransform>
@@ -30,56 +32,58 @@
                 </TransformGroup>
             </Border.RenderTransform>
 
+            <!-- A floating layer, so it casts Fivebar's floating shadow. Nothing else does. -->
             <Border.Effect>
-                <DropShadowEffect BlurRadius="34" ShadowDepth="7" Opacity="0.62" Color="#000000"/>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.45"/>
             </Border.Effect>
 
-            <Grid>
-                <Border CornerRadius="{StaticResource PillRadius}" BorderThickness="1"
-                        BorderBrush="{StaticResource PillEdge}"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                        Margin="19,0,21,0">
 
-                <Border CornerRadius="{StaticResource PillRadius}" Margin="1"
-                        Background="{StaticResource PillSheen}"/>
+                <Grid Width="30" Height="30" Margin="0,0,13,0" VerticalAlignment="Center">
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                            Margin="19,0,21,0">
+                    <!-- Kept for the code that fades it; there are no glows in the family. -->
+                    <Ellipse x:Name="Glow" Width="34" Height="34" Opacity="0" Fill="Transparent"/>
 
-                    <Grid Width="30" Height="30" Margin="0,0,13,0" VerticalAlignment="Center">
+                    <Viewbox Width="24" Height="24">
+                        <Grid Width="100" Height="100" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="Breathe"/>
+                            </Grid.RenderTransform>
 
-                        <!-- Swells with your voice while listening. -->
-                        <Ellipse x:Name="Glow" Width="34" Height="34" Opacity="0">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush>
-                                    <GradientStop Color="#8057D0FF" Offset="0"/>
-                                    <GradientStop Color="#0057D0FF" Offset="1"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
+                            <!--
+                              The mark itself, and it moves: the two tall bars in the middle are
+                              the voice meter while listening and the typing indicator while
+                              working. Drawn as horizontal bars in a grid turned a quarter-turn,
+                              so a bar's Width — which the code animates — reads as its height,
+                              and each bar grows from its own centre, like the mark's.
+                            -->
+                            <Grid>
+                                <Grid.LayoutTransform>
+                                    <RotateTransform Angle="-90"/>
+                                </Grid.LayoutTransform>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="17.5"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="17.5"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="17.5"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="17.5"/>
+                                </Grid.RowDefinitions>
 
-                        <Viewbox Width="28" Height="28">
-                            <Canvas Width="100" Height="104" RenderTransformOrigin="0.5,0.5">
-                                <Canvas.RenderTransform>
-                                    <ScaleTransform x:Name="Breathe" CenterX="50" CenterY="52"/>
-                                </Canvas.RenderTransform>
+                                <Rectangle x:Name="BarA" Grid.Row="0" Width="48" RadiusX="3" RadiusY="3"
+                                           HorizontalAlignment="Center" Fill="{StaticResource AssistantWave}"/>
+                                <Rectangle x:Name="Bar1" Grid.Row="2" Width="100" RadiusX="3" RadiusY="3"
+                                           HorizontalAlignment="Center" Fill="{StaticResource AssistantWave}"/>
+                                <Rectangle x:Name="Bar2" Grid.Row="4" Width="74" RadiusX="3" RadiusY="3"
+                                           HorizontalAlignment="Center" Fill="{StaticResource AssistantWave}"/>
+                                <Rectangle x:Name="BarB" Grid.Row="6" Width="36" RadiusX="3" RadiusY="3"
+                                           HorizontalAlignment="Center" Fill="{StaticResource AssistantWave}"/>
+                            </Grid>
 
-                                <!-- The bubble from MarkGeometry's first figure, stroked rather
-                                     than filled so the interior is free to be expressive. The
-                                     two knocked-out text bars become the face. -->
-                                <Path Stroke="{StaticResource HudText}"
-                                      StrokeThickness="7"
-                                      StrokeLineJoin="Round"
-                                      Fill="Transparent"
-                                      Data="M30,14 H70 A16,16 0 0 1 86,30 V58 A16,16 0 0 1 70,74 H46 L30,90 V74 A16,16 0 0 1 14,58 V30 A16,16 0 0 1 30,14 Z"/>
-
-                                <Rectangle x:Name="Bar1" Canvas.Left="32" Canvas.Top="30"
-                                           Width="28" Height="10" RadiusX="5" RadiusY="5"
-                                           Fill="{StaticResource AssistantWave}"/>
-
-                                <Rectangle x:Name="Bar2" Canvas.Left="32" Canvas.Top="48"
-                                           Width="20" Height="10" RadiusX="5" RadiusY="5"
-                                           Fill="{StaticResource AssistantWave}"/>
-
-                                <!-- Drawn on via the dash offset, so it reads as written. -->
+                            <!-- Drawn on via the dash offset once the bars fade, so it reads as written. -->
+                            <Canvas Width="100" Height="100">
                                 <Path x:Name="Tick" Opacity="0"
                                       Stroke="{StaticResource AssistantGood}"
                                       StrokeThickness="9"
@@ -87,44 +91,43 @@
                                       StrokeLineJoin="Round"
                                       StrokeDashArray="6 6"
                                       StrokeDashOffset="6"
-                                      Data="M33,45 L44,57 L69,32"/>
+                                      Data="M30,52 L42,64 L70,36"/>
                             </Canvas>
-                        </Viewbox>
-                    </Grid>
+                        </Grid>
+                    </Viewbox>
+                </Grid>
 
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock x:Name="StatusText"
-                                   Text="Listening"
-                                   Foreground="{StaticResource HudText}"
-                                   FontFamily="Segoe UI Variable Display, Segoe UI"
-                                   FontSize="13.5"
-                                   FontWeight="SemiBold"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusText"
+                               Text="Listening"
+                               Foreground="{StaticResource HudText}"
+                               FontFamily="{StaticResource UiFont}"
+                               FontSize="13"
+                               FontWeight="SemiBold"/>
 
-                        <!-- What it heard, shown only when that is the useful thing to say. -->
-                        <TextBlock x:Name="HeardText"
-                                   Visibility="Collapsed"
-                                   Foreground="{StaticResource HudText}"
-                                   Opacity="0.62"
-                                   FontFamily="Segoe UI Variable Text, Segoe UI"
-                                   FontSize="11.5"
-                                   Margin="0,1,0,0"
-                                   MaxWidth="420"
-                                   TextTrimming="CharacterEllipsis"/>
+                    <!-- What it heard, shown only when that is the useful thing to say. -->
+                    <TextBlock x:Name="HeardText"
+                               Visibility="Collapsed"
+                               Foreground="{StaticResource Muted}"
+                               FontFamily="{StaticResource UiFont}"
+                               FontSize="12"
+                               Margin="0,1,0,0"
+                               MaxWidth="420"
+                               TextTrimming="CharacterEllipsis"/>
 
-                        <!-- An answer, which is prose rather than a status line: it wraps, and
-                             the pill grows to hold it. StatusText carries the heading above. -->
-                        <TextBlock x:Name="AnswerText"
-                                   Visibility="Collapsed"
-                                   Foreground="{StaticResource HudText}"
-                                   FontFamily="Segoe UI Variable Text, Segoe UI"
-                                   FontSize="13"
-                                   LineHeight="19"
-                                   Margin="0,3,0,0"
-                                   Width="{StaticResource AnswerWidth}"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
+                    <!-- An answer, which is prose rather than a status line: it wraps, and
+                         the pill grows to hold it. StatusText carries the heading above. -->
+                    <TextBlock x:Name="AnswerText"
+                               Visibility="Collapsed"
+                               Foreground="{StaticResource Body}"
+                               FontFamily="{StaticResource UiFont}"
+                               FontSize="13"
+                               LineHeight="19"
+                               Margin="0,3,0,0"
+                               Width="{StaticResource AnswerWidth}"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
-            </Grid>
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

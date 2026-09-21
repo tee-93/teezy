@@ -219,8 +219,8 @@ public partial class InsightsView : UserControl
                 Text = i is 1 or 3 or 5
                     ? CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(i + 1) % 7]
                     : string.Empty,
-                FontSize = 9.5,
-                Foreground = new SolidColorBrush(Brand.Faint),
+                FontSize = 11,
+                Foreground = Brand.Faint,
                 Height = CellSize + CellGap,
                 VerticalAlignment = VerticalAlignment.Center,
             });
@@ -246,10 +246,9 @@ public partial class InsightsView : UserControl
                 {
                     Width = CellSize,
                     Height = CellSize,
-                    CornerRadius = new CornerRadius(3),
+                    CornerRadius = new CornerRadius(2),
                     Margin = new Thickness(0, 0, 0, CellGap),
-                    Background = new SolidColorBrush(
-                        date > today ? Colors.Transparent : ShadeFor(words, busiest)),
+                    Background = date > today ? Brushes.Transparent : ShadeFor(words, busiest),
                     ToolTip = date > today
                         ? null
                         : $"{date.ToDateTime(TimeOnly.MinValue):d MMM yyyy} — "
@@ -266,9 +265,9 @@ public partial class InsightsView : UserControl
             {
                 Width = 11,
                 Height = 11,
-                CornerRadius = new CornerRadius(3),
+                CornerRadius = new CornerRadius(2),
                 Margin = new Thickness(1.5, 0, 1.5, 0),
-                Background = new SolidColorBrush(Shade(level)),
+                Background = Shade(level),
             });
         }
     }
@@ -280,7 +279,7 @@ public partial class InsightsView : UserControl
     /// Relative to the busiest day rather than to a fixed threshold, so the grid stays
     /// readable whether the user dictates 50 words a day or 5,000.
     /// </remarks>
-    private static Color ShadeFor(int words, int busiest)
+    private static Brush ShadeFor(int words, int busiest)
     {
         if (words == 0 || busiest == 0) return Shade(0);
         var fraction = words / (double)busiest;
@@ -293,12 +292,5 @@ public partial class InsightsView : UserControl
         });
     }
 
-    private static Color Shade(int level) => level switch
-    {
-        0 => Color.FromRgb(0xEE, 0xEA, 0xE3),
-        1 => Color.FromRgb(0xC9, 0xDD, 0xEC),
-        2 => Color.FromRgb(0x92, 0xBB, 0xD8),
-        3 => Color.FromRgb(0x4E, 0x8C, 0xB5),
-        _ => Color.FromRgb(0x1E, 0x5F, 0x8E),
-    };
+    private static Brush Shade(int level) => Brand.Brush($"Heat{Math.Clamp(level, 0, 4)}");
 }

@@ -28,6 +28,15 @@
     <Product>TeezyFlow</Product>
     <AssemblyTitle>TeezyFlow</AssemblyTitle>
     <Company>Teezy Labs</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Outfit Bold, the Teezy Labs display face shared with Fivebar: the home greeting and
+         the wordmark only. SIL Open Font License; the licence travels beside it. -->
+    <Resource Include="Fonts\Outfit-700.ttf" />
+  </ItemGroup>
+
+  <PropertyGroup>
     <RootNamespace>Teezy.App</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 

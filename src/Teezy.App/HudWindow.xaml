@@ -20,39 +20,34 @@
                 Height="{StaticResource PillHeight}"
                 MinWidth="180"
                 HorizontalAlignment="Center"
-                Background="{StaticResource PillGlass}">
+                Background="{StaticResource PillGlass}"
+                BorderBrush="{StaticResource PillEdge}"
+                BorderThickness="1">
 
+            <!-- A floating layer, so it casts Fivebar's floating shadow. Nothing else does. -->
             <Border.Effect>
-                <DropShadowEffect BlurRadius="34" ShadowDepth="7" Opacity="0.62" Color="#000000"/>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.45"/>
             </Border.Effect>
 
-            <Grid>
-                <Border CornerRadius="{StaticResource PillRadius}" BorderThickness="1"
-                        BorderBrush="{StaticResource PillEdge}"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                        Margin="19,0,21,0">
 
-                <Border CornerRadius="{StaticResource PillRadius}" Margin="1"
-                        Background="{StaticResource PillSheen}"/>
+                <!-- Red means recording. Nothing else in this app is red. -->
+                <Ellipse x:Name="RecordDot" Width="9" Height="9" Fill="{StaticResource Record}"
+                         VerticalAlignment="Center" Margin="0,0,12,0"/>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                            Margin="19,0,21,0">
+                <!-- Level meter. Bars are sized in code-behind from the RMS level. -->
+                <StackPanel x:Name="Meter" Orientation="Horizontal" VerticalAlignment="Center"
+                            Height="26" Margin="0,0,12,0"/>
 
-                    <!-- Red means recording. Nothing else in this app is red. -->
-                    <Ellipse x:Name="RecordDot" Width="10" Height="10" Fill="{StaticResource Record}"
-                             VerticalAlignment="Center" Margin="0,0,12,0"/>
-
-                    <!-- Level meter. Bars are sized in code-behind from the RMS level. -->
-                    <StackPanel x:Name="Meter" Orientation="Horizontal" VerticalAlignment="Center"
-                                Height="26" Margin="0,0,12,0"/>
-
-                    <TextBlock x:Name="StatusText"
-                               Text="Listening"
-                               Foreground="{StaticResource HudText}"
-                               FontFamily="Segoe UI Variable Display, Segoe UI"
-                               FontSize="13.5"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
+                <TextBlock x:Name="StatusText"
+                           Text="Listening"
+                           Foreground="{StaticResource HudText}"
+                           FontFamily="{StaticResource UiFont}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

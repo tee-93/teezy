@@ -161,6 +161,7 @@ public partial class MeetingsView : UserControl
         var recording = _recorder.IsRecording;
 
         RecordButton.Content = recording ? "Stop and transcribe" : "Start recording";
+        RecordButton.Style = (Style)FindResource(recording ? "Secondary" : "Primary");
         RecorderTitle.Text = recording ? "Recording" : "Record a meeting";
         RecordingClock.Visibility = recording ? Visibility.Visible : Visibility.Collapsed;
         Meters.Visibility = recording ? Visibility.Visible : Visibility.Collapsed;

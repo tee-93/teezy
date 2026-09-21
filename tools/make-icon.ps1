@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Renders the Teezy mark to a multi-resolution Teezy.ico.
+  Renders the TeezyFlow mark to a multi-resolution Teezy.ico.
 
 .DESCRIPTION
   Windows needs an icon *resource embedded in the PE file* for Explorer, the Start Menu,
@@ -9,7 +9,7 @@
 
   So this is the one place the mark exists as a binary asset. It is generated rather than
   hand-drawn, and it is generated from src\Teezy.App\Theme.xaml itself — the same
-  MarkGeometry, tile metrics and accent colour the running app uses. This script used to
+  MarkGeometry, fill and mark colour the running app uses. This script used to
   redraw the mark in GDI+ from remembered coordinates, which matched the app only for as long
   as somebody changed both. Re-run it after changing the mark or the accent.
 
@@ -51,25 +51,16 @@ $stream = [IO.File]::OpenRead($themePath)
 try { $theme = [Windows.Markup.XamlReader]::Load($stream) } finally { $stream.Dispose() }
 
 $glyph  = $theme['MarkGeometry']
-$inset  = $theme['MarkTileInset']
-$radius = $theme['MarkTileRadius']
 $fill   = $theme['MarkGlyphFill']
-$white  = [Windows.Media.Brushes]::White
+$colour = $theme['MarkColor']
 
-# The tile is the pill's two-stop gradient, on the same diagonal, read from the same two
-# resources TrayIcons reads. A flat accent here and a gradient in the tray would be the exact
-# drift this script exists to prevent.
-$tileStart = $theme['MarkTileStart']
-$tileEnd   = $theme['MarkTileEnd']
-
-if (-not $glyph -or -not $tileStart -or -not $tileEnd) {
-    throw "Theme.xaml did not yield MarkGeometry and the two MarkTile stops."
+if (-not $glyph -or -not $fill -or -not $colour) {
+    throw "Theme.xaml did not yield MarkGeometry, MarkGlyphFill and MarkColor."
 }
 
-$accent = New-Object Windows.Media.LinearGradientBrush(
-    $tileStart, $tileEnd,
-    (New-Object Windows.Point(0, 0)),
-    (New-Object Windows.Point(1, 1)))
+# The mark stands on its own in its own colour, with no tile - the same rule as Fivebar's,
+# and the same colour TrayIcons reads for the tray.
+$brush = New-Object Windows.Media.SolidColorBrush($colour)
 
 function New-MarkBitmap([int]$size) {
     # Everything in the resource dictionary is authored on a 100x100 grid.
@@ -77,11 +68,6 @@ function New-MarkBitmap([int]$size) {
 
     $visual = New-Object Windows.Media.DrawingVisual
     $dc = $visual.RenderOpen()
-
-    $tile = New-Object Windows.Rect(($inset * $s), ($inset * $s),
-                                    ($size - 2 * $inset * $s), ($size - 2 * $inset * $s))
-    $squircle = New-Object Windows.Media.RectangleGeometry($tile, ($radius * $s), ($radius * $s))
-    $dc.DrawGeometry($accent, $null, $squircle)
 
     # Centred from the geometry's own bounds rather than remembered numbers, so re-drawing the
     # glyph re-centres it instead of quietly sitting off to one side.
@@ -94,7 +80,7 @@ function New-MarkBitmap([int]$size) {
         ((($size - $b.Width * $k) / 2) - $b.X * $k),
         ((($size - $b.Height * $k) / 2) - $b.Y * $k))))
     $placed.Transform = $tg
-    $dc.DrawGeometry($white, $null, $placed)
+    $dc.DrawGeometry($brush, $null, $placed)
 
     $dc.Close()
 

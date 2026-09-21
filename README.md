@@ -182,11 +182,30 @@ sign-in page, not secrets.
 ### A work calendar that allows nothing else
 
 When a work calendar can be neither signed in to (the organisation will not consent to an app
-it has not approved) nor published (IT has switched publishing off), and the laptop runs the
-New Outlook (which has no local interface to read), **Power Automate** is usually still open:
-it is Microsoft's own tool, running inside your own account. A flow writes the diary to a file
-in your work OneDrive every 15 minutes; TeezyFlow on the work laptop reads that file. The
-calendar never leaves the company, and nobody's permission is needed.
+it has not approved) nor published (IT has switched publishing off), there are two routes left.
+
+**1 · Read New Outlook on this computer — works when everything else is blocked.** Settings ▸
+Accounts ▸ *Read my calendar from Outlook*. New Outlook labels every meeting for screen readers
+with its subject, times, date and location; TeezyFlow reads those labels every three minutes,
+the way a screen reader does, and keeps a copy on this computer. No API, no sign-in, no flow,
+nothing installed in Outlook, and nothing for IT to approve. The copy never leaves the laptop and
+never syncs.
+
+- **Leave Outlook open on the Calendar, in Week or Month view.** Behind other windows is fine —
+  measured: fully covered for 25 seconds, still read in full. **Minimised is not:** Outlook
+  discards its view, and TeezyFlow keeps the last copy and says how old it is.
+- **It sees what is on screen.** A month with more meetings on a day than fit in its box shows
+  "+2", and those two are not read — Week view shows everything.
+- Each read replaces what was stored for the days it saw and keeps the rest, so switching views
+  loses nothing, and a meeting deleted from a day on screen is gone at the next read.
+- Proven against real New Outlook labels, US and Australian date formats, and subjects with
+  commas in them (`OutlookLabel`, `OutlookWatcher`).
+
+**2 · Power Automate, where the organisation allows its Microsoft 365 connectors.** Many block
+them outright (data loss prevention policy), in which case saving the flow reports it as blocked
+and route 1 is the answer. Where they are allowed, a flow writes the diary to a file in your work
+OneDrive every 15 minutes, and TeezyFlow reads that file — Settings ▸ Accounts ▸ *Or read a
+calendar file*:
 
 1. In the work OneDrive on the laptop, make a folder `TeezyFlow` and an empty file in it called
    `calendar.json` (New ▸ Text document, then rename it).
@@ -201,8 +220,8 @@ calendar never leaves the company, and nobody's permission is needed.
 6. In TeezyFlow on the work laptop: **Settings ▸ Accounts ▸ Or read a calendar file ▸ Choose…**,
    pick that `calendar.json`, **Add file**.
 
-If saving the flow says a connector is blocked by your organisation's data policy, this route is
-closed as well. If the file stops changing, the flow has stopped — its run history says why.
+If saving the flow says a connector is blocked by your organisation's data policy, use route 1
+instead. If the file stops changing, the flow has stopped — its run history says why.
 
 ---
 

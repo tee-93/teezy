@@ -43,6 +43,7 @@ These live in `%LOCALAPPDATA%\Teezy` and are never transmitted:
 | `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed |
 | `settings.json` | Your preferences, and which accounts you have connected |
 | `dictionary.txt` | Words and names you have taught it |
+| `outlook-calendar.json` | Only if you switch on reading Outlook: the meetings New Outlook showed, read locally the way a screen reader does |
 | `secrets\` | API keys, account tokens, the Gmail app password and calendar links, encrypted (see below) |
 
 ## What leaves your computer, and only if you turn it on

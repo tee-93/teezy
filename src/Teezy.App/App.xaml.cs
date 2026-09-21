@@ -80,6 +80,16 @@ public partial class App : Application
     private HistoryStore? _history;
     private ISecretStore? _secrets;
     private SyncService? _sync;
+
+    /// <summary>Reads New Outlook's calendar on this computer, when that route is switched on.</summary>
+    private readonly OutlookWatcher _outlook;
+
+    public App()
+    {
+        // Built here rather than at startup so the timer exists from the first moment; it reads
+        // nothing until the route is switched on in Settings.
+        _outlook = new OutlookWatcher(() => _settings.ReadOutlookWindow);
+    }
     private ClaudeFormatter? _claude;
     private MainWindow? _main;
     private WindowsAudioCapture? _audio;
@@ -541,7 +551,8 @@ public partial class App : Application
             meetingSummariser: _meetingSummariser,
             updater: _updater,
             restartToUpdate: RestartToUpdate,
-            sync: _sync);
+            sync: _sync,
+            outlook: _outlook);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -633,6 +644,7 @@ public partial class App : Application
         _speaker?.Dispose();
         _updater.Dispose();
         _sync?.Dispose();
+        _outlook.Dispose();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
         TrayIcons.Dispose();
         base.OnExit(e);

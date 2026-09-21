@@ -339,6 +339,12 @@ public sealed record TeezySettings
     /// </remarks>
     public string? SyncFolder { get; init; }
 
+    /// <summary>
+    /// Read the meetings New Outlook shows on this computer, as the work-calendar route of last
+    /// resort. Per computer: it is the work laptop's Outlook, and its calendar stays there.
+    /// </summary>
+    public bool ReadOutlookWindow { get; init; }
+
     /// <summary>The saved-at time of the last sync file this computer applied or wrote.</summary>
     /// <remarks>What stops a computer re-applying its own write, or an older file over a newer one.</remarks>
     public DateTimeOffset? SyncAppliedAt { get; init; }
@@ -358,7 +364,7 @@ public sealed record TeezySettings
     public static readonly IReadOnlySet<string> LocalOnly = new HashSet<string>(StringComparer.Ordinal)
     {
         nameof(InputDeviceId), nameof(InputDeviceName), nameof(NumThreads), nameof(ModelPath),
-        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt),
+        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt), nameof(ReadOutlookWindow),
     };
 
     /// <summary>Everything that should be the same on every computer, as JSON.</summary>

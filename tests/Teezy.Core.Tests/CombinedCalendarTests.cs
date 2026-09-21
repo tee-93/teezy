@@ -51,6 +51,22 @@ public class CombinedCalendarTests
     }
 
     [Fact]
+    public async Task TheSameMeetingReachedTwoWaysIsListedOnce()
+    {
+        // A signed-in account and the same diary read from Outlook's window.
+        var signedIn = new FakeCalendar(CalendarSource.Microsoft);
+        signedIn.Events.Add(Meeting("Review", 14, CalendarSource.Microsoft));
+
+        var fromOutlook = new FakeCalendar(CalendarSource.File);
+        fromOutlook.Events.Add(Meeting("Review", 14, CalendarSource.File));
+        fromOutlook.Events.Add(Meeting("Review", 16, CalendarSource.File));
+
+        var reading = await Read(signedIn, fromOutlook);
+
+        reading.Events.Count.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task OneAccountFailingStillAnswersFromTheOther()
     {
         var work = new FakeCalendar(CalendarSource.Microsoft) { FailWith = "token expired" };

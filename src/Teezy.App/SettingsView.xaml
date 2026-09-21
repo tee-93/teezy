@@ -712,6 +712,47 @@
                           a Power Automate flow in the work account writes it to a file in the work
                           OneDrive, and this reads the file. Never syncs to other computers.
                         -->
+                        <!--
+                          The route of last resort, for a work calendar that allows nothing else: the
+                          meetings New Outlook is already showing, read the way a screen reader reads
+                          them. Local to this computer, never synced.
+                        -->
+                        <TextBlock Text="OR READ NEW OUTLOOK ON THIS COMPUTER" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <StackPanel>
+                                <Border Style="{StaticResource FormRowFirst}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Read my calendar from Outlook" Style="{StaticResource FormLabel}"/>
+                                            <TextBlock Style="{StaticResource FormHint}"
+                                                       Text="For a work calendar nothing else can reach. TeezyFlow reads the meetings New Outlook is showing, the way a screen reader does, every few minutes. Leave Outlook open on the Calendar in Week or Month view — behind other windows is fine, minimised is not. Nothing leaves this computer, and it never syncs to your others."/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="OutlookReadBox" Grid.Column="1" Style="{StaticResource Switch}"
+                                                  VerticalAlignment="Center" Margin="16,0,0,0" Click="OnOutlookReadToggled"/>
+                                    </Grid>
+                                </Border>
+                                <Border x:Name="OutlookReadRow" Style="{StaticResource FormRow}" Visibility="Collapsed">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse x:Name="OutlookReadDot" Width="8" Height="8" Margin="0,0,10,0"
+                                                 VerticalAlignment="Center" Fill="{StaticResource Faint}"/>
+                                        <TextBlock x:Name="OutlookReadText" Grid.Column="1" Style="{StaticResource FormHint}"
+                                                   Margin="0" VerticalAlignment="Center" Text="Not read yet."/>
+                                        <Button Grid.Column="2" Content="Read now" Style="{StaticResource Secondary}"
+                                                Margin="12,0,0,0" Click="OnReadOutlookNow"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock Text="OR READ A CALENDAR FILE" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
                         <Border Style="{StaticResource FormRows}">
                             <StackPanel>

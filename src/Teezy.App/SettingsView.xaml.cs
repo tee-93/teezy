@@ -552,7 +552,9 @@ public partial class SettingsView : UserControl
 
         public string DisplayName => Account.DisplayName;
 
-        public string Detail => Account.Source switch
+        public string Detail => Account.Id == Connectors.ConnectedAccounts.OutlookWindowId
+            ? "Read from Outlook on this computer · read-only"
+            : Account.Source switch
         {
             CalendarSource.Microsoft => "Microsoft",
             CalendarSource.Google => "Google",

@@ -27,11 +27,13 @@ public class SyncTests
     [Fact]
     public void ATamperedFileIsRefused()
     {
-        var sealedText = SyncCipher.Seal("the real settings", "pw");
-        var data = System.Text.Json.Nodes.JsonNode.Parse(sealedText)!["data"]!.GetValue<string>();
-        var bytes = Convert.FromBase64String(data);
+        // Through the JSON, not by find-and-replace on the text: the serializer escapes '+' in
+        // base64, so a textual replace silently changed nothing whenever the data held one.
+        var file = System.Text.Json.Nodes.JsonNode.Parse(SyncCipher.Seal("the real settings", "pw"))!;
+        var bytes = Convert.FromBase64String(file["data"]!.GetValue<string>());
         bytes[0] ^= 1;
-        var tampered = sealedText.Replace(data, Convert.ToBase64String(bytes), StringComparison.Ordinal);
+        file["data"] = Convert.ToBase64String(bytes);
+        var tampered = file.ToJsonString();
 
         Should.Throw<SyncUnlockException>(() => SyncCipher.Open(tampered, "pw"));
     }

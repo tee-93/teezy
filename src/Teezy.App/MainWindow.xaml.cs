@@ -75,7 +75,8 @@ public partial class MainWindow : Window
         IMeetingSummariser? meetingSummariser = null,
         Updater? updater = null,
         Action? restartToUpdate = null,
-        SyncService? sync = null)
+        SyncService? sync = null,
+        OutlookWatcher? outlook = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -100,6 +101,7 @@ public partial class MainWindow : Window
         _updater = updater;
         _restartToUpdate = restartToUpdate;
         _sync = sync;
+        _outlook = outlook;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -133,6 +135,7 @@ public partial class MainWindow : Window
     private readonly Updater? _updater;
     private readonly Action? _restartToUpdate;
     private readonly SyncService? _sync;
+    private readonly OutlookWatcher? _outlook;
 
     /// <summary>Closed with its 'Later' button, which lasts until the next version.</summary>
     private Version? _hiddenUpdate;
@@ -294,6 +297,7 @@ public partial class MainWindow : Window
             updater: _updater,
             restartToUpdate: _restartToUpdate);
         _settingsView.AttachSync(_sync);
+        _settingsView.AttachOutlook(_outlook);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

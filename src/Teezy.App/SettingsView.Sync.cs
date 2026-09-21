@@ -95,6 +95,59 @@ public partial class SettingsView
 
     private void OnSyncNow(object sender, RoutedEventArgs e) => _sync?.SyncNow();
 
+    // ---- reading New Outlook ----
+
+    private OutlookWatcher? _outlook;
+
+    /// <summary>Hooked up by the window once it has the watcher.</summary>
+    internal void AttachOutlook(OutlookWatcher? outlook)
+    {
+        if (_outlook is not null || outlook is null) return;
+        _outlook = outlook;
+        _outlook.Changed += status => Dispatcher.BeginInvoke(() => ShowOutlook(status));
+        ShowOutlook(_outlook.Status);
+    }
+
+    private void ShowOutlook(OutlookReadStatus status)
+    {
+        var on = _read().ReadOutlookWindow;
+        OutlookReadBox.IsChecked = on;
+        OutlookReadRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        OutlookReadText.Text = status.Message;
+        OutlookReadDot.Fill = status.Problem ? Brand.Brush("CautionBorder") : Brand.Accent;
+    }
+
+    private async void OnOutlookReadToggled(object sender, RoutedEventArgs e)
+    {
+        if (_calendars is null) return;
+        var on = OutlookReadBox.IsChecked == true;
+        var settings = _read();
+        var others = settings.ConnectedAccounts.Where(a => a.Id != Connectors.ConnectedAccounts.OutlookWindowId).ToList();
+
+        if (on)
+        {
+            var account = _calendars.ConnectOutlookWindow(OutlookWatcher.CachePath);
+            _write(settings with { ReadOutlookWindow = true, ConnectedAccounts = [.. others, account] });
+        }
+        else
+        {
+            _write(settings with { ReadOutlookWindow = false, ConnectedAccounts = others });
+            try { File.Delete(OutlookWatcher.CachePath); } catch (IOException) { }
+        }
+
+        Refresh();
+        if (_outlook is not null)
+        {
+            ShowOutlook(_outlook.Status);
+            if (on) await _outlook.ReadAsync();
+        }
+    }
+
+    private async void OnReadOutlookNow(object sender, RoutedEventArgs e)
+    {
+        if (_outlook is not null) await _outlook.ReadAsync();
+    }
+
     // ---- the calendar file ----
 
     private void OnCalendarFileTyped(object sender, RoutedEventArgs e) =>

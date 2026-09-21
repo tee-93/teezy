@@ -202,6 +202,21 @@ public sealed class ConnectedAccounts(
         return account;
     }
 
+    /// <summary>The fixed id of the account that reads New Outlook's window on this computer.</summary>
+    public const string OutlookWindowId = "outlook-window";
+
+    /// <summary>The account for TeezyFlow's own copy of what New Outlook shows.</summary>
+    /// <remarks>
+    /// Not checked like a chosen file: the copy may not exist until the first read. A fixed id,
+    /// so switching the route off finds exactly the account switching it on made.
+    /// </remarks>
+    public ConnectedAccount ConnectOutlookWindow(string cachePath)
+    {
+        var account = new ConnectedAccount(OutlookWindowId, "Outlook on this computer", CalendarSource.File, CalendarProfile.Work);
+        tokens.SaveLink(account.Id, cachePath);
+        return account;
+    }
+
     /// <summary>Forgets an account's credentials. The caller drops it from settings.</summary>
     /// <remarks>
     /// The tokens go first and unconditionally. A crash between the two leaves an orphaned

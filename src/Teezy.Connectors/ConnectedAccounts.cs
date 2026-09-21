@@ -141,7 +141,7 @@ public sealed class ConnectedAccounts(
         if (microsoftClientId() is not { Length: > 0 } clientId)
         {
             throw new OAuthException(
-                "Teezy needs a Microsoft application id before it can sign in.");
+                "TeezyFlow needs a Microsoft application id before it can sign in.");
         }
 
         return GraphCalendar.ConnectAsync(
@@ -155,7 +155,7 @@ public sealed class ConnectedAccounts(
     {
         if (googleClientId?.Invoke() is not { Length: > 0 } clientId)
         {
-            throw new OAuthException("Teezy needs a Google client ID before it can sign in.");
+            throw new OAuthException("TeezyFlow needs a Google client ID before it can sign in.");
         }
 
         return GoogleCalendar.ConnectAsync(

@@ -75,7 +75,7 @@ public sealed class GraphMailbox(AccountSession session, HttpClient? http = null
                 // Distinct from a dead token, and the likeliest failure the first time: the
                 // registration has Calendars.Read but nobody ticked Mail.Read.
                 throw new MailUnavailableException(
-                    "Teezy isn’t allowed to read this mailbox. The app registration needs the "
+                    "TeezyFlow isn’t allowed to read this mailbox. The app registration needs the "
                     + "Mail.Read permission, and you have to sign in again after adding it.",
                     needsReconnect: true);
             }

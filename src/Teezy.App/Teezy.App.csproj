@@ -20,7 +20,14 @@
          Explorer, the Start Menu, Alt-Tab and taskbar pinning all show the generic exe icon
          no matter what the app draws at runtime. Regenerate with tools/make-icon.ps1. -->
     <ApplicationIcon>Teezy.ico</ApplicationIcon>
+    <!-- The product is TeezyFlow; the file stays Teezy.exe. The exe name is plumbing: the
+         installed path, the sign-in Run entry and existing shortcuts all point at it, and
+         renaming it would strand every one of them. What people see — Task Manager, Startup
+         apps, file properties — reads these three instead. -->
     <AssemblyName>Teezy</AssemblyName>
+    <Product>TeezyFlow</Product>
+    <AssemblyTitle>TeezyFlow</AssemblyTitle>
+    <Company>Teezy Labs</Company>
     <RootNamespace>Teezy.App</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 

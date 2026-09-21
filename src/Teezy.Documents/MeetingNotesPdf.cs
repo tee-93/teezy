@@ -74,7 +74,7 @@ public static class MeetingNotesPdf
         var notes = saved.Notes;
         var document = new Document();
         document.Info.Title = notes.Title;
-        document.Info.Author = "Teezy";
+        document.Info.Author = "TeezyFlow";
         Styles(document);
 
         var section = document.AddSection();

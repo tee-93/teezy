@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Removes Teezy for the current user.
+  Removes TeezyFlow for the current user.
 
 .DESCRIPTION
-  Closes Teezy, removes the sign-in entry, the Start Menu shortcut and the program folder.
+  Closes TeezyFlow, removes the sign-in entry, the Start Menu shortcut and the program folder.
 
   Your data is kept by default: history, dictionary, settings and the encrypted API key at
   %LOCALAPPDATA%\Teezy. History is the only place dictated text still exists once the app it
@@ -38,7 +38,7 @@ if (-not $Destination) { $Destination = Join-Path $env:LOCALAPPDATA 'Programs\Te
 $dataDir  = Join-Path $env:LOCALAPPDATA 'Teezy'
 $modelDir = Join-Path $dataDir 'models'
 
-Write-Host "`nRemoving Teezy" -ForegroundColor Cyan
+Write-Host "`nRemoving TeezyFlow" -ForegroundColor Cyan
 
 $running = Get-Process Teezy -ErrorAction SilentlyContinue
 if ($running) {
@@ -55,10 +55,13 @@ if ((Get-ItemProperty -Path $runKey -Name 'Teezy' -ErrorAction SilentlyContinue)
     Write-Step 'Sign-in entry removed'
 }
 
-$lnk = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Teezy.lnk'
-if (Test-Path $lnk) {
-    Remove-Item $lnk -Force
-    Write-Step 'Start Menu shortcut removed'
+# Both names: TeezyFlow since the rename, Teezy from an install made before it.
+foreach ($name in 'TeezyFlow.lnk', 'Teezy.lnk') {
+    $lnk = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\$name"
+    if (Test-Path $lnk) {
+        Remove-Item $lnk -Force
+        Write-Step 'Start Menu shortcut removed'
+    }
 }
 
 if (Test-Path $Destination) {

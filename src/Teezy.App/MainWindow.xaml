@@ -1,7 +1,7 @@
 <Window x:Class="Teezy.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Teezy" Width="1080" Height="740" MinWidth="880" MinHeight="560"
+        Title="TeezyFlow" Width="1080" Height="740" MinWidth="880" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Paper}"
         FontFamily="{StaticResource UiFont}" FontSize="13">

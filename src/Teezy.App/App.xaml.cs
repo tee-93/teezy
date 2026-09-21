@@ -95,12 +95,12 @@ public partial class App : Application
         {
             MessageBox.Show(
                 """
-                Teezy is already running.
+                TeezyFlow is already running.
 
                 Look for the speech bubble in the system tray — click the ^ arrow
                 next to the clock if you cannot see it.
                 """,
-                "Teezy", MessageBoxButton.OK, MessageBoxImage.Information);
+                "TeezyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
@@ -244,7 +244,7 @@ public partial class App : Application
         // UI thread, which has one. From a pool thread the callback silently never fires.
         if (!_session.Start())
         {
-            Notify("Teezy could not install its keyboard hook.", Forms.ToolTipIcon.Error);
+            Notify("TeezyFlow could not install its keyboard hook.", Forms.ToolTipIcon.Error);
         }
 
         // Open the window unless Windows started us at sign-in.
@@ -291,7 +291,7 @@ public partial class App : Application
             Dispatch(() =>
             {
                 SetTrayState("Speech model not found", ready: false);
-                MessageBox.Show(ex.Message, "Teezy — model problem",
+                MessageBox.Show(ex.Message, "TeezyFlow — model problem",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             });
         }
@@ -349,7 +349,7 @@ public partial class App : Application
         if (result.Injection == InjectionResult.Failed)
         {
             Dispatch(() => Notify(
-                "Couldn't type into that window. Elevated apps need Teezy to be elevated too.",
+                "Couldn't type into that window. Elevated apps need TeezyFlow to be elevated too.",
                 Forms.ToolTipIcon.Warning));
         }
     }
@@ -418,12 +418,12 @@ public partial class App : Application
         {
             Icon = TrayIcons.Ready,
             Visible = true,
-            Text = "Teezy — starting…",
+            Text = "TeezyFlow — starting…",
         };
 
         var menu = new Forms.ContextMenuStrip();
         // Bold marks it as the default action, matching what a double-click does.
-        var open = new Forms.ToolStripMenuItem("Open Teezy", null, (_, _) => ShowMainWindow())
+        var open = new Forms.ToolStripMenuItem("Open TeezyFlow", null, (_, _) => ShowMainWindow())
         {
             Font = new System.Drawing.Font(
                 System.Drawing.SystemFonts.MenuFont!, System.Drawing.FontStyle.Bold),
@@ -441,7 +441,7 @@ public partial class App : Application
         menu.Items.Add(_downloadItem);
 
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Quit Teezy", null, (_, _) => Shutdown());
+        menu.Items.Add("Quit TeezyFlow", null, (_, _) => Shutdown());
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ShowMainWindow();
     }
@@ -542,7 +542,7 @@ public partial class App : Application
     }
 
     private void Notify(string message, Forms.ToolTipIcon icon) =>
-        _tray?.ShowBalloonTip(4000, "Teezy", message, icon);
+        _tray?.ShowBalloonTip(4000, "TeezyFlow", message, icon);
 
 
     private void EnsureDictionaryFileExists()

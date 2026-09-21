@@ -87,11 +87,11 @@ public sealed class DictionaryStore
 
     private static IReadOnlyList<string> Header =>
     [
-        "# Teezy personal dictionary - edited in the app, or here.",
+        "# TeezyFlow personal dictionary - edited in the app, or here.",
         "#",
         "#   Anthropic                  a hint: bias the engine toward this spelling",
         "#   cloud code -> Claude Code  a correction: rewrite the left side to the right",
-        "#   # off: teezy -> Teezy      disabled, kept for later",
+        "#   # off: gpt -> GPT          disabled, kept for later",
         "#",
         "# Corrections apply longest-trigger-first and match whole words only, so",
         "# 'cloud code' never touches 'Cloudflare'.",

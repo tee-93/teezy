@@ -1,7 +1,7 @@
-; Teezy - Inno Setup script
+; TeezyFlow - Inno Setup script
 ;
-; Produces dist\Teezy-Setup.exe: one download, double-click, no administrator rights, no
-; wizard pages. The user sees a progress bar for a second or two and then Teezy is running.
+; Produces dist\TeezyFlow-Setup.exe: one download, double-click, no administrator rights, no
+; wizard pages. The user sees a progress bar for a second or two and then TeezyFlow is running.
 ;
 ; Build it with tools\build-installer.ps1, which publishes both architectures first and
 ; passes the version in. Compiling this file directly works too, provided dist\win-x64 and
@@ -12,8 +12,14 @@
 ; needing the network once - see tools\package.ps1 for the fully offline package to fall
 ; back on if huggingface.co turns out to be blocked.
 
-#define AppName "Teezy"
+#define AppName "TeezyFlow"
 #define AppExeName "Teezy.exe"
+
+; The product was Teezy until 1.11. Everything a person sees says TeezyFlow; the folder and
+; the exe keep the old name, because the sign-in Run entry, pinned shortcuts and existing
+; installs all point at that path. A new folder would mean a second copy, not an upgrade.
+#define AppFolder "Teezy"
+#define OldShortcut "Teezy"
 #define AppPublisher "Zack Tarczynski"
 #define AppUrl "https://github.com/tee-93/teezy"
 
@@ -40,7 +46,7 @@ AppUpdatesURL={#AppUrl}/releases
 ; lowest: never ask for elevation, never offer an all-users install. Everything lands under
 ; the user's own profile, which is what makes this installable on a managed work machine.
 PrivilegesRequired=lowest
-DefaultDirName={localappdata}\Programs\{#AppName}
+DefaultDirName={localappdata}\Programs\{#AppFolder}
 DefaultGroupName={#AppName}
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName}
@@ -67,7 +73,7 @@ CloseApplications=yes
 RestartApplications=no
 
 OutputDir=..\..\dist
-OutputBaseFilename=Teezy-Setup
+OutputBaseFilename=TeezyFlow-Setup
 SetupIconFile=..\..\src\Teezy.App\Teezy.ico
 WizardStyle=modern
 Compression=lzma2/max
@@ -83,11 +89,16 @@ Source: "..\..\dist\win-arm64\{#AppExeName}"; DestDir: "{app}"; DestName: "{#App
 Source: "..\..\dist\win-x64\{#AppExeName}";   DestDir: "{app}"; DestName: "{#AppExeName}"; Flags: ignoreversion; Check: not IsArm64
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Comment: "Push-to-talk dictation"
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Comment: "Dictation and a voice assistant"
+
+[InstallDelete]
+; The Start menu entry from before the rename. Upgrading would otherwise leave both a Teezy
+; and a TeezyFlow shortcut, pointing at the same exe.
+Type: files; Name: "{autoprograms}\{#OldShortcut}.lnk"
 
 [Run]
 ; No postinstall flag: with the finished page disabled there is nothing to tick, so this
-; runs as an install step instead. nowait, because Teezy stays resident in the tray.
+; runs as an install step instead. nowait, because TeezyFlow stays resident in the tray.
 Filename: "{app}\{#AppExeName}"; Flags: nowait skipifsilent
 
 [UninstallDelete]

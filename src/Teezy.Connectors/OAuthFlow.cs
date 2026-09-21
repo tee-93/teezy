@@ -112,13 +112,13 @@ public static class OAuthFlow
             // arrives. Left as a raw cancellation it escaped every catch at the call site —
             // and an unhandled exception in an async void event handler takes the app with it.
             throw new OAuthException(
-                "Teezy gave up waiting for the sign-in. If the browser showed an error rather "
+                "TeezyFlow gave up waiting for the sign-in. If the browser showed an error rather "
                 + "than a sign-in page, check the application id and the redirect URI.");
         }
 
         if (!string.Equals(response.State, state, StringComparison.Ordinal))
         {
-            throw new OAuthException("That sign-in did not match the one Teezy started.");
+            throw new OAuthException("That sign-in did not match the one TeezyFlow started.");
         }
 
         if (response.Error is { Length: > 0 } declined)
@@ -171,7 +171,7 @@ public static class OAuthFlow
         }
 
         var token = JsonSerializer.Deserialize<TokenResponse>(body)
-                    ?? throw new OAuthException("The provider returned a reply Teezy could not read.");
+                    ?? throw new OAuthException("The provider returned a reply TeezyFlow could not read.");
 
         if (token.AccessToken is not { Length: > 0 } access)
         {

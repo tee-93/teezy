@@ -121,7 +121,7 @@ public partial class SettingsView : UserControl
         // report 1.0.0 through four releases without anyone noticing it was not the truth.
         var version = typeof(SettingsView).Assembly.GetName().Version?.ToString(3) ?? "unknown version";
         var arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture;
-        AboutVersion.Text = $"Teezy {version} · {arch} · .NET {Environment.Version.ToString(2)}";
+        AboutVersion.Text = $"TeezyFlow {version} · {arch} · .NET {Environment.Version.ToString(2)}";
 
         Refresh();
         _loading = false;
@@ -595,7 +595,7 @@ public partial class SettingsView : UserControl
 
             // Worth saying plainly, because it is the difference between this feature and the
             // integrations people are right to be wary of.
-            _ => "Read-only. Teezy can see what is in your diary and cannot change any of it.",
+            _ => "Read-only. TeezyFlow can see what is in your diary and cannot change any of it.",
         };
 
         // Offered only once there is an account to read, since the switch would otherwise be a
@@ -740,7 +740,7 @@ public partial class SettingsView : UserControl
 
         GoogleSecretHint.Text = (id.Length > 0, typed || stored) switch
         {
-            (true, false) => "Google refuses to sign in without the secret, so Teezy won’t "
+            (true, false) => "Google refuses to sign in without the secret, so TeezyFlow won’t "
                              + "save an ID on its own. It is shown next to the client ID in "
                              + "the Cloud console.",
             (_, true) when stored && !typed => "Secret saved, encrypted for your Windows "
@@ -888,7 +888,7 @@ public partial class SettingsView : UserControl
     private void OnHearVoice(object sender, RoutedEventArgs e) => Speak();
 
     private void Speak() =>
-        _speaker?.SpeakAsync("Teezy will read your answers in this voice.");
+        _speaker?.SpeakAsync("TeezyFlow will read your answers in this voice.");
 
     private void OnAssistantModelChanged(object sender, RoutedEventArgs e)
     {
@@ -1040,13 +1040,13 @@ public partial class SettingsView : UserControl
 
         MicInUse.Text = chosen?.Id is null
             ? "Follows Windows, so plugging in a headset switches to it automatically."
-            : "Teezy always records from this device, whatever Windows is set to.";
+            : "TeezyFlow always records from this device, whatever Windows is set to.";
 
         MicWarning.Visibility = chosen?.Missing == true ? Visibility.Visible : Visibility.Collapsed;
         if (chosen?.Missing == true)
         {
             MicWarningText.Text =
-                $"{chosen.Name ?? "That microphone"} is not connected. Teezy is recording from the "
+                $"{chosen.Name ?? "That microphone"} is not connected. TeezyFlow is recording from the "
                 + "Windows default until it comes back — it stays selected, so plugging it in is "
                 + "all it takes.";
         }
@@ -1242,7 +1242,7 @@ public partial class SettingsView : UserControl
             // A managed machine can refuse writes to the Run key outright. Saying so beats a
             // switch that flicks back on its own, which reads as the app being broken.
             ShowAutostartState();
-            ExplainAutostart($"Windows would not let Teezy change the startup entry — {ex.Message}");
+            ExplainAutostart($"Windows would not let TeezyFlow change the startup entry — {ex.Message}");
             return;
         }
 
@@ -1256,7 +1256,7 @@ public partial class SettingsView : UserControl
         {
             ExplainAutostart(wanted
                 ? "The startup entry did not stick. Something on this machine is preventing it — try Task Manager ▸ Startup."
-                : "Teezy could not remove its startup entry.");
+                : "TeezyFlow could not remove its startup entry.");
         }
     }
 
@@ -1704,7 +1704,7 @@ public partial class SettingsView : UserControl
                + "milliseconds are a floor, not your real speed. Insights reports what actual "
                + "dictations cost. Nothing here can help with a throttled CPU, a slow network "
                + "for the Claude tier, or security software in the way — if the numbers above "
-               + "are close and Teezy still feels slow, the cause is one of those.";
+               + "are close and TeezyFlow still feels slow, the cause is one of those.";
     }
 
     private void ShowModelState()

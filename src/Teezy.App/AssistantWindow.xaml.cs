@@ -141,7 +141,7 @@ public partial class AssistantWindow : Window
 
         Glow.BeginAnimation(OpacityProperty, new DoubleAnimation(0, Ms(200)));
         RestoreBars();
-        Say("Teezy", answer: answer);
+        Say("TeezyFlow", answer: answer);
 
         // Roughly a comfortable reading pace, floored and capped.
         var words = answer.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;

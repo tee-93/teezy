@@ -1,4 +1,8 @@
-# Teezy
+# TeezyFlow
+
+*A Teezy Labs project, called Teezy until 1.11. Only what you see was renamed: the exe is still
+`Teezy.exe`, and settings, history, keys and the model still live in `%LOCALAPPDATA%\Teezy`,
+so an existing install upgrades in place with nothing to move.*
 
 Push-to-talk for Windows. Hold a key, talk, release — cleaned-up text is typed into whatever
 had focus. Hold a *different* key and it does what you said instead: opens an app, changes the
@@ -35,7 +39,7 @@ Intel and AMD. The x64 build runs on ARM64 through emulation, but transcribes fa
 progress window, verifies every file, and only then starts. Nothing touches the network
 afterwards. `tools\download-model.ps1` does the same from a shell if you prefer.
 
-Teezy lives in the system tray — click the `^` arrow next to the clock if you cannot see it.
+TeezyFlow lives in the system tray — click the `^` arrow next to the clock if you cannot see it.
 **Hold Ctrl + Win together, speak, release.** Double-click the tray icon to open the window.
 
 For development, `dotnet run --project src\Teezy.App -c Release` still works.
@@ -44,9 +48,9 @@ For development, `dotnet run --project src\Teezy.App -c Release` still works.
 
 Three routes, in the order you should reach for them. All three are per-user: no
 administrator rights, no services, nothing under Program Files or `HKLM`. That is what makes
-Teezy installable on a managed work machine at all.
+TeezyFlow installable on a managed work machine at all.
 
-**1 · The installer.** `tools\build-installer.ps1` compiles `dist\Teezy-Setup.exe` (~147 MB):
+**1 · The installer.** `tools\build-installer.ps1` compiles `dist\TeezyFlow-Setup.exe` (~147 MB):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
@@ -65,7 +69,7 @@ only"* — check the current licence before shipping this commercially.
 what keeps the download at 147 MB rather than 800 MB, and it is the one step a managed
 network can break.
 
-**2 · The offline package, for when it does.** `tools\package.ps1` stages `dist\Teezy-Setup\`
+**2 · The offline package, for when it does.** `tools\package.ps1` stages `dist\TeezyFlow-Setup\`
 (~790 MB) — both architectures, the model, `install.ps1`, `uninstall.ps1` and
 `READ-ME-FIRST.txt`. Add `-Zip` for a single 613 MB file.
 
@@ -90,13 +94,13 @@ prompt does not return on every launch; the installer route is unaffected, since
 the file itself. A machine running WDAC or a publisher allowlist can still refuse outright,
 and nothing local fixes that.
 
-**Installing over an older copy re-points the sign-in entry.** Teezy heals its own `Run` value
+**Installing over an older copy re-points the sign-in entry.** TeezyFlow heals its own `Run` value
 at launch — but only if it launches, and a value aimed at a path that no longer exists never
 does. `install.ps1` fixes it from outside, where both halves are still known.
 
 ### Starting at sign-in
 
-Settings ▸ **Start Teezy when I sign in**. It registers under `HKCU\…\CurrentVersion\Run` —
+Settings ▸ **Start TeezyFlow when I sign in**. It registers under `HKCU\…\CurrentVersion\Run` —
 per-user, no administrator rights, and visible in **Task Manager ▸ Startup** where people
 already expect to manage startup apps. A scheduled task would have hidden it from the place
 users actually look.
@@ -114,14 +118,14 @@ Three details that are easy to get wrong, and are not:
   should outlive us.
 - **The registered path self-heals.** Republishing to a different folder would otherwise
   leave a `Run` value aimed at a file that no longer exists, and nothing reports a startup
-  entry that failed to resolve. Teezy re-points it at launch — comparing the whole command
+  entry that failed to resolve. TeezyFlow re-points it at launch — comparing the whole command
   line, not just the path, so an entry written by an older version is brought up to date
   rather than left half-right.
 - **The sign-in launch is told apart from every other one.** The `Run` value ends in
   `--startup`, and that flag is the only thing that distinguishes "Windows started me" from
   "someone double-clicked me". Without it, the two would have to behave the same, and both
   answers are wrong: a window at every sign-in is a nuisance, and no window at all when you
-  have just installed the thing looks broken. So Teezy opens its window on launch **unless**
+  have just installed the thing looks broken. So TeezyFlow opens its window on launch **unless**
   the flag is present.
 
 Starting at sign-in loads the model — about 1.6 s and ~900 MB resident, once.
@@ -130,7 +134,7 @@ Starting at sign-in loads the model — about 1.6 s and ~900 MB resident, once.
 
 ## The window
 
-Teezy runs from the tray and never needs its window, so the window is built for the two
+TeezyFlow runs from the tray and never needs its window, so the window is built for the two
 moments you actually want it.
 
 **Home** is the history: every dictation, newest first, grouped by day, searchable. Hover a
@@ -157,7 +161,7 @@ accumulated, so deleting an entry corrects them instead of leaving them drifted.
 ## The assistant
 
 A second combination, off until you set one in Settings ▸ Assistant. Hold it, say what you
-want, and Teezy does it rather than typing it.
+want, and TeezyFlow does it rather than typing it.
 
 | | |
 |---|---|
@@ -220,7 +224,7 @@ percent" takes two seconds to say for something the pill shows instantly, and yo
 twenty times a day. It stops the moment you press the key again, because anyone starting a new
 utterance has stopped listening to the last answer.
 
-**Windows' own voices are the default tier: free, offline, instant.** Teezy picks the best one
+**Windows' own voices are the default tier: free, offline, instant.** TeezyFlow picks the best one
 installed rather than the system default, which is usually the *worst* — measured here, the
 default was "Microsoft Hazel Desktop" while four newer voices sat unused beside it. The ones
 Windows marks "Desktop" are the old SAPI5 set and are labelled as older in the picker. Accent is
@@ -248,7 +252,7 @@ do fifty times a day to fix the thing you chose.
 
 ## Choosing a microphone
 
-Settings ▸ Microphone picks the device Teezy records from. The default is **Windows default**,
+Settings ▸ Microphone picks the device TeezyFlow records from. The default is **Windows default**,
 which follows the communications endpoint Windows has chosen — so plugging in a headset
 switches to it automatically, and for most people that is the right answer permanently.
 
@@ -278,7 +282,7 @@ in Settings rather than shown as an opaque id.
 
 **An unplugged microphone falls back to the Windows default rather than failing.** A chosen
 headset that is in another bag must not turn the hotkey into a dead key. It stays selected —
-plugging it back in is all it takes — and Teezy says once per run that it is using something
+plugging it back in is all it takes — and TeezyFlow says once per run that it is using something
 else, because falling back *silently* would recreate the exact problem the picker exists to
 solve.
 
@@ -337,7 +341,7 @@ Four inference threads measured fastest; **eight measured slower**. That is why
 ### When it is slow somewhere else
 
 Those numbers are one machine. On a throttled corporate laptop the same work can take several
-times longer, and until recently Teezy could not say *why* — it recorded a single number for
+times longer, and until recently TeezyFlow could not say *why* — it recorded a single number for
 everything between releasing the key and seeing text, so the model, the network and the target
 app were indistinguishable.
 
@@ -507,7 +511,7 @@ user. At 30x realtime none of it is worth it.
 ## Smarter cleanup with Claude (optional, off by default)
 
 A second cleanup pass that fixes grammar, formats lists and honours spoken corrections.
-**Off by default, and that default is the honest one** — it is the only thing in Teezy that
+**Off by default, and that default is the honest one** — it is the only thing in TeezyFlow that
 leaves your machine.
 
 - **A Claude Pro or Max subscription does not cover this.** The Anthropic API is billed
@@ -520,9 +524,9 @@ leaves your machine.
 ### What it actually costs you
 
 **Insights shows measured spend, not the estimate above.** Every response carries a `usage`
-block, so Teezy records the tokens each dictation consumed and prices them locally. There is
+block, so TeezyFlow records the tokens each dictation consumed and prices them locally. There is
 no endpoint that reports account spend to an ordinary API key — the Console has that — but
-this is the more useful figure anyway: it is what *Teezy* cost, not what the account cost.
+this is the more useful figure anyway: it is what *TeezyFlow* cost, not what the account cost.
 
 **Prices are dated, because one of them changes.** Sonnet 5 runs an introductory rate until
 2026-08-31 and goes up by half after it. A single hardcoded number would misreport every
@@ -558,7 +562,7 @@ A style that applies only where the text is going: Outlook formal, Teams casual,
 faithful with no trailing full stop. An email and a chat message should not have to share one
 setting, and remembering to change a global one before each is worse than not having it.
 
-Teezy already knew which app it was typing into — that is what the Insights breakdown is —
+TeezyFlow already knew which app it was typing into — that is what the Insights breakdown is —
 so the rules list offers those apps to pick from rather than asking you to know that Outlook
 reports itself as `OUTLOOK`.
 
@@ -661,7 +665,7 @@ bulk edits, which a row-at-a-time UI is genuinely worse at.
 ```
 Anthropic                    # a hint: bias the engine toward this spelling
 cloud code -> Claude Code    # a correction: rewrite the left side to the right
-# off: teezy -> Teezy        # disabled, kept for later
+# off: gpt -> GPT              # disabled, kept for later
 ```
 
 ---
@@ -698,7 +702,7 @@ synthesised key events).
    refuse it outright on a freshly installed Windows 11, and a machine running WDAC or a
    publisher-allowlist policy can block it with nothing we can do locally.
 4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
-   window. Elevating Teezy would be worse than the problem.
+   window. Elevating TeezyFlow would be worse than the problem.
 5. **Budget figures.** The Budget page and its dashboard widget exist; reading a Cashew export
    and the bills that arrive by email does not yet, so both say so rather than show numbers.
 
@@ -751,7 +755,7 @@ licence**, so no code was copied from it — only independently re-verified fact
 
 ## Privacy
 
-Teezy runs no servers and collects nothing. Speech recognition, commands, meeting transcription,
+TeezyFlow runs no servers and collects nothing. Speech recognition, commands, meeting transcription,
 your dictionary and your history stay on the machine; five optional tiers can leave it, each off
 until you switch it on and each on your own account. Meeting audio is deleted once it has been
 transcribed. Connected calendars and mailboxes are read, never copied or stored. The full

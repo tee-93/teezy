@@ -42,7 +42,7 @@ public sealed class ClaudeAssistant(
     /// floating pill above the taskbar and read at a glance, not scrolled.
     /// </remarks>
     private const string SystemPrompt = """
-        You are the voice assistant built into Teezy, a Windows dictation app. The user held a
+        You are the voice assistant built into TeezyFlow, a Windows dictation app. The user held a
         key, spoke, and this is what they said. A set of local patterns already tried and
         failed to match it, so it is either a request phrased unusually or a question.
 

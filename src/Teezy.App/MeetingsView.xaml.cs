@@ -173,7 +173,7 @@ public partial class MeetingsView : UserControl
         }
 
         var problem = _startProblem ?? (recording && _recorder.SpeakersProblem is { } speakers
-            ? $"Only your microphone is being recorded. Windows would not let Teezy hear the speakers: {speakers}"
+            ? $"Only your microphone is being recorded. Windows would not let TeezyFlow hear the speakers: {speakers}"
             : null);
 
         ProblemText.Text = problem ?? "";
@@ -460,7 +460,7 @@ public partial class MeetingsView : UserControl
     }
 
     private void Warn(string message) =>
-        MessageBox.Show(Window.GetWindow(this), message, "Teezy", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageBox.Show(Window.GetWindow(this), message, "TeezyFlow", MessageBoxButton.OK, MessageBoxImage.Warning);
 
     private static string When(DateTimeOffset started) =>
         started.ToLocalTime().ToString("dddd d MMMM, h:mm tt", CultureInfo.CurrentCulture);

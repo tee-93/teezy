@@ -198,7 +198,7 @@ public partial class DictionaryView : UserControl
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            MessageBox.Show("No app is associated with .txt files.", "Teezy",
+            MessageBox.Show("No app is associated with .txt files.", "TeezyFlow",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }

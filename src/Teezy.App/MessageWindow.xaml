@@ -42,7 +42,7 @@
             <Grid Margin="0,16,0,0">
                 <TextBlock Style="{StaticResource Hint}" Margin="0" MaxWidth="340"
                            HorizontalAlignment="Left"
-                           Text="A preview only, and read-only — Teezy cannot reply, delete, or mark this as read."/>
+                           Text="A preview only, and read-only — TeezyFlow cannot reply, delete, or mark this as read."/>
                 <Button Content="Close" Style="{StaticResource Secondary}" Click="OnClose"
                         HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
             </Grid>

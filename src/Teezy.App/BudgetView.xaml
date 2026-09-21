@@ -22,7 +22,7 @@
                 <StackPanel>
                     <TextBlock Text="Nothing is connected yet" Style="{StaticResource H2}"/>
                     <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="19" Foreground="{StaticResource Body}"
-                               Text="Cashew stays where your budget is kept. Teezy will read from it, and from the bills that arrive in your email, and show the highlights here and on the dashboard. Until a source is set up these cards stay empty rather than guess."/>
+                               Text="Cashew stays where your budget is kept. TeezyFlow will read from it, and from the bills that arrive in your email, and show the highlights here and on the dashboard. Until a source is set up these cards stay empty rather than guess."/>
                 </StackPanel>
             </Border>
 

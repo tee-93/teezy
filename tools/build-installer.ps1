@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Builds dist\Teezy-Setup.exe - the download-and-double-click installer.
+  Builds dist\TeezyFlow-Setup.exe - the download-and-double-click installer.
 
 .DESCRIPTION
   Publishes both architectures, then compiles tools\installer\Teezy.iss into a single
@@ -90,7 +90,7 @@ Write-Host "`nCompiling installer ($Version) ..." -ForegroundColor Cyan
 & $iscc "/DAppVersion=$Version" $iss
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
 
-$out = Join-Path $root 'dist\Teezy-Setup.exe'
+$out = Join-Path $root 'dist\TeezyFlow-Setup.exe'
 if (-not (Test-Path $out)) { throw "ISCC reported success but $out is missing." }
 
 $mb = [math]::Round((Get-Item $out).Length / 1MB, 1)

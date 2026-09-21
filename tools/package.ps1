@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-  Assembles the folder you carry to another machine to install Teezy.
+  Assembles the folder you carry to another machine to install TeezyFlow.
 
 .DESCRIPTION
-  Builds both architectures, then stages dist\Teezy-Setup containing the two executables,
+  Builds both architectures, then stages dist\TeezyFlow-Setup containing the two executables,
   the ~661 MB speech model, and the installer. About 740 MB in total.
 
-  The model is bundled deliberately. Teezy can download it on first launch, but that is the
+  The model is bundled deliberately. TeezyFlow can download it on first launch, but that is the
   single step most likely to fail on a managed network - corporate proxies and TLS
   inspection break large Hugging Face transfers, and the failure lands at the worst moment,
   on a machine you may not be able to debug on.
 
-  The result works two ways. Running install.ps1 puts Teezy in a permanent per-user
+  The result works two ways. Running install.ps1 puts TeezyFlow in a permanent per-user
   location; if scripts are blocked, the same files can be arranged by hand into a portable
-  folder, because Teezy also looks for the model next to its own executable.
+  folder, because TeezyFlow also looks for the model next to its own executable.
 
 .PARAMETER SkipBuild
   Use whatever is already in dist\win-x64 and dist\win-arm64 instead of republishing.
@@ -23,7 +23,7 @@
   %LOCALAPPDATA%\Teezy\models\parakeet-v2. Run tools\download-model.ps1 first if absent.
 
 .PARAMETER Zip
-  Also produce dist\Teezy-Setup.zip. Worth it for a download or a cloud share; skip it for
+  Also produce dist\TeezyFlow-Setup.zip. Worth it for a download or a cloud share; skip it for
   a USB stick, where it only doubles the copying.
 #>
 [CmdletBinding()]
@@ -40,7 +40,7 @@ if (-not $ModelSource) {
     $ModelSource = Join-Path $env:LOCALAPPDATA 'Teezy\models\parakeet-v2'
 }
 
-$staging = Join-Path $root 'dist\Teezy-Setup'
+$staging = Join-Path $root 'dist\TeezyFlow-Setup'
 
 # ---------------------------------------------------------------------------------- build
 
@@ -129,7 +129,7 @@ Write-Host ("`n  {0:N0} MB total" -f [math]::Round($bytes / 1MB))
 # ------------------------------------------------------------------------------------ zip
 
 if ($Zip) {
-    $zipPath = Join-Path $root 'dist\Teezy-Setup.zip'
+    $zipPath = Join-Path $root 'dist\TeezyFlow-Setup.zip'
     Write-Host "`nCompressing to $zipPath (a minute or two) ..." -ForegroundColor Cyan
     Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
 

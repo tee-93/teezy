@@ -65,7 +65,7 @@ internal static class CrashLog
     private static void Report(Exception ex) =>
         MessageBox.Show(
             $"{ex.GetType().Name}: {ex.Message}\n\nFull detail: {Path}",
-            "Teezy hit an error",
+            "TeezyFlow hit an error",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
 }

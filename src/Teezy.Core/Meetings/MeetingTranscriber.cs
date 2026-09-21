@@ -118,7 +118,7 @@ public sealed class MeetingTranscriber(ITranscriber transcriber, MeetingStore st
 
         if (info.ThemProblem is { } problem)
         {
-            yield return $"Only your microphone was recorded. Windows would not let Teezy hear the speakers: {problem}";
+            yield return $"Only your microphone was recorded. Windows would not let TeezyFlow hear the speakers: {problem}";
         }
 
         // Only a recording that stopped cleanly knows whether anything was heard; one that was
@@ -128,7 +128,7 @@ public sealed class MeetingTranscriber(ITranscriber transcriber, MeetingStore st
         if (info.ThemProblem is null && !info.ThemHeard)
         {
             yield return "Nothing at all came from the speakers. If other people were talking, "
-                         + "something on this computer is stopping Teezy from hearing them.";
+                         + "something on this computer is stopping TeezyFlow from hearing them.";
         }
 
         if (!info.MeHeard)

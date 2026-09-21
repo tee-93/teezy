@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Installs Teezy for the current user. No administrator rights, no network.
+  Installs TeezyFlow for the current user. No administrator rights, no network.
 
 .DESCRIPTION
   Copies the executable matching this machine's CPU to %LOCALAPPDATA%\Programs\Teezy and
@@ -9,13 +9,13 @@
   Everything is per-user and under %LOCALAPPDATA%, so nothing needs elevation and nothing is
   written to Program Files, HKLM, or any other machine-wide location.
 
-  The model travels with this package. Teezy therefore never contacts the network on first
+  The model travels with this package. TeezyFlow therefore never contacts the network on first
   launch - the download window only appears if the model is missing or damaged.
 
 .PARAMETER Autostart
-  Also start Teezy at sign-in, via HKCU\...\CurrentVersion\Run. This is the same entry the
+  Also start TeezyFlow at sign-in, via HKCU\...\CurrentVersion\Run. This is the same entry the
   in-app setting writes, and it shows up in Task Manager's Startup tab. You can equally
-  leave this off and use Settings > "Start Teezy when I sign in" later.
+  leave this off and use Settings > "Start TeezyFlow when I sign in" later.
 
 .PARAMETER Destination
   Override the install folder. Defaults to %LOCALAPPDATA%\Programs\Teezy.
@@ -24,7 +24,7 @@
   Skip the Start Menu shortcut.
 
 .PARAMETER NoLaunch
-  Do not start Teezy when the install finishes.
+  Do not start TeezyFlow when the install finishes.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File install.ps1
@@ -57,7 +57,7 @@ $osArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.To
 $arch = switch ($osArch) {
     'X64'   { 'x64' }
     'Arm64' { 'arm64' }
-    default { throw "Teezy has no build for $osArch. Only x64 and ARM64 Windows are supported." }
+    default { throw "TeezyFlow has no build for $osArch. Only x64 and ARM64 Windows are supported." }
 }
 
 $source = Join-Path $here "bin\$arch\Teezy.exe"
@@ -65,7 +65,7 @@ if (-not (Test-Path $source)) {
     throw "Missing $source - this package is incomplete. Re-copy the whole folder."
 }
 
-Write-Host "`nInstalling Teezy" -ForegroundColor Cyan
+Write-Host "`nInstalling TeezyFlow" -ForegroundColor Cyan
 Write-Step "CPU              $osArch, using the $arch build"
 
 # ------------------------------------------------------------------------------ where to
@@ -80,7 +80,7 @@ Write-Step "Model            $modelDest"
 # A running instance holds its own executable open, and the copy fails with a file lock.
 $running = Get-Process Teezy -ErrorAction SilentlyContinue
 if ($running) {
-    Write-Step 'Closing the running copy of Teezy'
+    Write-Step 'Closing the running copy of TeezyFlow'
     $running | Stop-Process -Force
     Start-Sleep -Milliseconds 700
 }
@@ -162,12 +162,16 @@ Write-Step 'Model verified'
 
 if (-not $NoShortcut) {
     $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-    $lnk = Join-Path $startMenu 'Teezy.lnk'
+    $lnk = Join-Path $startMenu 'TeezyFlow.lnk'
+
+    # The shortcut from before the rename, which would otherwise sit beside the new one.
+    Remove-Item (Join-Path $startMenu 'Teezy.lnk') -Force -ErrorAction SilentlyContinue
+
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($lnk)
     $shortcut.TargetPath = $exePath
     $shortcut.WorkingDirectory = $Destination
-    $shortcut.Description = 'Push-to-talk dictation'
+    $shortcut.Description = 'Dictation and a voice assistant'
     $shortcut.Save()
     Write-Step 'Start Menu shortcut created'
 }
@@ -180,7 +184,7 @@ $approvedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Startup
 $existing = (Get-ItemProperty -Path $runKey -Name 'Teezy' -ErrorAction SilentlyContinue).Teezy
 
 # Quoted: the path contains spaces on any machine whose user name does, and an unquoted value
-# is parsed as a command plus arguments. The --startup flag is how Teezy tells a sign-in
+# is parsed as a command plus arguments. The --startup flag is how TeezyFlow tells a sign-in
 # launch from someone double-clicking it, and stays in the tray rather than opening its
 # window. It must match WindowsAutostart.StartupFlag.
 $runCommand = '"' + $exePath + '" --startup'
@@ -188,7 +192,7 @@ $runCommand = '"' + $exePath + '" --startup'
 if ($Autostart) {
     Set-ItemProperty -Path $runKey -Name 'Teezy' -Value $runCommand
 
-    # Writing the Run value alone is not enough. If Teezy was ever switched off in Task
+    # Writing the Run value alone is not enough. If TeezyFlow was ever switched off in Task
     # Manager, Windows records that veto separately and it wins - the entry would look
     # enabled and nothing would happen at sign-in.
     if (Test-Path $approvedKey) {
@@ -198,7 +202,7 @@ if ($Autostart) {
 }
 elseif ($existing) {
     # An entry from a previous install points at the old executable, or predates the
-    # --startup flag. Teezy repairs it itself at launch - but only if it launches, and it
+    # --startup flag. TeezyFlow repairs it itself at launch - but only if it launches, and it
     # will not launch from a path that no longer exists. So fix it here, where both halves
     # are still known. Compared as a whole command line, so a flagless entry is upgraded too.
     if ($existing.Trim() -ne $runCommand) {
@@ -210,11 +214,11 @@ elseif ($existing) {
 # -------------------------------------------------------------------------------- finish
 
 Write-Host "`nInstalled." -ForegroundColor Green
-Write-Host '  Hold Ctrl + Win together, speak, release. Teezy lives in the system tray -'
+Write-Host '  Hold Ctrl + Win together, speak, release. TeezyFlow lives in the system tray -'
 Write-Host '  click the ^ arrow next to the clock if you cannot see it.'
 Write-Host "  Uninstall with: powershell -ExecutionPolicy Bypass -File uninstall.ps1`n"
 
 if (-not $NoLaunch) {
     Start-Process $exePath
-    Write-Host 'Teezy is starting. The tray icon appears once the model has loaded (~2 s).'
+    Write-Host 'TeezyFlow is starting. The tray icon appears once the model has loaded (~2 s).'
 }

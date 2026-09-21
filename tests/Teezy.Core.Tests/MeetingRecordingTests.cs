@@ -151,7 +151,7 @@ public sealed class MeetingRecordingTests : IDisposable
 
         var done = await new MeetingTranscriber(new ScriptedTranscriber("Hello."), _store).TranscribeAsync(record);
 
-        (await File.ReadAllTextAsync(done.TranscriptPath)).ShouldContain("Windows would not let Teezy hear the speakers: no device");
+        (await File.ReadAllTextAsync(done.TranscriptPath)).ShouldContain("Windows would not let TeezyFlow hear the speakers: no device");
     }
 
     [Fact]

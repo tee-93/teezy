@@ -86,11 +86,11 @@ internal sealed class LoopbackListener : IDisposable
     private static async Task RespondAsync(HttpListenerContext context, bool ok)
     {
         var message = ok
-            ? "<h2>Teezy is connected.</h2><p>You can close this tab.</p>"
+            ? "<h2>TeezyFlow is connected.</h2><p>You can close this tab.</p>"
             : "<h2>Sign-in was cancelled.</h2><p>You can close this tab.</p>";
 
         var body = Encoding.UTF8.GetBytes(
-            "<!doctype html><meta charset=\"utf-8\"><title>Teezy</title>"
+            "<!doctype html><meta charset=\"utf-8\"><title>TeezyFlow</title>"
             + "<body style=\"font-family:system-ui;margin:4rem;color:#1B1A18\">"
             + message + "</body>");
 

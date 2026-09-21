@@ -131,7 +131,7 @@ public partial class App
             Dispatch(() =>
             {
                 _modelReady = false;
-                SetTrayState("Teezy — model not loaded", ready: false);
+                SetTrayState("TeezyFlow — model not loaded", ready: false);
                 Notify($"Dictionary hints could not be applied: {e.Message}", Forms.ToolTipIcon.Warning);
             });
         }

@@ -39,7 +39,7 @@ public sealed class ClaudeNarrator(
     /// tools, which holds whether or not the model takes the instruction seriously.
     /// </remarks>
     private const string SystemPrompt = """
-        You are the voice assistant built into Teezy, a Windows dictation app. The user held a
+        You are the voice assistant built into TeezyFlow, a Windows dictation app. The user held a
         key and asked a question about their own calendar or email. You are shown the part of it
         the question needs, and the current time.
 

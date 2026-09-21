@@ -45,6 +45,61 @@ public class ClaudeFormatterTests
         // to rewrite, and the fence itself would be typed.
         ClaudeFormatter.IsPlausible(Original, "```\n" + Original + "\n```").ShouldBeFalse();
 
+    // ---- long dictation ----
+
+    private const string DictatedPrompt =
+        "Um, okay, so can you write me an email to the team, uh, saying that the quarterly "
+        + "review has moved from Tuesday to Thursday afternoon, and that everyone should "
+        + "bring their pipeline numbers and, you know, any blockers they want to raise.";
+
+    [Fact]
+    public void AcceptsACleanedUpLongPrompt() =>
+        ClaudeFormatter.IsPlausible(DictatedPrompt,
+            "Can you write me an email to the team saying that the quarterly review has moved "
+            + "from Tuesday to Thursday afternoon, and that everyone should bring their pipeline "
+            + "numbers and any blockers they want to raise?").ShouldBeTrue();
+
+    [Fact]
+    public void RejectsAnAnswerOfTheSameLength() =>
+        // The failure the length band cannot see: asked to tidy a dictated prompt, the model
+        // carried it out instead. Same size, different words.
+        ClaudeFormatter.IsPlausible(DictatedPrompt,
+            "Hi all, a quick heads-up that this quarter's review is now on Thursday afternoon "
+            + "rather than Tuesday. Please come prepared with your latest forecast figures and "
+            + "anything slowing your deals down. Thanks, and see you there.").ShouldBeFalse();
+
+    [Fact]
+    public void AFormalRewriteStillCountsAsTheSpeakersWords() =>
+        ClaudeFormatter.IsPlausible(DictatedPrompt,
+            "Could you please write an email to the team stating that the quarterly review has "
+            + "been moved from Tuesday to Thursday afternoon, and that everyone should bring "
+            + "their pipeline numbers and any blockers they wish to raise?",
+            ClaudeFormatter.MinRatioFor(WritingStyle.Formal)).ShouldBeTrue();
+
+    [Fact]
+    public void TheOutputBudgetGrowsWithTheDictation()
+    {
+        ClaudeFormatter.MaxTokensFor(80).ShouldBe(2000);
+
+        // Five minutes of speech is roughly 4,000 words — far past the old fixed ceiling.
+        ClaudeFormatter.MaxTokensFor(24_000).ShouldBeGreaterThan(10_000);
+    }
+
+    [Fact]
+    public void TheWaitGrowsWithTheDictationButTheSettingStillWins()
+    {
+        var configured = TimeSpan.FromSeconds(6);
+
+        ClaudeFormatter.TimeoutFor(80, configured).ShouldBe(configured);
+        ClaudeFormatter.TimeoutFor(6_000, configured).ShouldBeGreaterThan(TimeSpan.FromSeconds(30));
+        ClaudeFormatter.TimeoutFor(80, TimeSpan.FromSeconds(30)).ShouldBe(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public void AnEchoedFenceIsNeverTyped() =>
+        ClaudeFormatter.StripEchoedTags("<transcript>\nShip it Friday.\n</transcript>")
+            .ShouldBe("Ship it Friday.");
+
     // ---- fallback behaviour ----
 
     [Fact]

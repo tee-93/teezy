@@ -24,8 +24,17 @@ public sealed class WindowsTextInjector : ITextInjector
 {
     /// <summary>
     /// Newlines cannot be sent as Unicode. A literal U+000A arrives as a control character
-    /// that most controls ignore, so line breaks are sent as real Return keystrokes.
+    /// that most controls ignore, so line breaks are sent as real keystrokes — Shift+Return,
+    /// not a bare Return.
     /// </summary>
+    /// <remarks>
+    /// A bare Return is "send" in every chat box: Teams, Slack, WhatsApp, and the prompt box of
+    /// every AI tool. Long dictation is exactly what the Claude tier breaks into paragraphs, so
+    /// a bare Return posted the first paragraph as a message and typed the rest into an empty
+    /// box. Shift+Return is a line break in all of those, and still a new line in Notepad,
+    /// Outlook and Word — where it is a soft break rather than a new paragraph, which is the
+    /// price, and a far smaller one than sending half a message.
+    /// </remarks>
     private static readonly char[] LineSeparators = ['\n'];
 
     /// <summary>
@@ -47,7 +56,7 @@ public sealed class WindowsTextInjector : ITextInjector
 
         for (var i = 0; i < lines.Length; i++)
         {
-            if (i > 0) AppendKey(inputs, 0x0D);   // VK_RETURN
+            if (i > 0) AppendLineBreak(inputs);
 
             foreach (var unit in lines[i].Replace("\r", string.Empty, StringComparison.Ordinal))
             {
@@ -73,10 +82,13 @@ public sealed class WindowsTextInjector : ITextInjector
         inputs.Add(MakeInput(0, (ushort)unit, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP));
     }
 
-    private static void AppendKey(List<INPUT> inputs, ushort vk)
+    /// <summary>Shift down, Return, Shift up — see <see cref="LineSeparators"/> for why.</summary>
+    private static void AppendLineBreak(List<INPUT> inputs)
     {
-        inputs.Add(MakeInput(vk, 0, 0));
-        inputs.Add(MakeInput(vk, 0, KEYEVENTF_KEYUP));
+        inputs.Add(MakeInput((ushort)VK_SHIFT, 0, 0));
+        inputs.Add(MakeInput(0x0D, 0, 0));                  // VK_RETURN
+        inputs.Add(MakeInput(0x0D, 0, KEYEVENTF_KEYUP));
+        inputs.Add(MakeInput((ushort)VK_SHIFT, 0, KEYEVENTF_KEYUP));
     }
 
     private static INPUT MakeInput(ushort vk, ushort scan, uint flags) => new()

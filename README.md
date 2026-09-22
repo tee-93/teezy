@@ -123,12 +123,9 @@ Three details that are easy to get wrong, and are not:
   entry that failed to resolve. TeezyFlow re-points it at launch — comparing the whole command
   line, not just the path, so an entry written by an older version is brought up to date
   rather than left half-right.
-- **The sign-in launch is told apart from every other one.** The `Run` value ends in
-  `--startup`, and that flag is the only thing that distinguishes "Windows started me" from
-  "someone double-clicked me". Without it, the two would have to behave the same, and both
-  answers are wrong: a window at every sign-in is a nuisance, and no window at all when you
-  have just installed the thing looks broken. So TeezyFlow opens its window on launch **unless**
-  the flag is present.
+- **The window opens at sign-in too** (since 1.17): Home is the day's update, and the morning
+  is when it is wanted. The `Run` value still ends in `--startup`, so the sign-in launch can be
+  told apart again if that ever needs a setting.
 
 Starting at sign-in loads the model — about 1.6 s and ~900 MB resident, once.
 
@@ -205,6 +202,8 @@ email out of Outlook, every route ran into the employer's lockdown, and all of i
   day you pick (*tomorrow*, *in 3 days*, *in a week*, *in 2 weeks*, or any day; weekends move to
   Monday), linked back, with the reminder and the email carried over. The panel shows the whole
   chain — quote sent, chased, chased again. Undo takes either back.
+- **Notes are saved with Save on the notes header** (or Ctrl+Enter), and anything typed but not
+  saved is kept anyway when the panel moves to another task or the page is left.
 - **Notes are a timeline**, newest first, each with who wrote it and when — the record to read
   back in a review. The name is set in Settings ▸ Tasks; notes TeezyFlow writes itself (closed,
   followed up, email attached) are shown quieter.
@@ -235,11 +234,31 @@ first.
 
 ## The window
 
-TeezyFlow runs from the tray and never needs its window, so the window is built for the two
-moments you actually want it.
+TeezyFlow is an ordinary application on the taskbar, with its tray icon kept for status and a
+quick menu. **Opening it again while it runs brings its window forward** — a second copy signals
+the first and exits, since two would install two keyboard hooks and type everything twice.
+**The window's X asks once** whether to keep TeezyFlow running (minimised to the taskbar, so
+dictation, the assistant and reminders carry on) or quit it, with a box to remember the answer;
+Settings ▸ Advanced ▸ *When I close the window* changes it later.
 
-**Home** is the history: every dictation, newest first, grouped by day, searchable. Hover a
-row to copy or delete it. Entries are recorded **even when injection failed** — that is
+**Home is the day's update**, built to be full on a computer with no accounts at all:
+
+- A greeting, the date, and the day in one line — "3 tasks today, 1 late · 2 follow-ups this
+  week", with meetings and unread mail added where a calendar or mailbox is connected.
+- **Tiles** across the top, after Pursiva's widget bar: up to five of Due today, Follow-ups this
+  week, Next reminder, Done this week, Dictated this week, Overdue, Time saved, Streak, Meetings
+  recorded, and — with accounts — Next meeting and Unread. Each opens what it counts.
+- **Two columns, 65 / 35**, stacking on a narrow window. Left: **Today** (late tasks, then the
+  day's timed tasks, reminders and meetings on one timeline, then "any time today", with a
+  quick-add box that also takes a dropped email) and **This week** (Monday to Sunday). Right:
+  **Coming up**, **Recent notes** (the latest notes across your tasks, who and when), **Meetings**,
+  and the **Inbox** where mail is connected. Each panel folds away.
+- **Customise** ticks and orders the tiles and panels; the choice travels with Sync. Parts that
+  need an account are hidden where it is not connected — never shown empty — and kept in the
+  saved choice, so the work laptop's edits do not remove the personal laptop's Inbox.
+
+**Transcripts** is the history: every dictation, newest first, grouped by day, searchable. Hover
+a row to copy or delete it. Entries are recorded **even when injection failed** — that is
 precisely when you need the text back, because it did not land anywhere you can reach.
 
 **Insights** is the aggregate: words per minute, dictionary fixes, total words, where the

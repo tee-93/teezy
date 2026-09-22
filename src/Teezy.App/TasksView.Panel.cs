@@ -55,6 +55,9 @@ public partial class TasksView
 
         FollowUpDay.Changed += () => FollowUpThen.IsEnabled = FollowUpDay.Date is not null;
 
+        // Leaving the page keeps what was typed.
+        Unloaded += (_, _) => SavePendingNote();
+
         // A text box swallows the wheel even when it has nothing to scroll, which left the panel
         // stuck whenever the pointer rested on a note. The panel scrolls unless the box can.
         DetailScroll.PreviewMouseWheel += (_, e) =>
@@ -72,6 +75,7 @@ public partial class TasksView
 
     private void OnDeselect(object sender, RoutedEventArgs e)
     {
+        SavePendingNote();
         _selected = null;
         Refresh();
     }
@@ -91,6 +95,9 @@ public partial class TasksView
         }
 
         var changed = Detail.Tag as string != task.Id;
+
+        // Before the panel switches: an unsaved note belongs to the task it was typed on.
+        if (changed) SavePendingNote();
         Detail.Tag = task.Id;
         Detail.Visibility = Visibility.Visible;
         _panelFilling = true;
@@ -260,9 +267,27 @@ public partial class TasksView
 
     private void OnAddNote(object sender, RoutedEventArgs e) => AddNote();
 
+    /// <summary>Save: the note, and anything half-edited in the panel with it.</summary>
     private void AddNote()
     {
-        if (_selected is not { } id || NoteBox.Text.Trim().Length == 0) return;
+        if (_selected is not { } id) return;
+        CommitTitle();
+        OnAdviceEdited(this, null!);
+        if (NoteBox.Text.Trim().Length == 0) return;
+
+        _store.AddNote(id, NoteBox.Text, _settings().NoteAuthor);
+        NoteBox.Clear();
+        Refresh();
+    }
+
+    /// <summary>
+    /// A note typed but not saved is saved anyway when the panel moves on — to another task,
+    /// closed, or the page left — so nothing written is ever lost.
+    /// </summary>
+    private void SavePendingNote()
+    {
+        if (Detail.Tag is not string id || NoteBox.Text.Trim().Length == 0) return;
+        if (_store.Find(id) is null) return;
         _store.AddNote(id, NoteBox.Text, _settings().NoteAuthor);
         NoteBox.Clear();
     }

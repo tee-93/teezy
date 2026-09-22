@@ -198,6 +198,27 @@ public partial class SettingsView
         ShowTaskSettings();
     }
 
+    // ---- Advanced ▸ When I close the window (kept here with the other small pickers) ----
+
+    private bool _closeActionFilling;
+
+    private void OnCloseActionLoaded(object sender, RoutedEventArgs e)
+    {
+        _closeActionFilling = true;
+        var current = _read().CloseAction.ToString();
+        CloseActionPicker.SelectedItem = CloseActionPicker.Items.Cast<ComboBoxItem>().FirstOrDefault(i => i.Tag as string == current);
+        _closeActionFilling = false;
+    }
+
+    private void OnCloseActionChosen(object sender, SelectionChangedEventArgs e)
+    {
+        if (_closeActionFilling || CloseActionPicker.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        if (Enum.TryParse<CloseAction>(tag, out var action) && action != _read().CloseAction)
+        {
+            _write(_read() with { CloseAction = action });
+        }
+    }
+
     private void OnAuthorKey(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;

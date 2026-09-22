@@ -2,439 +2,168 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Media;
-using System.Windows.Input;
-using System.Windows.Media.Animation;
-
-using System.Threading.Tasks;
 using Teezy.Core;
 using Teezy.Core.Calendar;
 using Teezy.Core.History;
+using Teezy.Core.Home;
 using Teezy.Core.Mail;
+using Teezy.Core.Meetings;
+using Teezy.Core.Tasks;
 
 namespace Teezy.App;
 
+/// <summary>What Home can ask the window to do.</summary>
+/// <param name="MatchCategory">A typed #category in the list's spelling, added to the list if new.</param>
+public sealed record HomeActions(Action<string> OpenTask, Action<Page> OpenPage, Func<string?, string?> MatchCategory);
 
-/// <summary>One line under the day band — a time and what is on.</summary>
-public sealed record UpcomingRow(string When, string What, string Where, bool Done, bool Now)
-{
-    /// <summary>Past events stay on the card, faded, so the shape of the day is legible.</summary>
-    public double Dim => Done ? 0.40 : 1.0;
-
-    /// <summary>Struck through as well as faded — fade alone reads as "loading".</summary>
-    public TextDecorationCollection? Strike => Done ? TextDecorations.Strikethrough : null;
-
-    /// <summary>The one happening right now gets the marker; everything else is a plain rule.</summary>
-    public double RailWidth => Now ? 4 : 3;
-
-    /// <summary>The accent is kept for the one on now; the rest are a plain line.</summary>
-    public Brush Rail => Brand.Brush(Now ? "Accent" : "Hairline");
-}
-
-/// <summary>One day on the week card.</summary>
-public sealed record WeekRow(string Day, string Date, bool IsToday, double Dim, IReadOnlyList<WeekEntry> Entries)
-{
-    public Visibility TodayMarker => IsToday ? Visibility.Visible : Visibility.Collapsed;
-
-    public Visibility EmptyVisibility => Entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-}
-
-/// <summary>One thing on a day of the week card.</summary>
-public sealed record WeekEntry(string When, string What);
-
-/// <summary>One unread message, as the inbox card shows it.</summary>
-public sealed record InboxRow(
-    string Initials, string Who, string Subject, string Mailbox, MailMessage Message)
-{
-    /// <summary>The mailbox as one letter, for the badge on the avatar.</summary>
-    public string MailboxLetter => Mailbox.Length > 0 ? Mailbox[..1] : "";
-
-    /// <summary>Who, and which mailbox by name, for whoever hovers a row the column has squeezed.</summary>
-    public string Tip => Mailbox.Length > 0
-        ? $"{Who} · {char.ToUpperInvariant(Mailbox[0])}{Mailbox[1..].ToLowerInvariant()}"
-        : Who;
-}
-
-/// <summary>The dashboard: the day said in one line, then your day, your week and the inbox, then the figures.</summary>
+/// <summary>Home: the day's update — a greeting and a line, tiles, and two columns of panels.</summary>
 /// <remarks>
-/// Everything on it is a summary. The transcripts moved to their own page, so this one can
-/// answer "what is going on" without also being a search results list.
+/// <para>
+/// <b>Local first.</b> Everything paints straight away from what is on this computer — tasks,
+/// notes, meetings, dictation — so the page is full on the work laptop, which can connect no
+/// accounts. Calendar and mail, where connected, are read in the background at most every five
+/// minutes and folded in when they arrive; a slow or failed read never delays or blanks the page.
+/// </para>
+/// <para>
+/// Rebuilt on every refresh rather than bound: the page is small, and building it from one
+/// snapshot means the header, the tiles and the panels cannot disagree about the day.
+/// </para>
 /// </remarks>
 public partial class HomeView : UserControl
 {
+    private static readonly CultureInfo Display = CultureInfo.GetCultureInfo("en-AU");
+
     private readonly HistoryStore _history;
+    private readonly TaskStore _tasks;
     private readonly CombinedCalendar? _calendar;
     private readonly CombinedMailbox? _mailbox;
-    private IReadOnlyList<HistoryEntry> _all = [];
+    private readonly MeetingStore? _meetingStore;
+    private readonly Func<TeezySettings> _settings;
+    private readonly Action<TeezySettings> _save;
+    private readonly HomeActions _actions;
 
-    private readonly Func<IReadOnlyList<string>> _expandedSections;
-    private readonly Action<IReadOnlyList<string>> _saveExpandedSections;
-    private readonly Action _openBudget;
+    /// <summary>The week's calendar (Monday to Sunday) and recent mail, as last read; null until read or when not connected.</summary>
+    private CalendarReading? _week;
+    private MailReading? _mail;
+    private DateTimeOffset _accountsRead = DateTimeOffset.MinValue;
+    private bool _reading;
 
-    /// <summary>Set while widgets are put back the size they were left, so that is not saved as a change.</summary>
-    private bool _restoring;
-
-    /// <summary>How long a widget takes to grow or shrink: long enough to be seen, short enough not to wait for.</summary>
-    private static readonly Duration SectionMotion = TimeSpan.FromMilliseconds(220);
-
-    /// <summary>When the day band was last filled, so opening Home does not re-read every time.</summary>
-    /// <remarks>
-    /// Reading a diary and a mailbox costs a network round trip and, for the mailbox, touches
-    /// something private. Doing it on every navigation to Home would turn a glance at the
-    /// history into a mail fetch, which is not what the user asked for by clicking Home.
-    /// </remarks>
-    private DateTimeOffset _summaryRead = DateTimeOffset.MinValue;
-
-    private static readonly TimeSpan SummaryFreshFor = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan AccountsFreshFor = TimeSpan.FromMinutes(5);
 
     public HomeView(
         HistoryStore history,
+        TaskStore tasks,
+        Func<TeezySettings> settings,
+        Action<TeezySettings> save,
+        HomeActions actions,
+        Func<string>? hotkey = null,
         CombinedCalendar? calendar = null,
         CombinedMailbox? mailbox = null,
-        Func<string>? hotkey = null,
-        Func<IReadOnlyList<string>>? expandedSections = null,
-        Action<IReadOnlyList<string>>? saveExpandedSections = null,
-        Action? openBudget = null)
+        MeetingStore? meetings = null)
     {
         InitializeComponent();
         _history = history;
+        _tasks = tasks;
+        _settings = settings;
+        _save = save;
+        _actions = actions;
         _calendar = calendar;
         _mailbox = mailbox;
-        _expandedSections = expandedSections ?? (() => []);
-        _saveExpandedSections = saveExpandedSections ?? (_ => { });
-        _openBudget = openBudget ?? (() => { });
+        _meetingStore = meetings;
 
-        RestoreSections();
+        HotkeyChip.Text = hotkey?.Invoke() ?? string.Empty;
 
-        // The hotkey is the one thing on this page that is useful before you have read anything.
-        HotkeyChip.Text = hotkey?.Invoke() ?? "";
+        // Tasks change from the Tasks page, reminders and sync; Home follows while it is showing.
+        _tasks.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
+        _history.Added += _ => Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
+
         Refresh();
     }
 
-    // ---- widgets that grow and shrink ----
+    private bool CalendarConnected => _calendar is { IsConnected: true };
 
-    /// <summary>Each widget's header, the scrolling body it resizes, and the body's two heights.</summary>
-    /// <remarks>
-    /// Fixed heights rather than "as tall as the content": a dashboard is tiles that stay where
-    /// they are, and whatever does not fit a tile scrolls inside it. Growing a widget is a view
-    /// of more of it, not a different layout — which is also what makes the change animatable.
-    /// </remarks>
-    private (ToggleButton Toggle, FrameworkElement Body, double Normal, double Larger)[] Widgets =>
-    [
-        (DayToggle, DayBody, 150, 320),
-        (WeekToggle, WeekBody, 330, 600),
-    ];
+    private bool MailConnected => _mailbox is { IsConnected: true };
 
-    /// <summary>The inbox never gets shorter than this, even beside an empty calendar column.</summary>
-    private const double InboxMinHeight = 320;
-
-    /// <summary>Puts every widget back at the size it was left, without animating.</summary>
-    private void RestoreSections()
-    {
-        var expanded = _expandedSections();
-        _restoring = true;
-
-        foreach (var (toggle, body, normal, larger) in Widgets)
-        {
-            var large = expanded.Contains((string)toggle.Tag);
-            toggle.IsChecked = large;
-            body.Height = large ? larger : normal;
-        }
-
-        _restoring = false;
-    }
-
-    private void OnSectionToggled(object sender, RoutedEventArgs e)
-    {
-        if (_restoring || sender is not ToggleButton toggle) return;
-
-        var (_, body, normal, larger) = Widgets.First(w => w.Toggle == toggle);
-
-        body.BeginAnimation(HeightProperty, new DoubleAnimation(
-            toggle.IsChecked == true ? larger : normal,
-            SectionMotion)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-        });
-
-        _saveExpandedSections([.. Widgets.Where(w => w.Toggle.IsChecked == true).Select(w => (string)w.Toggle.Tag)]);
-    }
-
-    /// <summary>Keeps the right-hand column ending on exactly the same line as the calendar column.</summary>
-    /// <remarks>
-    /// Follows every frame of a widget growing, so the two columns move together and end on the
-    /// same line throughout rather than only once the animation settles.
-    /// </remarks>
-    private void OnLeftColumnSized(object sender, SizeChangedEventArgs e)
-    {
-        // The budget widget sits above the inbox in the same column, so the inbox takes the rest.
-        var above = BudgetCard.Height + InboxCard.Margin.Top;
-        InboxCard.Height = Math.Max(e.NewSize.Height - above, InboxMinHeight);
-    }
-
-    private void OnOpenBudget(object sender, RoutedEventArgs e) => _openBudget();
-
-    /// <summary>Passes the wheel to the page once a widget has nothing left to scroll that way.</summary>
-    /// <remarks>
-    /// A scroll area inside a scrolling page otherwise swallows the wheel even at its end, and
-    /// the page seems stuck whenever the pointer happens to be over a widget.
-    /// </remarks>
-    private void OnWidgetWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (sender is not ScrollViewer widget) return;
-
-        var up = e.Delta > 0;
-        var canScroll = widget.ScrollableHeight > 0
-                        && (up ? widget.VerticalOffset > 0 : widget.VerticalOffset < widget.ScrollableHeight);
-        if (canScroll) return;
-
-        e.Handled = true;
-        PageScroll.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
-        {
-            RoutedEvent = MouseWheelEvent,
-            Source = widget,
-        });
-    }
-
+    /// <summary>Paints from what is here now, then reads the accounts if they are due a read.</summary>
     public void Refresh()
     {
-        _all = _history.Load();
+        Render();
 
-        UpdateStats();
-        ShowTasksCard();
-
-        // Deliberately not awaited. The history is the page and must paint immediately; the
-        // band fills in a moment later, or never, and neither delays anything.
-        _ = UpdateSummaryAsync();
+        // Not awaited: the page is already painted, and the accounts fold in when they answer.
+        _ = ReadAccountsAsync();
     }
 
-    /// <summary>Fills the day band from whatever is connected.</summary>
-    private async Task UpdateSummaryAsync()
+    /// <summary>Builds the whole page from one snapshot.</summary>
+    private void Render()
     {
-        var connectedDiary = _calendar is { IsConnected: true };
-        var connectedMail = _mailbox is { IsConnected: true };
+        var snapshot = Snapshot();
+        var settings = _settings();
 
-        if (!connectedDiary && !connectedMail)
-        {
-            SummaryBand.Visibility = Visibility.Collapsed;
-            return;
-        }
+        Greeting.Text = $"{DayBrief.Greeting(snapshot.Now)}, {settings.NoteAuthor}";
+        DateLine.Text = snapshot.Now.LocalDateTime.ToString("dddd d MMMM", Display);
+        BriefLine.Text = DayBrief.For(snapshot);
 
-        if (DateTimeOffset.Now - _summaryRead < SummaryFreshFor) return;
+        RenderTiles(snapshot, settings);
+        RenderPanels(snapshot, settings);
+        if (CustomisePanel.Visibility == Visibility.Visible) RenderCustomise(settings);
+    }
 
+    private HomeSnapshot Snapshot()
+    {
         var now = DateTimeOffset.Now;
+        var usage = UsageStats.From(_history.Load(), DateOnly.FromDateTime(now.LocalDateTime));
+        var meetings = Meetings().Select(m => m.Info.Started).ToList();
 
-        // One read covers the day and the week. Sunday to Saturday, as Zack counts a week, and
-        // today's card is cut from the same reading so the two cards cannot disagree. Midnight to
-        // midnight rather than the spoken window: the cards show what already happened, faded,
-        // and cannot show what was never fetched.
-        var (from, to) = CalendarWeek.Bounds(now);
-        var today = CalendarWeek.Today(now);
+        var today = _week is { } week && CalendarConnected
+            ? (IReadOnlyList<CalendarEvent>)CalendarWeek.On(week.Events, DateOnly.FromDateTime(now.LocalDateTime))
+            : null;
 
-        var (since, atMost) = MailAnswer.Window(MailAsk.Unread, now);
-
-        // Both at once, and neither allowed to take the other down: a mailbox that cannot be
-        // reached must not cost the diary its half of the line.
-        var week = connectedDiary ? await Read(() => _calendar!.BetweenAsync(from, to)) : null;
-        var diary = week is null ? null : week with { Events = CalendarWeek.On(week.Events, today) };
-        var mail = connectedMail ? await Read(() => _mailbox!.RecentAsync(since, atMost)) : null;
-
-        _summaryRead = DateTimeOffset.Now;
-
-        SummaryText.Text = DaySummary.For(diary, mail, now);
-        SummaryBand.Visibility = Visibility.Visible;
-
-        ShowToday(diary, now);
-        ShowWeek(week, now);
-
-        // The week's top gap exists to separate it from the day; with no day above it, the week
-        // would start lower than the inbox beside it.
-        WeekCard.Margin = new Thickness(0, TodayCard.Visibility == Visibility.Visible ? 12 : 0, 0, 0);
-        ShowInbox(mail);
+        return new HomeSnapshot(now, _tasks.Visible, usage, meetings, today, MailConnected ? _mail : null);
     }
 
-    /// <summary>The whole day, with what has already happened dimmed rather than dropped.</summary>
-    /// <remarks>
-    /// The spoken answer only reports what is left, because nobody asks out loud to be told
-    /// about a meeting they have already sat through. A card is read differently: seeing the
-    /// morning greyed out is what makes an empty afternoon legible as an afternoon rather than
-    /// as a calendar that failed to load.
-    /// </remarks>
-    private void ShowToday(CalendarReading? diary, DateTimeOffset now)
+    private IReadOnlyList<MeetingRecord> Meetings()
     {
-        if (diary is null)
+        try { return _meetingStore?.List() ?? []; }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException) { return []; }
+    }
+
+    // ---- accounts, in the background ----
+
+    private async Task ReadAccountsAsync()
+    {
+        if (_reading || (!CalendarConnected && !MailConnected)) return;
+        if (DateTimeOffset.Now - _accountsRead < AccountsFreshFor) return;
+
+        _reading = true;
+        try
         {
-            TodayCard.Visibility = Visibility.Collapsed;
-            return;
+            var now = DateTimeOffset.Now;
+
+            // Monday to Sunday, the working week Home shows, midnight to midnight.
+            var today = DateOnly.FromDateTime(now.LocalDateTime);
+            var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+            var from = CalendarWeek.Midnight(monday);
+            var to = CalendarWeek.Midnight(monday.AddDays(7));
+            var (since, atMost) = MailAnswer.Window(MailAsk.Unread, now);
+
+            // Neither allowed to take the other down: a mailbox that cannot be reached must not
+            // cost the diary its part of the page.
+            _week = CalendarConnected ? await Read(() => _calendar!.BetweenAsync(from, to)) : null;
+            _mail = MailConnected ? await Read(() => _mailbox!.RecentAsync(since, atMost)) : null;
+            _accountsRead = DateTimeOffset.Now;
+        }
+        finally
+        {
+            _reading = false;
         }
 
-        var all = diary.Events;
-        var left = all.Count(e => e.IsAllDay || e.End > now);
-
-        TodayList.ItemsSource = all
-            .Select(e => new UpcomingRow(
-                e.IsAllDay ? "all day" : Spoken.Clock(e.Start),
-                e.Subject,
-                Where(e),
-                Done: !e.IsAllDay && e.End <= now,
-                Now: e.IsHappeningAt(now)))
-            .ToList();
-
-        TodayCount.Text = (left, all.Count) switch
-        {
-            (0, 0) => "",
-            (0, var had) => $"{Plural(had, "thing")}, all done",
-            var (remaining, had) when remaining == had => Plural(had, "thing"),
-            var (remaining, had) => $"{remaining} left of {had}",
-        };
-
-        TodayEmpty.Visibility = all.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        TodayCard.Visibility = Visibility.Visible;
+        if (IsLoaded) Render();
     }
 
-    /// <summary>Sunday to Saturday, a line a day, with the days already gone faded.</summary>
-    /// <remarks>
-    /// Collapsed when no account answered at all. Seven days of "Nothing booked" over a calendar
-    /// that could not be read would be the most confident wrong answer on the page; the band
-    /// above already says an account could not be reached.
-    /// </remarks>
-    private void ShowWeek(CalendarReading? week, DateTimeOffset now)
-    {
-        if (week is null || week.NothingAnswered)
-        {
-            WeekCard.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        var days = CalendarWeek.Days(week.Events, now);
-
-        WeekList.ItemsSource = days
-            .Select(day =>
-            {
-                var start = CalendarWeek.Midnight(day.Date);
-                var end = CalendarWeek.Midnight(day.Date.AddDays(1));
-
-                return new WeekRow(
-                    day.IsToday ? "Today" : day.Date.ToString("ddd", CultureInfo.CurrentCulture),
-                    day.Date.ToString("d MMM", CultureInfo.CurrentCulture),
-                    day.IsToday,
-                    day.IsPast ? 0.4 : 1.0,
-                    [.. day.Events.Select(e => new WeekEntry(WeekWhen(e, start, end), e.Subject))]);
-            })
-            .ToList();
-
-        var booked = week.Events.Count == 0 ? "Nothing booked" : Plural(week.Events.Count, "thing");
-        var missing = week.Unavailable.Count > 0 ? " · an account couldn’t be reached" : "";
-        WeekCount.Text = $"{booked} · {Span(days[0].Date, days[^1].Date)}{missing}";
-
-        WeekCard.Visibility = Visibility.Visible;
-    }
-
-    /// <summary>When something is on, as it reads on one particular day of it.</summary>
-    /// <remarks>
-    /// A conference that began yesterday at nine does not start at nine today. On the days after
-    /// its first it says when it ends, or "all day" if it runs straight through.
-    /// </remarks>
-    private static string WeekWhen(CalendarEvent occurrence, DateTimeOffset dayStart, DateTimeOffset dayEnd)
-    {
-        if (occurrence.IsAllDay) return "all day";
-        if (occurrence.Start >= dayStart) return Spoken.Clock(occurrence.Start);
-
-        return occurrence.End <= dayEnd ? $"until {Spoken.Clock(occurrence.End)}" : "all day";
-    }
-
-    /// <summary>"13–19 September", or "27 Sep – 3 Oct" across a month.</summary>
-    private static string Span(DateOnly first, DateOnly last) => first.Month == last.Month
-        ? $"{first.Day}–{last.Day} {last.ToString("MMMM", CultureInfo.CurrentCulture)}"
-        : $"{first.ToString("d MMM", CultureInfo.CurrentCulture)} – {last.ToString("d MMM", CultureInfo.CurrentCulture)}";
-
-    private void ShowInbox(MailReading? mail)
-    {
-        if (mail is null)
-        {
-            InboxCard.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        var unread = mail.Messages.Where(m => m.IsUnread).ToList();
-
-        // Twenty rather than five: the inbox scrolls inside its widget now, so the limit is how
-        // much untrusted text is worth holding for a glance, not how much fits.
-        InboxList.ItemsSource = unread.Take(20).Select(Row).ToList();
-
-        InboxCount.Text = unread.Count == 0 ? "" : Plural(unread.Count, "unread", plural: "unread");
-        InboxEmpty.Visibility = unread.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        InboxCard.Visibility = Visibility.Visible;
-    }
-
-    private static InboxRow Row(MailMessage message) => new(
-        Initials(message.Who),
-        message.Who,
-        message.Subject,
-        message.Source is MailSource.Google ? "GMAIL" : "OUTLOOK",
-        message);
-
-    // ---- one message, read in place ----
-
-    /// <summary>Opens the picked message in its own window.</summary>
-    /// <remarks>
-    /// <para>
-    /// A real window rather than a panel laid over the page. A message is a thing you read and
-    /// then dismiss, not a mode the dashboard enters, and a dialog gets the Escape key, the
-    /// title bar and the focus trap for nothing.
-    /// </para>
-    /// <para>
-    /// Selection, not a click, because the list is a <see cref="ListBox"/> — see the comment on
-    /// it for why. The selection is cleared straight afterwards: it exists only to carry which
-    /// row was picked, and a row still highlighted when the reader closes would be describing a
-    /// state the page is no longer in. Clearing re-enters this handler with nothing selected,
-    /// which the first line returns on.
-    /// </para>
-    /// </remarks>
-    private void OnMessageOpened(object sender, SelectionChangedEventArgs e)
-    {
-        if (InboxList.SelectedItem is not InboxRow row) return;
-
-        InboxList.SelectedItem = null;
-
-        new MessageWindow(row.Message, row.Mailbox)
-        {
-            Owner = Window.GetWindow(this),
-        }.ShowDialog();
-    }
-
-    /// <summary>Where a meeting is, when the organiser said and it is short enough to read.</summary>
-    /// <remarks>
-    /// Locations are frequently a whole conference URL. One of those in a card is a wall of
-    /// characters that says nothing, so anything that long is dropped rather than trimmed.
-    /// </remarks>
-    private static string Where(CalendarEvent occurrence) =>
-        occurrence.Location is { Length: > 0 and < 40 } place ? place : "";
-
-    /// <summary>Two letters for the avatar, from the sender's own name.</summary>
-    private static string Initials(string who)
-    {
-        var words = who.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        return words.Length switch
-        {
-            0 => "?",
-            1 => words[0][..Math.Min(2, words[0].Length)].ToUpperInvariant(),
-            _ => $"{char.ToUpperInvariant(words[0][0])}{char.ToUpperInvariant(words[^1][0])}",
-        };
-    }
-
-    private static string Plural(int count, string one, string? plural = null) =>
-        count == 1 ? $"1 {one}" : $"{count} {plural ?? one + "s"}";
-
-    /// <summary>Runs a read, turning any failure into the reading's own "unavailable" shape.</summary>
-    /// <remarks>
-    /// The combined readers already absorb one account failing; this catches the case where the
-    /// whole call throws, so a broken connection greys one clause rather than the window.
-    /// </remarks>
+    /// <summary>Runs a read, turning a failure into "not read" rather than an error on the page.</summary>
     private static async Task<T?> Read<T>(Func<Task<T>> read) where T : class
     {
         try
@@ -447,48 +176,19 @@ public partial class HomeView : UserControl
         }
     }
 
+    // ---- the page's shape ----
 
-    private void UpdateStats()
+    /// <summary>Two columns when there is room; the right one under the left when there is not.</summary>
+    private void OnPageSized(object sender, SizeChangedEventArgs e)
     {
-        var stats = UsageStats.From(_all, DateOnly.FromDateTime(DateTime.Today));
+        var narrow = e.NewSize.Width < 900;
+        LeftWidth.Width = new GridLength(narrow ? 1 : 13, GridUnitType.Star);
+        GapWidth.Width = new GridLength(narrow ? 0 : 14);
+        RightWidth.Width = narrow ? new GridLength(0) : new GridLength(7, GridUnitType.Star);
+        Grid.SetColumn(RightColumn, narrow ? 0 : 2);
+        Grid.SetRow(RightColumn, narrow ? 1 : 0);
+        RightColumn.Margin = new Thickness(0, narrow ? 14 : 0, 0, 0);
 
-        Greeting.Text = $"Welcome back, {FirstName()}";
-        Subtitle.Text = stats.TotalDictations == 0
-            ? "Hold your push-to-talk key anywhere to start."
-            : $"{stats.TotalDictations:N0} dictations so far.";
-
-        TotalWords.Text = Compact(stats.TotalWords);
-        Wpm.Text = stats.WordsPerMinute.ToString(CultureInfo.CurrentCulture);
-        Streak.Text = stats.CurrentStreak.ToString(CultureInfo.CurrentCulture);
-        StreakCaption.Text = stats.CurrentStreak == 1 ? "day streak" : "day streak";
-
-        var minutes = Math.Max(0, stats.MinutesSavedVsTyping);
-        TimeSaved.Text = minutes >= 60
-            ? $"{minutes / 60:0.#} h"
-            : $"{minutes:0} min";
+        ArrangeTiles(e.NewSize.Width);
     }
-
-    private static string FirstName()
-    {
-        var name = Environment.UserName;
-        if (string.IsNullOrWhiteSpace(name)) return "there";
-
-        // Windows account names are rarely a bare first name: "ada_", "ada.lovelace" and
-        // "ada-l" should all greet the same person.
-        var cut = name.Split('.', '_', ' ', '-')[0];
-        return cut.Length switch
-        {
-            0 => "there",
-            1 => cut.ToUpperInvariant(),
-            _ => char.ToUpperInvariant(cut[0]) + cut[1..],
-        };
-    }
-
-    /// <summary>48,273 reads better as 48.3K in a small card.</summary>
-    private static string Compact(int n) => n switch
-    {
-        >= 1_000_000 => $"{n / 1_000_000.0:0.#}M",
-        >= 10_000 => $"{n / 1_000.0:0.#}K",
-        _ => n.ToString("N0", CultureInfo.CurrentCulture),
-    };
 }

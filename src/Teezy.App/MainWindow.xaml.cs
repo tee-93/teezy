@@ -266,13 +266,14 @@ public partial class MainWindow : Window
     {
         _home ??= new HomeView(
             _history,
+            _tasks ?? new TaskStore(),
+            _settings,
+            _saveSettings,
+            new HomeActions(ShowTask, ShowPage, MatchCategory),
+            () => _settings().Hotkey.Display,
             _diary,
             _mail,
-            () => _settings().Hotkey.Display,
-            expandedSections: () => _settings().ExpandedSections,
-            saveExpandedSections: expanded => _saveSettings(_settings() with { ExpandedSections = expanded }),
-            openBudget: () => NavBudget.IsChecked = true);
-        _home.AttachTasks(_tasks, ShowTask, () => NavTasks.IsChecked = true, MatchCategory);
+            _meetingStore);
         _home.Refresh();
         PageHost.Content = _home;
     }
@@ -350,14 +351,27 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        // Hide, never close. Teezy lives in the tray; disposing this window would mean
-        // rebuilding it, and quitting on a window close would strand the hotkey.
+        // Never actually closed: the window is built once and kept. What the X does is the
+        // user's choice — asked the first time — between keeping TeezyFlow running, minimised
+        // on the taskbar like any open application, and quitting it.
         //
         // The settings page is told either way: it may be holding the microphone open for a
-        // level meter, and a hidden window has no business still recording.
+        // level meter, and a minimised window has no business still recording.
         e.Cancel = true;
         _settingsView?.Leaving();
-        Hide();
+
+        var action = _settings().CloseAction;
+        if (action == CloseAction.Ask)
+        {
+            var dialog = new CloseDialog(this);
+            if (dialog.ShowDialog() != true || dialog.Choice is not { } chosen) return;
+            action = chosen;
+            if (dialog.Remember) _saveSettings(_settings() with { CloseAction = chosen });
+        }
+
+        if (action == CloseAction.Quit) ((App)Application.Current).Quit();
+        else WindowState = WindowState.Minimized;
+
         base.OnClosing(e);
     }
 }

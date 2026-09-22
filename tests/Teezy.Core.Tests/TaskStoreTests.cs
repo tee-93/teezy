@@ -224,6 +224,13 @@ public sealed class TaskStoreTests : IDisposable
     }
 
     [Fact]
+    public void OldNotesFromTeezyFlowAreKnownByTheirWording()
+    {
+        new TaskNote(_now, "Closed, and followed up for Fri 25 Sep.").IsFromApp.ShouldBeTrue();
+        new TaskNote(_now, "Rang Priya about the level 3 doors").IsFromApp.ShouldBeFalse();
+    }
+
+    [Fact]
     public void AFollowUpKeepsTheEmailAndMovesTheReminder()
     {
         var store = Store();

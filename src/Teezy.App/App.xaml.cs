@@ -105,17 +105,13 @@ public partial class App : Application
         _instance = new SingleInstance();
         if (!_instance.IsFirst)
         {
-            MessageBox.Show(
-                """
-                TeezyFlow is already running.
-
-                Look for the teal bars in the system tray — click the ^ arrow
-                next to the clock if you cannot see it.
-                """,
-                "TeezyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+            // Already running: this launch was someone wanting the window. Bring it forward and go.
+            _instance.AskFirstToShow();
             Shutdown();
             return;
         }
+
+        _instance.Listen(() => Dispatch(() => ShowMainWindow()));
 
         _settings = TeezySettings.Load();
 
@@ -286,26 +282,22 @@ public partial class App : Application
             Notify("TeezyFlow could not install its keyboard hook.", Forms.ToolTipIcon.Error);
         }
 
-        // Open the window unless Windows started us at sign-in.
-        //
-        // Starting silently in the tray is right for the sign-in launch and wrong for every
-        // other one: someone who has just installed Teezy, or just double-clicked it, gets no
-        // acknowledgement that anything happened and no way to find out short of knowing to
-        // look behind the ^ in the notification area.
+        // Open the window, at sign-in too: since 1.17 Home is the day's update, and the morning
+        // is when it is wanted. (The Run entry still passes --startup, so a sign-in launch can
+        // be told apart again if that ever needs a setting.)
         //
         // Deferred past a model download when there is one. On a fresh machine the download
         // window is the whole story at that moment, and two windows at once is not an
         // introduction.
-        var greet = !e.Args.Contains(WindowsAutostart.StartupFlag, StringComparer.OrdinalIgnoreCase);
         var modelPresent = ModelPaths.Resolve(_settings.ModelPath) is not null;
 
-        if (greet && modelPresent) ShowMainWindow();
+        if (modelPresent) ShowMainWindow();
 
         await LoadModelAsync().ConfigureAwait(false);
 
         // Back off the UI thread after the await, so this hops the dispatcher like everything
         // else that touches a window.
-        if (greet && !modelPresent) Dispatch(() => ShowMainWindow());
+        if (!modelPresent) Dispatch(() => ShowMainWindow());
     }
 
     private async Task LoadModelAsync()

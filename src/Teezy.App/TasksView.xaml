@@ -160,16 +160,25 @@
                     </StackPanel>
 
                     <!-- Notes: a running timeline, newest first, for reviews. -->
-                    <TextBlock x:Name="NotesLabel" Text="NOTES" Style="{StaticResource SectionLabel}" Margin="0,22,0,6"/>
-                    <Grid>
+                    <!-- Save sits on the header, where the eye is while typing; unsaved text is also
+                         saved on its own when the panel moves on, so a note is never lost. -->
+                    <Grid Margin="0,22,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="NotesLabel" Text="NOTES" Style="{StaticResource SectionLabel}" Margin="0"
+                                   VerticalAlignment="Center"/>
+                        <Button x:Name="AddNoteButton" Grid.Column="1" Content="Save" Style="{StaticResource Primary}"
+                                IsEnabled="False" Click="OnAddNote" ToolTip="Save the note (Ctrl+Enter)"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,12">
                         <TextBox x:Name="NoteBox" Style="{StaticResource Field}" Height="Auto" MinHeight="54"
                                  TextWrapping="Wrap" AcceptsReturn="True" Padding="8,6" VerticalContentAlignment="Top"
                                  KeyDown="OnNoteKey" TextChanged="OnNoteTyped"/>
                         <TextBlock x:Name="NotePlaceholder" Style="{StaticResource Hint}" Margin="10,7,0,0"
-                                   IsHitTestVisible="False" Text="Add a note — Ctrl+Enter to save"/>
+                                   IsHitTestVisible="False" Text="Add a note — Save or Ctrl+Enter"/>
                     </Grid>
-                    <Button x:Name="AddNoteButton" Content="Add note" Style="{StaticResource Secondary}" HorizontalAlignment="Left"
-                            Margin="0,6,0,10" IsEnabled="False" Click="OnAddNote"/>
                     <StackPanel x:Name="NotesList"/>
 
                     <!-- The email: folded away; opened in its own window to read. -->

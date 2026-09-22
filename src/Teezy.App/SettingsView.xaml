@@ -1095,6 +1095,26 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="When I close the window" Style="{StaticResource FormLabel}"/>
+                                            <TextBlock Style="{StaticResource FormHint}"
+                                                       Text="Keep running minimises TeezyFlow to the taskbar, so dictation and reminders carry on. Quit stops them until you open it again."/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="CloseActionPicker" Grid.Column="1" Width="170" VerticalAlignment="Center"
+                                                  Loaded="OnCloseActionLoaded" SelectionChanged="OnCloseActionChosen">
+                                            <ComboBoxItem Content="Ask me" Tag="Ask"/>
+                                            <ComboBoxItem Content="Keep running" Tag="KeepRunning"/>
+                                            <ComboBoxItem Content="Quit" Tag="Quit"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource FormRow}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                                             <TextBlock Text="Tidy up what I say" Style="{StaticResource FormLabel}"/>
                                             <TextBlock Style="{StaticResource FormHint}"
                                                        Text="Removes ums and ahs, fixes spacing, honours “scratch that”. Your dictionary is applied either way."/>

@@ -3,419 +3,101 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="{StaticResource UiFont}" FontSize="13">
     <!--
-      A dashboard of widgets: fixed tiles that each scroll inside themselves, on a page that
-      scrolls as a whole. The page scrollbar is for the page; a widget's scrollbar is for more of
-      that widget than its tile has room for, so one busy week cannot push everything else off
-      the screen.
+      Home is the day's update: a greeting and one line saying the day, tiles across the top,
+      then two columns of panels — about two thirds for today and the week, one third for what
+      is coming and coming in. Everything but the header is built in code (HomeView.Tiles.cs,
+      HomeView.Panels.cs), because which tiles and panels appear, and in what order, is the
+      user's choice (Customise).
+
+      Full without any account: every default is made from tasks, notes, meetings and dictation,
+      which exist on the locked-down work laptop too. Calendar and mail join where connected.
     -->
     <ScrollViewer x:Name="PageScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <Grid Margin="28,24,28,24">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+    <Grid x:Name="PageGrid" Margin="28,24,28,28" SizeChanged="OnPageSized">
         <Grid.RowDefinitions>
-            <!-- greeting · day band · tasks · widgets · figures -->
-            <RowDefinition Height="Auto"/>
+            <!-- header · customise · tiles · columns -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- The greeting is the one place in the app that uses the brand face. -->
-        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
-            <TextBlock x:Name="Greeting" Style="{StaticResource Display}" Text="Welcome back"
-                       TextTrimming="CharacterEllipsis"/>
-            <TextBlock x:Name="Subtitle" Style="{StaticResource Lede}" Margin="0,2,0,0"/>
-        </StackPanel>
-
-        <!-- The hotkey, where the eye lands first on a page you opened to check something. -->
-        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="16,8,0,0"
-                    HorizontalAlignment="Right" VerticalAlignment="Top">
-            <TextBlock Text="Hold" FontSize="12" Foreground="{StaticResource Muted}"
-                       VerticalAlignment="Center"/>
-            <Border Style="{StaticResource KeyCap}" Margin="6,0" VerticalAlignment="Center">
-                <TextBlock x:Name="HotkeyChip" FontSize="12" FontWeight="SemiBold"
-                           Foreground="{StaticResource Ink}"/>
-            </Border>
-            <TextBlock Text="to dictate" FontSize="12" Foreground="{StaticResource Muted}"
-                       VerticalAlignment="Center"/>
-        </StackPanel>
-
-        <!--
-          The day, said in one line, across the top. The page opens with the assistant telling
-          you what is going on rather than with figures to assemble into a sentence yourself,
-          and it is composed from the same readings the spoken answers use — so the window and
-          the pill cannot describe different days.
-
-          Collapsed until there is something to say. Most of Teezy has never needed an account,
-          and an empty band is worse than no band.
-        -->
-        <Border x:Name="SummaryBand" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                Style="{StaticResource CardPanel}" Margin="0,12,0,0"
-                Visibility="Collapsed">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Path Data="{StaticResource MarkGeometry}" Fill="{StaticResource Accent}" Stretch="Uniform"
-                      Width="18" Height="18" VerticalAlignment="Center"/>
-                <TextBlock x:Name="SummaryText" Grid.Column="1" Style="{StaticResource H2}"
-                           TextWrapping="Wrap" Margin="12,0,0,0" VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
-
-        <!--
-          Tasks, full width and first among the widgets: what needs doing today is the reason
-          most mornings start here. Due-today-and-late on the left, the next week on the right,
-          and a box to add one without leaving the page. Built in HomeView.Tasks.cs.
-        -->
-        <Border x:Name="TasksCard" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                Style="{StaticResource CardPanel}" Margin="0,12,0,0" Visibility="Collapsed"
-                AllowDrop="True" PreviewDragOver="OnTaskDragOver" PreviewDrop="OnTaskDrop">
-            <StackPanel>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="TASKS" Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TasksCount" Grid.Column="1" Margin="10,0,0,0" FontSize="12"
-                               Foreground="{StaticResource Faint}" VerticalAlignment="Center"
-                               Typography.NumeralAlignment="Tabular"/>
-                    <Button Grid.Column="2" Content="Open Tasks" Style="{StaticResource Quiet}" Click="OnOpenTasks"/>
-                </Grid>
-
-                <Border Style="{StaticResource FieldBox}" Margin="0,10,0,0">
-                    <Grid>
-                        <TextBlock x:Name="TaskAddPlaceholder" Style="{StaticResource Hint}" VerticalAlignment="Center"
-                                   IsHitTestVisible="False" Margin="0"
-                                   Text="Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes — or drag an email here"/>
-                        <TextBox x:Name="TaskAddBox" Style="{StaticResource BareText}"
-                                 TextChanged="OnTaskAddTyped" KeyDown="OnTaskAddKey"/>
-                    </Grid>
-                </Border>
-
-                <Grid Margin="0,12,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="13*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="7*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock x:Name="TasksTodayLabel" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
-                        <StackPanel x:Name="TasksToday"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="COMING UP" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
-                        <StackPanel x:Name="TasksSoon"/>
-                    </StackPanel>
-                </Grid>
-            </StackPanel>
-        </Border>
-
-        <!--
-          The widgets, in two columns across the full width: about two thirds for your day and
-          your week, one third for the budget and the inbox. Proportions rather than a fixed
-          width, so both columns widen and narrow with the window.
-
-          The inbox is sized to the calendar column in code, not by sharing a grid row with it.
-          Sharing a row is what let a tall inbox stretch the day and open a gap above the week;
-          taking its height from the column means the two always end on the same line, and the
-          inbox scrolls inside itself for whatever does not fit.
-        -->
-        <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
+        <!-- The greeting, the date, and the day in one line. -->
+        <Grid Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="13*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="7*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
-            <StackPanel x:Name="LeftColumn" Grid.Column="0" VerticalAlignment="Top"
-                        SizeChanged="OnLeftColumnSized">
-
-                <Border x:Name="TodayCard" Style="{StaticResource CardPanel}" Visibility="Collapsed">
-                    <StackPanel>
-                        <ToggleButton x:Name="DayToggle" Style="{StaticResource SectionToggle}" Tag="day"
-                                      ToolTip="Show more or less of today"
-                                      Checked="OnSectionToggled" Unchecked="OnSectionToggled">
-                            <Grid>
-                                <TextBlock Text="YOUR DAY" Style="{StaticResource SectionLabel}" Margin="0"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TodayCount" HorizontalAlignment="Right" FontSize="12"
-                                           Foreground="{StaticResource Faint}" VerticalAlignment="Center"
-                                           Typography.NumeralAlignment="Tabular"/>
-                            </Grid>
-                        </ToggleButton>
-
-                        <ScrollViewer x:Name="DayBody" Margin="0,12,0,0" Height="150" Padding="0,0,8,0"
-                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                      PreviewMouseWheel="OnWidgetWheel">
-                            <StackPanel>
-                                <ItemsControl x:Name="TodayList">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,0,0,8" Opacity="{Binding Dim}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="64"/>
-                                                    <ColumnDefinition Width="4"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding When}" FontSize="12"
-                                                           Foreground="{StaticResource Muted}" VerticalAlignment="Center"
-                                                           Typography.NumeralAlignment="Tabular"/>
-                                                <!-- A quiet rule for each entry; the accent marks only the one on now. -->
-                                                <Border Grid.Column="1" Width="{Binding RailWidth}" CornerRadius="2" MinHeight="26"
-                                                        HorizontalAlignment="Left" Background="{Binding Rail}"/>
-                                                <StackPanel Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding What}" TextDecorations="{Binding Strike}"
-                                                               Foreground="{StaticResource Ink}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Where}" FontSize="12" Margin="0,1,0,0"
-                                                               Foreground="{StaticResource Muted}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <TextBlock x:Name="TodayEmpty" Style="{StaticResource Hint}" Margin="0"
-                                           Visibility="Collapsed" Text="Nothing else in your diary today."/>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </StackPanel>
-                </Border>
-
-                <!--
-                  Sunday to Saturday, a line a day. The day widget above is the detail; this is
-                  the shape of the week, so today is in it too, marked, and the days already gone
-                  are faded rather than dropped. Every day is listed even when empty, because a
-                  free Thursday is exactly what someone glancing at a week is looking for.
-                -->
-                <Border x:Name="WeekCard" Style="{StaticResource CardPanel}" Margin="0,12,0,0"
-                        Visibility="Collapsed">
-                    <StackPanel>
-                        <ToggleButton x:Name="WeekToggle" Style="{StaticResource SectionToggle}" Tag="week"
-                                      ToolTip="Show more or less of the week"
-                                      Checked="OnSectionToggled" Unchecked="OnSectionToggled">
-                            <Grid>
-                                <TextBlock Text="YOUR WEEK" Style="{StaticResource SectionLabel}" Margin="0"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock x:Name="WeekCount" HorizontalAlignment="Right" FontSize="12"
-                                           Foreground="{StaticResource Faint}" VerticalAlignment="Center"
-                                           Typography.NumeralAlignment="Tabular"/>
-                            </Grid>
-                        </ToggleButton>
-
-                        <ScrollViewer x:Name="WeekBody" Margin="0,12,0,0" Height="330" Padding="0,0,8,0"
-                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                      PreviewMouseWheel="OnWidgetWheel">
-                            <ItemsControl x:Name="WeekList">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0"
-                                                Padding="0,8" Opacity="{Binding Dim}">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="104"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                                                    <Border Width="3" Height="14" CornerRadius="2" Margin="0,1,6,0"
-                                                            Background="{StaticResource Accent}"
-                                                            Visibility="{Binding TodayMarker}"/>
-                                                    <TextBlock Text="{Binding Day}" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{StaticResource Ink}"/>
-                                                    <TextBlock Text="{Binding Date}" FontSize="11" Margin="6,1,0,0"
-                                                               Foreground="{StaticResource Faint}"
-                                                               Typography.NumeralAlignment="Tabular"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1">
-                                                    <ItemsControl ItemsSource="{Binding Entries}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <Grid Margin="0,0,0,2">
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="88"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-                                                                    <TextBlock Text="{Binding When}" FontSize="12"
-                                                                               Foreground="{StaticResource Muted}"
-                                                                               Typography.NumeralAlignment="Tabular"/>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding What}" FontSize="12"
-                                                                               Foreground="{StaticResource Ink}"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                    <TextBlock Text="Nothing booked" FontSize="12" Foreground="{StaticResource Faint}"
-                                                               Visibility="{Binding EmptyVisibility}"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </StackPanel>
-                </Border>
+            <StackPanel>
+                <TextBlock x:Name="Greeting" Style="{StaticResource Display}" Text="Good morning"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="DateLine" Style="{StaticResource Lede}" Margin="0,2,0,0"/>
+                <TextBlock x:Name="BriefLine" Style="{StaticResource H2}" TextWrapping="Wrap" Margin="0,10,0,0"/>
             </StackPanel>
-
-            <StackPanel x:Name="RightColumn" Grid.Column="2" VerticalAlignment="Top">
-
-                <!--
-                  The budget's highlights, above the inbox. Empty until a source is connected,
-                  and it says so rather than showing sample figures; the Budget page is where
-                  the detail will live. The height is read in code to size the inbox below.
-                -->
-                <Border x:Name="BudgetCard" Style="{StaticResource CardPanel}" Height="150">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Text="BUDGET" Style="{StaticResource SectionLabel}" Margin="0"/>
-
-                        <TextBlock Grid.Row="1" Style="{StaticResource Hint}" Margin="0,8,0,0"
-                                   Text="Bills due this week, and money in and out, will show here once your budget is connected."/>
-
-                        <Button Grid.Row="2" Content="Open Budget" Style="{StaticResource Quiet}"
-                                HorizontalAlignment="Left" Margin="-7,0,0,-3" Click="OnOpenBudget"/>
-                    </Grid>
-                </Border>
-                <Border x:Name="InboxCard" Margin="0,12,0,0" VerticalAlignment="Top" Style="{StaticResource CardPanel}"
-                        Visibility="Collapsed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <Grid>
-                            <TextBlock Text="INBOX" Style="{StaticResource SectionLabel}" Margin="0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock x:Name="InboxCount" HorizontalAlignment="Right" FontSize="12"
-                                       Foreground="{StaticResource Faint}" VerticalAlignment="Center"
-                                       Typography.NumeralAlignment="Tabular"/>
-                        </Grid>
-
-                        <ScrollViewer x:Name="InboxBody" Grid.Row="1" Margin="0,12,0,0" Padding="0,0,6,0"
-                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                      PreviewMouseWheel="OnWidgetWheel">
-                            <StackPanel>
-                                <!--
-                                  A ListBox rather than an ItemsControl with a click handler on the rows.
-                                  The rows are a list of things you pick one of, which is what a ListBox is
-                                  for, and using it brings keyboard focus and arrow-key movement along with
-                                  the mouse — the hand-rolled version was mouse-only.
-                                -->
-                                <ListBox x:Name="InboxList" Style="{StaticResource PlainList}"
-                                         ItemContainerStyle="{StaticResource InboxRowItem}"
-                                         SelectionChanged="OnMessageOpened">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid ToolTip="{Binding Tip}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <Grid Width="28" Height="28" VerticalAlignment="Top">
-                                                    <Border CornerRadius="14" Background="{StaticResource Selected}">
-                                                        <TextBlock Text="{Binding Initials}" FontSize="11"
-                                                                   FontWeight="SemiBold" Foreground="{StaticResource Ink}"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-
-                                                    <!--
-                                                      Which mailbox it landed in, as a letter on the avatar's
-                                                      corner rather than a tag beside the name. Two accounts merge
-                                                      into one list, and "who is this from" is a different question
-                                                      from "where do I reply" — but in a quarter-width column the
-                                                      tag took the room the sender's name needed. The full name is
-                                                      on the row's tooltip.
-                                                    -->
-                                                    <!-- A small disc cut into the corner, the way a status
-                                                         badge sits on an avatar: the card's own colour as a
-                                                         ring, so it reads as notched out rather than on top. -->
-                                                    <Border CornerRadius="7" Width="14" Height="14" Margin="0,0,-4,-4"
-                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                            Background="{StaticResource Raised}"
-                                                            BorderBrush="{StaticResource Card}" BorderThickness="2">
-                                                        <TextBlock Text="{Binding MailboxLetter}" FontSize="8" FontWeight="Bold"
-                                                                   Foreground="{StaticResource Body}"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </Grid>
-
-                                                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Who}"
-                                                               Foreground="{StaticResource Ink}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Subject}" FontSize="12" Margin="0,1,0,0"
-                                                               Foreground="{StaticResource Muted}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                                <TextBlock x:Name="InboxEmpty" Style="{StaticResource Hint}" Margin="0"
-                                           Visibility="Collapsed" Text="Nothing unread."/>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16,8,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="Hold" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                    <Border Style="{StaticResource KeyCap}" Margin="6,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="HotkeyChip" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
+                    </Border>
+                    <TextBlock Text="to dictate" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button x:Name="CustomiseButton" Content="Customise" Style="{StaticResource Quiet}"
+                        HorizontalAlignment="Right" Margin="0,10,0,0" Click="OnCustomise"
+                        ToolTip="Choose the tiles and panels on Home"/>
             </StackPanel>
         </Grid>
 
-        <!--
-          The dictation figures, as one strip rather than a sidebar: one card split by lines,
-          four numbers in a row, closing the page off under the widgets.
-        -->
-        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,20,0,0">
-            <TextBlock Text="DICTATION" Style="{StaticResource SectionLabel}"/>
-            <Border Style="{StaticResource CardPanel}" Padding="0,14">
+        <!-- Customise: tick, order, done. Saved as it changes. -->
+        <Border x:Name="CustomisePanel" Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,0,0,14"
+                Visibility="Collapsed">
+            <StackPanel>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="CUSTOMISE HOME" Style="{StaticResource SectionLabel}" Margin="0"/>
+                        <TextBlock Style="{StaticResource FormHint}"
+                                   Text="Tick what to show and put it in order. Changes save as you go, and travel with Sync."/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Done" Style="{StaticResource Primary}" VerticalAlignment="Top" Click="OnCustomise"/>
+                </Grid>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="16"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="16"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Margin="16,0">
-                        <TextBlock x:Name="TotalWords" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="total words" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                    <Border Grid.Column="1" Background="{StaticResource Hairline}"/>
-                    <StackPanel Grid.Column="2" Margin="16,0">
-                        <TextBlock x:Name="Wpm" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="words / min" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                    <Border Grid.Column="3" Background="{StaticResource Hairline}"/>
-                    <StackPanel Grid.Column="4" Margin="16,0">
-                        <TextBlock x:Name="Streak" Style="{StaticResource StatNumber}"/>
-                        <TextBlock x:Name="StreakCaption" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                    <Border Grid.Column="5" Background="{StaticResource Hairline}"/>
-                    <StackPanel Grid.Column="6" Margin="16,0">
-                        <TextBlock x:Name="TimeSaved" Style="{StaticResource StatNumber}"/>
-                        <TextBlock Text="saved vs typing" Style="{StaticResource StatCaption}" Margin="0,2,0,0"/>
-                    </StackPanel>
+                    <StackPanel x:Name="CustomiseTiles"/>
+                    <StackPanel x:Name="CustomiseLeft" Grid.Column="2"/>
+                    <StackPanel x:Name="CustomiseRight" Grid.Column="4"/>
                 </Grid>
-            </Border>
-        </StackPanel>
+                <TextBlock x:Name="CustomiseAccounts" Style="{StaticResource FormHint}" Margin="0,10,0,0"
+                           Text="Connect Microsoft or Google in Settings ▸ Accounts to add Next meeting, Unread and the Inbox."/>
+            </StackPanel>
+        </Border>
 
+        <!-- The tiles: equal columns, wrapping on a narrow window. -->
+        <UniformGrid x:Name="TilesHost" Grid.Row="2" Rows="1" Margin="-6,0,-6,14"/>
+
+        <!-- Two columns, 65 / 35, stacking when the window is narrow. -->
+        <Grid x:Name="Columns" Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LeftWidth" Width="13*"/>
+                <ColumnDefinition x:Name="GapWidth" Width="14"/>
+                <ColumnDefinition x:Name="RightWidth" Width="7*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel x:Name="LeftColumn" VerticalAlignment="Top"/>
+            <StackPanel x:Name="RightColumn" Grid.Column="2" VerticalAlignment="Top"/>
+        </Grid>
     </Grid>
     </ScrollViewer>
 </UserControl>

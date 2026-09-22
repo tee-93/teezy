@@ -226,6 +226,22 @@ public sealed record TeezySettings
     /// <summary>The Kokoro voice, e.g. <c>bf_emma</c>. Null picks the default British one.</summary>
     public string? KokoroVoice { get; init; }
 
+    /// <summary>What the window's close button does. Asked the first time, then remembered.</summary>
+    /// <remarks>Per computer: whether to keep dictation running is a question about that machine.</remarks>
+    public CloseAction CloseAction { get; init; } = CloseAction.Ask;
+
+    /// <summary>The tiles across the top of Home, in order. Empty uses the defaults.</summary>
+    public IReadOnlyList<string> HomeTiles { get; init; } = [];
+
+    /// <summary>The larger panels in Home's left column, in order. Empty uses the defaults.</summary>
+    public IReadOnlyList<string> HomeLeft { get; init; } = [];
+
+    /// <summary>The panels in Home's right column, in order. Empty uses the defaults.</summary>
+    public IReadOnlyList<string> HomeRight { get; init; } = [];
+
+    /// <summary>Home panels folded to their header.</summary>
+    public IReadOnlyList<string> HomeCollapsed { get; init; } = [];
+
     /// <summary>The categories a task can have, in the order the picker shows them.</summary>
     /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
     public IReadOnlyList<string> TaskCategories { get; init; } = [];
@@ -384,7 +400,7 @@ public sealed record TeezySettings
     public static readonly IReadOnlySet<string> LocalOnly = new HashSet<string>(StringComparer.Ordinal)
     {
         nameof(InputDeviceId), nameof(InputDeviceName), nameof(NumThreads), nameof(ModelPath),
-        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt),
+        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt), nameof(CloseAction),
     };
 
     /// <summary>Everything that should be the same on every computer, as JSON.</summary>
@@ -493,4 +509,17 @@ public sealed record TeezySettings
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, JsonSerializer.Serialize(this, Json));
     }
+}
+
+/// <summary>What closing the main window does.</summary>
+public enum CloseAction
+{
+    /// <summary>Ask, with a box to remember the answer.</summary>
+    Ask,
+
+    /// <summary>Minimise to the taskbar: dictation and reminders keep working.</summary>
+    KeepRunning,
+
+    /// <summary>Quit TeezyFlow, as closing most applications does.</summary>
+    Quit,
 }

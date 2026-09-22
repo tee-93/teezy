@@ -8,7 +8,14 @@ public sealed record TaskNote(DateTimeOffset At, string Text, string? By = null)
     /// <summary>The author of notes TeezyFlow writes itself.</summary>
     public const string App = "TeezyFlow";
 
-    public bool IsFromApp => By == App;
+    /// <summary>
+    /// Written by TeezyFlow rather than a person. Notes from before 1.16 carry no author, so
+    /// TeezyFlow's own are known by their wording.
+    /// </summary>
+    public bool IsFromApp => By == App
+        || (By is null && (Text.StartsWith("Closed, and followed up", StringComparison.Ordinal)
+                           || Text.StartsWith("Email attached:", StringComparison.Ordinal)
+                           || Text.StartsWith("Created from an email", StringComparison.Ordinal)));
 }
 
 /// <summary>An email attached to a task — dropped or pasted in — kept apart from the notes.</summary>

@@ -3,53 +3,208 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      Flagged emails from classic Outlook, as a task list. The flag is the tick box: done here is
-      done in Outlook. The AI sees one email, only when a button on that email is pressed.
-      Rows are built in code (see TasksView.xaml.cs) because each can open a panel of its own.
+      TeezyFlow's own task list. The list is on the left, grouped by when things are due; the task
+      chosen opens on the right with its dates, notes, follow-up chain and an email box. Rows and
+      the detail's changing parts are built in code (see TasksView.xaml.cs).
     -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="28,24,28,24">
+    <!-- Emails dragged from Outlook land anywhere on the page: on a task to add to it, elsewhere
+         to make one. Preview events, so a drop on a text box is not swallowed as plain text. -->
+    <Grid Margin="28,24,28,24" Background="Transparent" AllowDrop="True"
+          PreviewDragOver="OnDragOver" PreviewDragLeave="OnDragLeave" PreviewDrop="OnDrop">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="360"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
 
-            <Grid Margin="0,0,0,16">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="Tasks" Style="{StaticResource H1}"/>
-                    <TextBlock x:Name="Lede" Style="{StaticResource Lede}" Margin="0,4,0,0"
-                               Text="Your flagged emails from Outlook, by category. Tick one off here and it’s done in Outlook too."/>
-                </StackPanel>
-                <Button x:Name="RefreshButton" Grid.Column="1" Content="Refresh" Style="{StaticResource Secondary}"
-                        VerticalAlignment="Top" Click="OnRefresh"/>
-            </Grid>
+        <!-- ============================== the list ============================== -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <!-- Shown after a tick, so a slip is one click to undo. -->
-            <Border x:Name="UndoBar" Style="{StaticResource CautionPanel}" Visibility="Collapsed" Margin="0,0,0,12">
+            <StackPanel Margin="0,0,0,16">
+                <TextBlock Text="Tasks" Style="{StaticResource H1}"/>
+                <TextBlock x:Name="Lede" Style="{StaticResource Lede}" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- Quick add: a date, a time and a #category can go at the end. -->
+            <StackPanel Grid.Row="1" Margin="0,0,0,14">
+                <Border Style="{StaticResource FieldBox}" Height="36">
+                    <Grid>
+                        <TextBlock x:Name="AddPlaceholder" Style="{StaticResource Hint}" VerticalAlignment="Center"
+                                   IsHitTestVisible="False"
+                                   Text="Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes — or drag an email here"/>
+                        <TextBox x:Name="AddBox" Style="{StaticResource BareText}"
+                                 TextChanged="OnAddTyped" KeyDown="OnAddKey"/>
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="AddPreview" Style="{StaticResource FormHint}" Margin="2,4,0,0" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <!-- Category filter, built from the categories in use. -->
+            <WrapPanel x:Name="Filters" Grid.Row="2" Margin="0,0,0,12"/>
+
+            <!-- Shown after closing, so a slip is one click to undo. -->
+            <Border x:Name="UndoBar" Grid.Row="3" Style="{StaticResource CautionPanel}" Visibility="Collapsed" Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="UndoText" VerticalAlignment="Center" Foreground="{StaticResource CautionInk}"/>
+                    <TextBlock x:Name="UndoText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Foreground="{StaticResource CautionInk}"/>
                     <Button Grid.Column="1" Content="Undo" Style="{StaticResource Quiet}" Click="OnUndo"/>
                 </Grid>
             </Border>
 
-            <!-- Why the list is empty, when it is. -->
-            <Border x:Name="EmptyState" Style="{StaticResource CardPanel}" Visibility="Collapsed">
-                <StackPanel HorizontalAlignment="Center" Margin="0,24">
-                    <Image Source="{StaticResource MarkImage}" Width="36" Height="36" Margin="0,0,0,12"/>
-                    <TextBlock x:Name="EmptyTitle" Style="{StaticResource H2}" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="EmptyText" Style="{StaticResource Hint}" TextAlignment="Center"
-                               MaxWidth="460" Margin="0,6,0,0"/>
+            <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border x:Name="EmptyState" Style="{StaticResource CardPanel}" Visibility="Collapsed">
+                        <StackPanel HorizontalAlignment="Center" Margin="0,24">
+                            <Image Source="{StaticResource MarkImage}" Width="36" Height="36" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="EmptyTitle" Style="{StaticResource H2}" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="EmptyText" Style="{StaticResource Hint}" TextAlignment="Center"
+                                       MaxWidth="460" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel x:Name="Groups"/>
+
+                    <Button x:Name="ClosedToggle" Style="{StaticResource Quiet}" HorizontalAlignment="Left"
+                            Margin="0,16,0,0" Click="OnToggleClosed"/>
+                    <StackPanel x:Name="ClosedList" Visibility="Collapsed" Margin="0,6,0,0"/>
                 </StackPanel>
-            </Border>
+            </ScrollViewer>
+        </Grid>
 
-            <StackPanel x:Name="Groups"/>
+        <!-- ============================== the chosen task ============================== -->
+        <Border x:Name="Detail" Grid.Column="1" Width="400" Margin="20,0,0,0" Style="{StaticResource CardPanel}"
+                Padding="0" Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18,16,18,18">
 
-            <TextBlock x:Name="AiNote" Style="{StaticResource Hint}" Margin="0,16,0,0" Visibility="Collapsed"
-                       Text="Next steps and Draft reply send that one email to Claude on your own Anthropic key, only when you press them. Check your employer is happy with work email going to an outside AI service."/>
-        </StackPanel>
-    </ScrollViewer>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="DetailState" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Close panel" Style="{StaticResource Quiet}" Click="OnDeselect"/>
+                    </Grid>
+
+                    <TextBox x:Name="TitleBox" Style="{StaticResource Field}" Height="Auto" MinHeight="34"
+                             TextWrapping="Wrap" Padding="8,6" FontSize="15" FontWeight="SemiBold"
+                             LostKeyboardFocus="OnTitleCommit" KeyDown="OnFieldKey"/>
+
+                    <!-- Dates and category. Dates take words: "fri", "tomorrow", "in 3 days", "25/9". -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Due" Style="{StaticResource FormHint}" Margin="0,0,0,3"/>
+                        <TextBox x:Name="DueBox" Grid.Row="1" Style="{StaticResource Field}"
+                                 LostKeyboardFocus="OnDatesCommit" KeyDown="OnFieldKey"
+                                 ToolTip="A day — fri, tomorrow, in 3 days, 25/9 — or empty for none"/>
+
+                        <TextBlock Grid.Column="2" Text="Remind at" Style="{StaticResource FormHint}" Margin="0,0,0,3"/>
+                        <TextBox x:Name="TimeBox" Grid.Row="1" Grid.Column="2" Style="{StaticResource Field}"
+                                 LostKeyboardFocus="OnDatesCommit" KeyDown="OnFieldKey"
+                                 ToolTip="A time on the due day — 2pm, 9:30am, 14:30 — or empty for no reminder"/>
+
+                        <TextBlock Grid.Row="3" Text="Start" Style="{StaticResource FormHint}" Margin="0,0,0,3"/>
+                        <TextBox x:Name="StartBox" Grid.Row="4" Style="{StaticResource Field}"
+                                 LostKeyboardFocus="OnDatesCommit" KeyDown="OnFieldKey"
+                                 ToolTip="Hidden under Not started until this day. Empty for now."/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="Category" Style="{StaticResource FormHint}" Margin="0,0,0,3"/>
+                        <TextBox x:Name="CategoryBox" Grid.Row="4" Grid.Column="2" Style="{StaticResource Field}"
+                                 LostKeyboardFocus="OnDatesCommit" KeyDown="OnFieldKey"/>
+                    </Grid>
+                    <WrapPanel x:Name="CategoryChips" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="DateProblem" Style="{StaticResource FormHint}" Foreground="{StaticResource CautionBorder}"
+                               Visibility="Collapsed"/>
+
+                    <!-- Closing. -->
+                    <StackPanel x:Name="OpenActions" Margin="0,16,0,0">
+                        <Button Content="Close task" Style="{StaticResource Primary}" HorizontalAlignment="Left" Click="OnCloseTask"/>
+                        <TextBlock Text="CLOSE AND FOLLOW UP" Style="{StaticResource SectionLabel}" Margin="0,14,0,6"/>
+                        <WrapPanel x:Name="FollowUpChoices"/>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="FollowUpBox" Style="{StaticResource Field}" KeyDown="OnFollowUpKey"
+                                     ToolTip="Another day for the follow-up: fri, next week, 3/10…"/>
+                            <Button Grid.Column="1" Content="Follow up then" Style="{StaticResource Secondary}"
+                                    Margin="8,0,0,0" Click="OnFollowUpOn"/>
+                        </Grid>
+                    </StackPanel>
+                    <Button x:Name="ReopenButton" Content="Reopen" Style="{StaticResource Secondary}" HorizontalAlignment="Left"
+                            Margin="0,16,0,0" Click="OnReopen" Visibility="Collapsed"/>
+
+                    <!-- The follow-up chain, when there is one. -->
+                    <StackPanel x:Name="ChainSection" Visibility="Collapsed">
+                        <TextBlock Text="THE CHAIN" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <Border Style="{StaticResource ListCard}">
+                            <StackPanel x:Name="ChainList"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Notes. -->
+                    <TextBlock Text="NOTES" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                    <StackPanel x:Name="NotesList"/>
+                    <TextBox x:Name="NoteBox" Style="{StaticResource Field}" Height="Auto" MinHeight="54"
+                             TextWrapping="Wrap" AcceptsReturn="True" Padding="8,6" VerticalContentAlignment="Top"
+                             KeyDown="OnNoteKey" ToolTip="Ctrl+Enter adds the note"/>
+                    <Button Content="Add note" Style="{StaticResource Secondary}" HorizontalAlignment="Left"
+                            Margin="0,6,0,0" Click="OnAddNote"/>
+
+                    <!-- An email pasted in, for next steps or a reply. -->
+                    <StackPanel x:Name="EmailSection">
+                        <TextBlock Text="AN EMAIL ABOUT THIS" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <TextBox x:Name="EmailBox" Style="{StaticResource Field}" Height="Auto" MinHeight="80" MaxHeight="220"
+                                 TextWrapping="Wrap" AcceptsReturn="True" Padding="8,6" VerticalContentAlignment="Top"
+                                 VerticalScrollBarVisibility="Auto"
+                                 ToolTip="Drag the email here from Outlook, or copy its text and paste it"/>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="SteerBox" Style="{StaticResource Field}"
+                                     ToolTip="Optional steer, e.g. “say yes, but not before Friday”"/>
+                            <TextBlock x:Name="SteerPlaceholder" Style="{StaticResource Hint}" Margin="10,0,0,0"
+                                       VerticalAlignment="Center" IsHitTestVisible="False"
+                                       Text="Optional: how to answer — “yes, but not before Friday”"/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button x:Name="NextStepsButton" Content="Next steps" Style="{StaticResource Secondary}" Click="OnNextSteps"/>
+                            <Button x:Name="DraftReplyButton" Content="Draft reply" Style="{StaticResource Secondary}"
+                                    Margin="8,0,0,0" Click="OnDraftReply"/>
+                        </StackPanel>
+                        <StackPanel x:Name="AdvicePanel" Margin="0,10,0,0" Visibility="Collapsed"/>
+                        <TextBlock x:Name="AiNote" Style="{StaticResource FormHint}" Margin="0,8,0,0"
+                                   Text="Sends the pasted email to Claude on your own Anthropic key, only when you press a button. Nothing is sent anywhere else. Check your employer is happy with work email going to an outside AI service."/>
+                    </StackPanel>
+
+                    <Button x:Name="DeleteButton" Content="Delete task" Style="{StaticResource Quiet}" HorizontalAlignment="Left"
+                            Margin="0,22,0,0" Foreground="{StaticResource Danger}" Click="OnDelete"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
 </UserControl>

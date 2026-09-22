@@ -15,7 +15,8 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <!-- greeting · day band · widgets · figures -->
+            <!-- greeting · day band · tasks · widgets · figures -->
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -67,6 +68,56 @@
         </Border>
 
         <!--
+          Tasks, full width and first among the widgets: what needs doing today is the reason
+          most mornings start here. Due-today-and-late on the left, the next week on the right,
+          and a box to add one without leaving the page. Built in HomeView.Tasks.cs.
+        -->
+        <Border x:Name="TasksCard" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                Style="{StaticResource CardPanel}" Margin="0,12,0,0" Visibility="Collapsed"
+                AllowDrop="True" PreviewDragOver="OnTaskDragOver" PreviewDrop="OnTaskDrop">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="TASKS" Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TasksCount" Grid.Column="1" Margin="10,0,0,0" FontSize="12"
+                               Foreground="{StaticResource Faint}" VerticalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular"/>
+                    <Button Grid.Column="2" Content="Open Tasks" Style="{StaticResource Quiet}" Click="OnOpenTasks"/>
+                </Grid>
+
+                <Border Style="{StaticResource FieldBox}" Margin="0,10,0,0">
+                    <Grid>
+                        <TextBlock x:Name="TaskAddPlaceholder" Style="{StaticResource Hint}" VerticalAlignment="Center"
+                                   IsHitTestVisible="False" Margin="0"
+                                   Text="Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes — or drag an email here"/>
+                        <TextBox x:Name="TaskAddBox" Style="{StaticResource BareText}"
+                                 TextChanged="OnTaskAddTyped" KeyDown="OnTaskAddKey"/>
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="13*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="7*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock x:Name="TasksTodayLabel" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                        <StackPanel x:Name="TasksToday"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="COMING UP" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                        <StackPanel x:Name="TasksSoon"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!--
           The widgets, in two columns across the full width: about two thirds for your day and
           your week, one third for the budget and the inbox. Proportions rather than a fixed
           width, so both columns widen and narrow with the window.
@@ -76,7 +127,7 @@
           taking its height from the column means the two always end on the same line, and the
           inbox scrolls inside itself for whatever does not fit.
         -->
-        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
+        <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="13*"/>
                 <ColumnDefinition Width="12"/>
@@ -328,7 +379,7 @@
           The dictation figures, as one strip rather than a sidebar: one card split by lines,
           four numbers in a row, closing the page off under the widgets.
         -->
-        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,20,0,0">
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,20,0,0">
             <TextBlock Text="DICTATION" Style="{StaticResource SectionLabel}"/>
             <Border Style="{StaticResource CardPanel}" Padding="0,14">
                 <Grid>

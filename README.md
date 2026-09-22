@@ -7,10 +7,11 @@ so an existing install upgrades in place with nothing to move.*
 Push-to-talk for Windows. Hold a key, talk, release — cleaned-up text is typed into whatever
 had focus. Hold a *different* key and it does what you said instead: opens an app, changes the
 volume, skips a track, locks the PC, and can answer you out loud. It also records a meeting and
-transcribes it once the call is over. **Local by default** — after the one-time model download,
-dictation, commands, meeting transcription, your dictionary and the built-in voice all run
-on-device and stay there. Seven optional tiers are the exception — five Claude, one ElevenLabs,
-and an encrypted sync file in your own OneDrive — every one of them off until you switch it on.
+transcribes it once the call is over, and keeps a task list for the follow-ups. **Local by
+default** — after the one-time model download, dictation, commands, meeting transcription, tasks,
+your dictionary and the voices all run on-device and stay there. Seven optional tiers are the
+exception — five Claude, one ElevenLabs, and an encrypted sync file in your own Google Drive or
+OneDrive — every one of them off until you switch it on.
 The only request TeezyFlow makes by itself is a check for updates against this repository.
 
 Everything dictated is kept, searchable, in an app window with usage stats — because the
@@ -155,103 +156,71 @@ by itself.
 ### Your other computers
 
 **Settings ▸ Sync** keeps your keys, settings and dictionary the same on every computer,
-through one encrypted file in a folder they can all see — a `TeezyFlow` folder in OneDrive is
-ideal. Choose the folder and a passphrase on the first computer; on each of the others, choose
-the same folder and type the same passphrase, and that computer takes the setup.
+through one encrypted file in a folder they can all see — a `TeezyFlow` folder in Google Drive
+is ideal, and the folder picker opens there when Google Drive is installed. OneDrive works too,
+but a personal and a work OneDrive cannot share a folder, which is why Google Drive is the
+suggestion. Choose the folder and a passphrase on the first computer; on each of the others,
+choose the same folder and type the same passphrase, and that computer takes the setup.
 
 - **What travels:** the Anthropic and ElevenLabs keys, the Google client secret, the Gmail app
   password, calendar links, hotkeys, the cleanup and assistant choices, writing styles and
-  per-app rules, the voice, and the dictionary.
-- **What stays:** the microphone, the thread count tuned to that processor, where the model
-  lives, and signed-in accounts — sign in to Microsoft or Google once on each computer (the
-  app ids are built in, so there is nothing to paste). A calendar file from Power Automate
-  stays on the computer it was added on.
+  per-app rules, the voice, the dictionary, and tasks.
+- **What stays:** the microphone, the thread count tuned to that processor, where the models
+  live (the natural voices are downloaded on each computer that uses them), and signed-in
+  accounts — sign in to Microsoft or Google once on each computer (the app ids are built in,
+  so there is nothing to paste).
 - **The file is unreadable without the passphrase:** PBKDF2-SHA256 at 600,000 iterations,
   then AES-256-GCM. The passphrase is kept on each computer under DPAPI, so it is typed once
   per machine — and it cannot be recovered. Forget it and the answer is to turn sync off
   everywhere and start again.
-- **The newest file wins, whole.** Two computers changing different things while both are
-  offline would lose one set of changes. For one person with a few machines that is simpler to
-  trust than a merge.
+- **The newest file wins, whole — except tasks.** Two computers changing different settings
+  while both are offline would lose one set of changes; for one person with a few machines that
+  is simpler to trust than a merge. Tasks are edited everywhere, so they merge task by task
+  instead (see Tasks below).
 
 **Why the keys are not simply built in:** the repository and its releases are public, and a
 key compiled into a public installer is a key anyone can pull out and spend. The Microsoft and
 Google *app ids* are built in (`BuiltInApps.cs`) because they are identifiers shown on every
 sign-in page, not secrets.
 
-### A work calendar that allows nothing else
+### Tasks
 
-When a work calendar can be neither signed in to (the organisation will not consent to an app
-it has not approved) nor published (IT has switched publishing off), there are two routes left.
+The **Tasks** tab is TeezyFlow's own task list, for quote follow-ups and the day's work. It is
+not connected to Outlook or anything else: 1.13–1.14 tried reading a work calendar and flagged
+email out of Outlook, every route ran into the employer's lockdown, and all of it was removed in
+1.15. The one bridge left is the one nothing can block — you drag an email across, or paste it.
 
-**1 · Read Outlook on this computer — works when everything else is blocked.** Settings ▸
-Accounts ▸ *Read my calendar from Outlook*.
+- **Quick add:** type a task with a day, a time and a category on the end —
+  *Chase Cessnock quote fri 2pm #Quotes*. Days read the way people write them: *today*,
+  *tomorrow*, *fri*, *next week*, *in 3 days*, *25/9*, *3 Oct*. A word like "Friday" in the
+  middle of a title stays part of the title.
+- **Grouped by when:** Overdue, Today, Upcoming, No date, and Not started — a start date in the
+  future keeps a task out of the way until that day. Filter by category along the top.
+- **Close, or close and follow up.** Following up closes the task and makes the next one for a
+  day you pick (*tomorrow*, *in 3 days*, *in a week*, *in 2 weeks*, or any day; weekends move to
+  Monday), linked back. The panel shows the whole chain — quote sent, chased, chased again.
+  Undo takes either back.
+- **Notes** on every task, timestamped.
+- **Reminders:** give a task a time and a card pops up above the tray when it comes due, with
+  *Done*, *In 1 hour*, *Tomorrow* and *Open*. It never takes the keyboard from what you are
+  typing, and it stays until dealt with.
+- **Home** shows today's and late tasks, the week ahead, and a box to add one.
+- **Syncs task by task.** With Settings ▸ Sync on, tasks travel in the same encrypted file, but
+  merged: each task keeps when it last changed and the newer copy wins, so tasks added on two
+  computers while apart both survive. Deletions travel too.
 
-**With classic Outlook running, this is the simple case.** Classic Outlook answers other programs
-on the same computer through its object model (COM), so TeezyFlow asks it for the week before and
-five weeks ahead every three minutes — every meeting, recurring ones expanded, whatever view is
-showing, with Outlook minimised or behind other windows. Only a running Outlook is asked; it is
-never started from TeezyFlow, since a hidden copy can stall on a sign-in prompt nobody sees.
-Only plain appointment fields are read, not attendees, which keeps Outlook's security guard out
-of it. *Not yet run against a live classic Outlook profile* — the laptop it was built on has none.
+**Emails in.** Drag a message from Outlook onto a task to add it as a note, or anywhere else on
+the page to make a new task from it — named after its subject, with the email kept as the first
+note. Classic Outlook's `.msg`, New Outlook's `.eml`, saved message files and plain text all
+work; copying the text and pasting it into a task works everywhere. Nothing is read from Outlook
+beyond what you drop, and nothing is written back.
 
-**Without classic Outlook, it reads New Outlook's window instead.** New Outlook labels every meeting for screen readers
-with its subject, times, date and location; TeezyFlow reads those labels every three minutes,
-the way a screen reader does, and keeps a copy on this computer. No API, no sign-in, no flow,
-nothing installed in Outlook, and nothing for IT to approve. The copy never leaves the laptop and
-never syncs.
-
-- **Leave Outlook open on the Calendar, in Week or Month view.** Behind other windows is fine —
-  measured: fully covered for 25 seconds, still read in full. **Minimised is not:** Outlook
-  discards its view, and TeezyFlow keeps the last copy and says how old it is.
-- **It sees what is on screen.** A month with more meetings on a day than fit in its box shows
-  "+2", and those two are not read — Week view shows everything.
-- Each read replaces what was stored for the days it saw and keeps the rest, so switching views
-  loses nothing, and a meeting deleted from a day on screen is gone at the next read.
-- Proven against real New Outlook labels, US and Australian date formats, and subjects with
-  commas in them (`OutlookLabel`, `OutlookWatcher`).
-
-**2 · Power Automate, where the organisation allows its Microsoft 365 connectors.** Many block
-them outright (data loss prevention policy), in which case saving the flow reports it as blocked
-and route 1 is the answer. Where they are allowed, a flow writes the diary to a file in your work
-OneDrive every 15 minutes, and TeezyFlow reads that file — Settings ▸ Accounts ▸ *Or read a
-calendar file*:
-
-1. In the work OneDrive on the laptop, make a folder `TeezyFlow` and an empty file in it called
-   `calendar.json` (New ▸ Text document, then rename it).
-2. Go to **make.powerautomate.com**, signed in with the work account. **Create ▸ Scheduled cloud
-   flow**, name it *TeezyFlow calendar*, repeat every **15 minutes**.
-3. **New step ▸ Office 365 Outlook ▸ Get calendar view of events (V3).** Calendar id:
-   *Calendar*. Start time: the expression `utcNow()`. End time: the expression
-   `addDays(utcNow(), 14)`.
-4. **New step ▸ OneDrive for Business ▸ Update file.** File: pick `/TeezyFlow/calendar.json`.
-   File content: the expression `string(body('Get_calendar_view_of_events_(V3)'))`.
-5. **Save**, then **Test ▸ Manually**. `calendar.json` should fill with your week.
-6. In TeezyFlow on the work laptop: **Settings ▸ Accounts ▸ Or read a calendar file ▸ Choose…**,
-   pick that `calendar.json`, **Add file**.
-
-If saving the flow says a connector is blocked by your organisation's data policy, use route 1
-instead. If the file stops changing, the flow has stopped — its run history says why.
-
-### Tasks: flagged emails from classic Outlook
-
-The **Tasks** tab is your flagged email, straight from classic Outlook's own To-Do List, grouped
-by category — due work first, overdue in amber. **The flag is the tick box:** tick a task and its
-flag is marked complete in Outlook; **Undo** puts it back. Flags and categories live in the
-mailbox, so the list matches New Outlook and your phone too. Pins do not — they are New
-Outlook's alone and classic Outlook cannot see them.
-
-- **Classic Outlook must be running** (minimised is fine). TeezyFlow never starts it.
-- **Only list fields are read in bulk** — sender name, subject, dates, categories. An email's
-  text is read only when you ask the AI about that one email, which keeps Outlook's security
-  guard quiet.
-- **Next steps** and **Draft reply** send that one email to Claude on your key, when you press
-  them and never otherwise. The request carries no tools, so an email written to manipulate an
-  AI has nothing to act with; the answer is text on the page. A draft is for you to copy into
-  Outlook — TeezyFlow never writes to your drafts and never sends anything. **Redraft** takes a
-  steer, e.g. *"say yes, but not before Friday"*.
-- If it is a work mailbox, check your employer is happy with work email going to an outside AI
-  service before using those two buttons. The rest of the page sends nothing anywhere.
+**Next steps and draft replies.** Paste or drop an email into a task's panel and press **Next
+steps** or **Draft reply** — an optional steer like *"yes, but not before Friday"* shapes it. Only
+that email and the task's title go to Claude, on your key, when you press the button. The
+request carries no tools, so an email written to manipulate an AI has nothing to act with; the
+answer is text to copy or save to the task's notes. If it is a work mailbox, check your employer
+is happy with work email going to an outside AI service first.
 
 ---
 
@@ -352,6 +321,19 @@ installed rather than the system default, which is usually the *worst* — measu
 default was "Microsoft Hazel Desktop" while four newer voices sat unused beside it. The ones
 Windows marks "Desktop" are the old SAPI5 set and are labelled as older in the picker. Accent is
 matched to your own where a voice exists for it.
+
+**Natural voices (Kokoro) are the free middle tier**: a neural voice made on this computer, far
+less robotic than Windows' and close to the paid tier to listen to. Settings ▸ Assistant ▸ Voice
+by ▸ *Natural — free*, then **Download** once (about 172 MB from Hugging Face: Kokoro v1.0,
+int8, as packaged for sherpa-onnx — the same engine dictation already uses). After that it is
+offline and nothing leaves the machine. Eighteen English voices, British first — the nearest
+Kokoro has to Australian — then American.
+
+- **It speaks a sentence at a time**, so the first words come about 1.2 s after the answer is
+  ready and the rest is made while the first plays (measured on the Snapdragon X Plus: about
+  0.8 s of work per second of speech, four threads; six were no faster and eight were slower).
+  A slower processor may leave a short gap between sentences.
+- Until the download finishes, answers use the Windows voice rather than nothing.
 
 **ElevenLabs is the paid tier**, and it costs three things: a subscription, a third API key, and
 a round trip before the first word — which lands *on top of* the wait for Claude that has already
@@ -864,7 +846,12 @@ the quantization and ONNX export are modifications. Model card:
 <https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2> · Licence:
 <https://creativecommons.org/licenses/by/4.0/>
 
-**sherpa-onnx** is Apache-2.0. **ONNX Runtime** is MIT. **NAudio** is MIT.
+Natural voices: **Kokoro-82M** v1.0 by hexgrad, **Apache-2.0**, in the int8 sherpa-onnx
+packaging by `csukuangfj`, with **espeak-ng** data (GPL-3.0) for pronunciation. Downloaded
+separately on request, never bundled. Model card: <https://huggingface.co/hexgrad/Kokoro-82M>
+
+**sherpa-onnx** is Apache-2.0. **ONNX Runtime** is MIT. **NAudio** is MIT. **MsgReader**, which
+reads Outlook `.msg` files dropped on the Tasks page, is MIT.
 
 The architecture and several hard-won constants were informed by
 [per-simmons/murmur-youtube](https://github.com/per-simmons/murmur-youtube), whose Windows
@@ -874,7 +861,7 @@ licence**, so no code was copied from it — only independently re-verified fact
 ## Privacy
 
 TeezyFlow runs no servers and collects nothing. Speech recognition, commands, meeting transcription,
-your dictionary and your history stay on the machine; five optional tiers can leave it, each off
+tasks, the voices, your dictionary and your history stay on the machine; seven optional tiers can leave it, each off
 until you switch it on and each on your own account. Meeting audio is deleted once it has been
 transcribed. Connected calendars and mailboxes are read, never copied or stored. The full
 statement is in [PRIVACY.md](PRIVACY.md).

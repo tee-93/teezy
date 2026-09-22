@@ -10,8 +10,9 @@ public enum CalendarSource
     Ics,
 
     /// <summary>
-    /// Events read from a file on this computer — written there by a Power Automate flow, for a
-    /// work calendar that can neither be signed in to nor published.
+    /// Retired: the work-Outlook routes (a Power Automate file, Outlook's window) that 1.13 had.
+    /// Kept only so an old settings file still reads; <see cref="TeezySettings.Migrate"/> drops
+    /// any account that has it.
     /// </summary>
     File,
 }

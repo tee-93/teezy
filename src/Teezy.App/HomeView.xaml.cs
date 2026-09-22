@@ -202,8 +202,9 @@ public partial class HomeView : UserControl
     public void Refresh()
     {
         _all = _history.Load();
-        
+
         UpdateStats();
+        ShowTasksCard();
 
         // Deliberately not awaited. The history is the page and must paint immediately; the
         // band fills in a moment later, or never, and neither delays anything.

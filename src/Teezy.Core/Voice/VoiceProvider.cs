@@ -8,4 +8,10 @@ public enum VoiceProvider
 
     /// <summary>A paid cloud voice. Better to listen to, slower to start, metered by character.</summary>
     ElevenLabs,
+
+    /// <summary>
+    /// Kokoro, a neural voice run on this computer. Free and offline like Windows, and close to
+    /// the paid tier to listen to; costs a one-off 170 MB download and a second before it starts.
+    /// </summary>
+    Kokoro,
 }

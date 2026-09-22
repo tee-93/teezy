@@ -16,6 +16,24 @@ public class SettingsMigrationTests
     }
 
     [Fact]
+    public void DropsTheRetiredWorkOutlookRoutes()
+    {
+        // A 1.13 settings file: a signed-in account, New Outlook's window and a Power Automate file.
+        var settings = Load("""
+            {
+              "ReadOutlookWindow": true,
+              "CalendarAccounts": [
+                { "Id": "a", "DisplayName": "Me", "Source": "Microsoft", "Profile": "Personal" },
+                { "Id": "outlook-window", "DisplayName": "Outlook on this computer", "Source": "File", "Profile": "Work" },
+                { "Id": "b", "DisplayName": "Work calendar", "Source": "File", "Profile": "Work" }
+              ]
+            }
+            """);
+
+        settings.ConnectedAccounts.Select(a => a.Id).ShouldBe(["a"]);
+    }
+
+    [Fact]
     public void ConvertsTheOldSingleKeyFormat() =>
         // Silently resetting someone's hotkey to the default would be worse than any amount
         // of migration code.

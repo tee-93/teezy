@@ -1,0 +1,38 @@
+<Window x:Class="Teezy.App.ReminderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TeezyFlow reminder" Width="380" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" ShowActivated="False"
+        FontFamily="{StaticResource UiFont}" FontSize="13">
+    <!--
+      A task reminder, in the corner above the tray. It never takes focus — it arrives while
+      something else is being typed — and stays until dealt with, because a reminder that fades
+      on its own is one that gets missed. Several due at once share one card.
+    -->
+    <Border Margin="12" Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"
+            BorderThickness="1" CornerRadius="8">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.5"/>
+        </Border.Effect>
+        <StackPanel>
+            <!-- The accent bar says "TeezyFlow" at a glance, as the top strip does in the window. -->
+            <Border Height="3" Background="{StaticResource Accent}" CornerRadius="8,8,0,0"/>
+
+            <Grid Margin="14,10,8,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image Source="{StaticResource MarkImage}" Width="16" Height="16" VerticalAlignment="Center"/>
+                <TextBlock x:Name="Heading" Grid.Column="1" Style="{StaticResource SectionLabel}" Margin="8,0,0,0"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="2" Content="✕" Style="{StaticResource Quiet}" Padding="8,2"
+                        ToolTip="Dismiss — the tasks stay on the list" Click="OnDismiss"/>
+            </Grid>
+
+            <StackPanel x:Name="Items" Margin="14,0,14,12"/>
+        </StackPanel>
+    </Border>
+</Window>

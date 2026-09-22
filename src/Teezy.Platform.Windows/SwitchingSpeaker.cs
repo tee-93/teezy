@@ -20,11 +20,16 @@ namespace Teezy.Platform.Windows;
 public sealed class SwitchingSpeaker(
     Func<TeezySettings> settings,
     WindowsSpeaker local,
-    ElevenLabsSpeaker cloud) : ISpeaker
+    ElevenLabsSpeaker cloud,
+    KokoroSpeaker natural) : ISpeaker
 {
     /// <summary>The tier that would answer right now.</summary>
-    public ISpeaker Active =>
-        settings().VoiceProvider == VoiceProvider.ElevenLabs && cloud.IsAvailable ? cloud : local;
+    public ISpeaker Active => settings().VoiceProvider switch
+    {
+        VoiceProvider.ElevenLabs when cloud.IsAvailable => cloud,
+        VoiceProvider.Kokoro when natural.IsAvailable => natural,
+        _ => local,
+    };
 
     public bool IsAvailable => Active.IsAvailable;
 
@@ -40,7 +45,12 @@ public sealed class SwitchingSpeaker(
     /// its voices are not listed.
     /// </remarks>
     private ISpeaker Chosen =>
-        settings().VoiceProvider == VoiceProvider.ElevenLabs ? cloud : local;
+        settings().VoiceProvider switch
+        {
+            VoiceProvider.ElevenLabs => cloud,
+            VoiceProvider.Kokoro => natural,
+            _ => local,
+        };
 
     public string? PreferredVoice
     {
@@ -56,15 +66,17 @@ public sealed class SwitchingSpeaker(
 
     public void Stop()
     {
-        // Both, always. The tier may have changed since the last utterance began, and a
+        // All three, always. The tier may have changed since the last utterance began, and a
         // sentence left playing from the other one is exactly the rudeness Stop exists for.
         local.Stop();
         cloud.Stop();
+        natural.Stop();
     }
 
     public void Dispose()
     {
         local.Dispose();
         cloud.Dispose();
+        natural.Dispose();
     }
 }

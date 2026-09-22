@@ -77,8 +77,7 @@ public partial class MainWindow : Window
         Updater? updater = null,
         Action? restartToUpdate = null,
         SyncService? sync = null,
-        OutlookWatcher? outlook = null,
-        IMailTasks? tasks = null,
+        TaskStore? tasks = null,
         IMailAdvisor? advisor = null)
     {
         InitializeComponent();
@@ -104,7 +103,6 @@ public partial class MainWindow : Window
         _updater = updater;
         _restartToUpdate = restartToUpdate;
         _sync = sync;
-        _outlook = outlook;
         _tasks = tasks;
         _advisor = advisor;
 
@@ -140,8 +138,7 @@ public partial class MainWindow : Window
     private readonly Updater? _updater;
     private readonly Action? _restartToUpdate;
     private readonly SyncService? _sync;
-    private readonly OutlookWatcher? _outlook;
-    private readonly IMailTasks? _tasks;
+    private readonly TaskStore? _tasks;
     private readonly IMailAdvisor? _advisor;
     private TasksView? _tasksView;
 
@@ -236,6 +233,14 @@ public partial class MainWindow : Window
         PageHost.Content = _tasksView;
     }
 
+    /// <summary>Opens the Tasks page at one task — from Home, or from a reminder.</summary>
+    public void ShowTask(string id)
+    {
+        NavTasks.IsChecked = true;
+        ShowTasks();
+        _tasksView?.Select(id);
+    }
+
     private void ShowBudget()
     {
         _budgetView ??= new BudgetView();
@@ -267,6 +272,7 @@ public partial class MainWindow : Window
             expandedSections: () => _settings().ExpandedSections,
             saveExpandedSections: expanded => _saveSettings(_settings() with { ExpandedSections = expanded }),
             openBudget: () => NavBudget.IsChecked = true);
+        _home.AttachTasks(_tasks, ShowTask, () => NavTasks.IsChecked = true);
         _home.Refresh();
         PageHost.Content = _home;
     }
@@ -317,7 +323,6 @@ public partial class MainWindow : Window
             updater: _updater,
             restartToUpdate: _restartToUpdate);
         _settingsView.AttachSync(_sync);
-        _settingsView.AttachOutlook(_outlook);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

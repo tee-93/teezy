@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace Teezy.Core.Sync;
 
-/// <summary>What travels between computers: settings, keys and the dictionary.</summary>
+/// <summary>What travels between computers: settings, keys, the dictionary and tasks.</summary>
 /// <param name="SavedAt">When it was written. The newest file wins.</param>
 /// <param name="SavedBy">The computer that wrote it, so each one can say where its setup came from.</param>
 /// <param name="Settings">The portable settings — see <see cref="TeezySettings.ToPortable"/>.</param>
@@ -13,12 +13,17 @@ namespace Teezy.Core.Sync;
 /// than deleted, so a computer that never had a key cannot wipe it from the others.
 /// </param>
 /// <param name="Dictionary">The dictionary file's text, exactly as written.</param>
+/// <param name="Tasks">
+/// The task list as JSON. Unlike everything else it is merged task by task rather than replaced,
+/// so tasks added on two computers while apart both survive. Null from a version without tasks.
+/// </param>
 public sealed record SyncProfile(
     DateTimeOffset SavedAt,
     string SavedBy,
     JsonObject Settings,
     IReadOnlyDictionary<string, string> Secrets,
-    string? Dictionary)
+    string? Dictionary,
+    string? Tasks = null)
 {
     public const string FileName = "TeezyFlow sync.tfsync";
 
@@ -31,6 +36,7 @@ public sealed record SyncProfile(
         ["settings"] = Settings.DeepClone(),
         ["secrets"] = JsonSerializer.SerializeToNode(Secrets, Json),
         ["dictionary"] = Dictionary,
+        ["tasks"] = Tasks,
     }.ToJsonString(Json);
 
     /// <exception cref="SyncUnlockException">The contents are not a profile.</exception>
@@ -44,7 +50,8 @@ public sealed record SyncProfile(
                 (string?)root["savedBy"] ?? "another computer",
                 root["settings"]?.AsObject().DeepClone().AsObject() ?? [],
                 root["secrets"]?.Deserialize<Dictionary<string, string>>(Json) ?? [],
-                (string?)root["dictionary"]);
+                (string?)root["dictionary"],
+                (string?)root["tasks"]);
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or NullReferenceException)

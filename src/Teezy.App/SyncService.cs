@@ -10,6 +10,7 @@ using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Calendar;
 using Teezy.Core.Sync;
+using Teezy.Core.Tasks;
 
 namespace Teezy.App;
 
@@ -37,6 +38,13 @@ public sealed record SyncStatus(bool On, string Message, bool Problem = false);
 /// other computer would then apply, and so on for ever.
 /// </para>
 /// <para>
+/// <b>Except tasks, which merge.</b> A task list is edited on every computer, often while another
+/// is asleep with older news, so whole-file-wins would lose tasks. Each task carries when it last
+/// changed, and the file's tasks are folded into this computer's — newer copy of each wins —
+/// whenever the file is read, and again just before it is written, so a write never drops a task
+/// another computer added since.
+/// </para>
+/// <para>
 /// Per-computer things never travel: see <see cref="TeezySettings.LocalOnly"/>. Neither do
 /// sign-ins — each computer signs in to its own accounts — nor the passphrase itself, which is
 /// kept on each computer under DPAPI so it is typed once per machine.
@@ -51,6 +59,7 @@ public sealed class SyncService : IDisposable
     private readonly ISecretStore _secrets;
     private readonly string _dictionaryPath;
     private readonly IReadOnlyList<string> _secretNames;
+    private readonly TaskStore? _tasks;
     private readonly Dispatcher _ui;
     private readonly DispatcherTimer _debounce;
     private readonly DispatcherTimer _poll;
@@ -69,13 +78,15 @@ public sealed class SyncService : IDisposable
         Action<TeezySettings> apply,
         ISecretStore secrets,
         string dictionaryPath,
-        IReadOnlyList<string> secretNames)
+        IReadOnlyList<string> secretNames,
+        TaskStore? tasks = null)
     {
         _settings = settings;
         _apply = apply;
         _secrets = secrets;
         _dictionaryPath = dictionaryPath;
         _secretNames = secretNames;
+        _tasks = tasks;
         _ui = Dispatcher.CurrentDispatcher;
 
         // A burst of edits — typing a key, ticking three switches — becomes one write.
@@ -180,7 +191,12 @@ public sealed class SyncService : IDisposable
             if (!File.Exists(path)) return;
 
             var profile = SyncProfile.FromJson(SyncCipher.Open(ReadShared(path), passphrase));
-            if (_settings().SyncAppliedAt is { } applied && profile.SavedAt <= applied) return;
+            if (_settings().SyncAppliedAt is { } applied && profile.SavedAt <= applied)
+            {
+                // Nothing newer to apply, but tasks merge regardless of which file is newest.
+                if (MergeTasks(profile)) LocalChanged();
+                return;
+            }
 
             Apply(profile);
         }
@@ -196,6 +212,8 @@ public sealed class SyncService : IDisposable
 
     private void Apply(SyncProfile profile)
     {
+        var ahead = MergeTasks(profile);
+
         _applying = true;
         try
         {
@@ -210,7 +228,9 @@ public sealed class SyncService : IDisposable
             }
 
             _apply(_settings().WithPortable(profile.Settings) with { SyncAppliedAt = profile.SavedAt });
-            _lastContent = Content(Snapshot(profile.SavedAt));
+            // What the file holds now matches this computer — unless this computer had tasks the
+            // file lacked, in which case the file needs writing again.
+            _lastContent = ahead ? null : Content(Snapshot(profile.SavedAt));
 
             var local = profile.SavedBy == Environment.MachineName;
             Set(new SyncStatus(true, local
@@ -221,6 +241,39 @@ public sealed class SyncService : IDisposable
         {
             _applying = false;
         }
+
+        if (ahead) LocalChanged();
+    }
+
+    /// <summary>Folds the file's tasks into this computer's.</summary>
+    /// <returns>Whether this computer has task news the file lacks, and so should write it.</returns>
+    private bool MergeTasks(SyncProfile profile)
+    {
+        if (_tasks is null) return false;
+        if (profile.Tasks is { } json)
+        {
+            try { _tasks.Merge(TaskStore.FromJson(json)); }
+            catch (System.Text.Json.JsonException) { }
+        }
+
+        return _tasks.ToSyncJson() != profile.Tasks;
+    }
+
+    /// <summary>
+    /// Just before writing: takes in any tasks another computer wrote since this one last read, so
+    /// the write carries them rather than wiping them.
+    /// </summary>
+    private void MergeTasksFromFile(string path, string passphrase)
+    {
+        if (_tasks is null || !File.Exists(path)) return;
+        try
+        {
+            MergeTasks(SyncProfile.FromJson(SyncCipher.Open(ReadShared(path), passphrase)));
+        }
+        catch (Exception e) when (e is SyncUnlockException or IOException or UnauthorizedAccessException)
+        {
+            // Unreadable just now; the write below still carries everything this computer has.
+        }
     }
 
     // ---- writing ----
@@ -228,6 +281,8 @@ public sealed class SyncService : IDisposable
     private void Push(bool force = false)
     {
         if (FilePath is not { } path || _secrets.Read(PassphraseName) is not { Length: > 0 } passphrase) return;
+
+        MergeTasksFromFile(path, passphrase);
 
         var now = DateTimeOffset.Now;
         var profile = Snapshot(now);
@@ -263,7 +318,8 @@ public sealed class SyncService : IDisposable
             if (_secrets.Read(name) is { Length: > 0 } value) secrets[name] = value;
         }
 
-        return new SyncProfile(at, Environment.MachineName, _settings().ToPortable(), secrets, ReadDictionary());
+        return new SyncProfile(at, Environment.MachineName, _settings().ToPortable(), secrets, ReadDictionary(),
+            _tasks?.ToSyncJson());
     }
 
     /// <summary>Everything but the time, for "has anything actually changed".</summary>

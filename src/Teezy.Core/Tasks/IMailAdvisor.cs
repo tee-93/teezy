@@ -11,15 +11,15 @@ public enum AdviceKind
 }
 
 /// <summary>
-/// Suggests next steps for a flagged email, or drafts a reply — only ever when asked, one email
-/// at a time.
+/// Suggests next steps for an email pasted into a task, or drafts a reply — only ever when asked,
+/// one email at a time.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>An implementation must send no tools</b>, for the same reason <see cref="IUntrustedNarrator"/>
 /// must not: an email is written by someone else, often to manipulate whoever reads it. The
-/// result is text shown to the user and nothing more — it is not sent, not saved into Outlook,
-/// and there is no member here through which an action could be requested.
+/// result is text shown to the user to copy and nothing more — it is not sent anywhere, and there
+/// is no member here through which an action could be requested.
 /// </para>
 /// <para>
 /// A separate interface rather than a mode of the narrator because the output differs in kind
@@ -33,14 +33,14 @@ public interface IMailAdvisor
     bool IsAvailable { get; }
 
     /// <param name="kind">Next steps, or a reply.</param>
-    /// <param name="task">What the list knows about the email: sender, subject, dates.</param>
-    /// <param name="body">The email's text. Untrusted.</param>
+    /// <param name="task">The task the email was pasted into, for context: the user's own words.</param>
+    /// <param name="email">The pasted email. Untrusted.</param>
     /// <param name="instruction">Anything the user added, e.g. "say yes but not before Friday".</param>
     /// <exception cref="Commands.AssistantUnavailableException">It could not be reached.</exception>
     Task<string?> AdviseAsync(
         AdviceKind kind,
-        MailTask task,
-        string body,
+        TaskItem? task,
+        string email,
         string? instruction,
         DateTimeOffset now,
         CancellationToken ct = default);

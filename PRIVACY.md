@@ -1,6 +1,6 @@
 # TeezyFlow privacy policy
 
-_Last updated: 13 September 2026_
+_Last updated: 22 September 2026_
 
 TeezyFlow is a push-to-talk dictation and voice assistant app that runs on your own Windows PC.
 There is no TeezyFlow account, no TeezyFlow server, and no TeezyFlow company collecting anything. Nothing
@@ -13,8 +13,8 @@ machine does with what it can see.
   to. We cannot see your dictation, your diary or your mail, and could not hand them over if
   asked.
 - **Everything is local until you switch something on.** Speech recognition, the command
-  vocabulary, your dictionary, your history, meeting transcription and the built-in Windows voice
-  all run on-device.
+  vocabulary, your dictionary, your history, your tasks, meeting transcription and the voices —
+  Windows' own and the natural (Kokoro) ones — all run on-device.
 - **Seven optional tiers leave the machine**, each off by default, each on your own API key, your
   own account or your own storage, and each listed below.
 - **No analytics, no telemetry, no crash reporting, no advertising, no tracking of any kind.**
@@ -43,7 +43,8 @@ These live in `%LOCALAPPDATA%\Teezy` and are never transmitted:
 | `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed |
 | `settings.json` | Your preferences, and which accounts you have connected |
 | `dictionary.txt` | Words and names you have taught it |
-| `outlook-calendar.json` | Only if you switch on reading Outlook: the meetings New Outlook showed, read locally the way a screen reader does |
+| `tasks.json` | Your task list: titles, dates, categories and notes, including any email you dropped or pasted into a task |
+| `models\` | The speech model, and the natural voices if you downloaded them |
 | `secrets\` | API keys, account tokens, the Gmail app password and calendar links, encrypted (see below) |
 
 ## What leaves your computer, and only if you turn it on
@@ -63,7 +64,7 @@ your machine and send nothing. Only an unusual phrasing that TeezyFlow cannot co
 sends the relevant events or message summaries so Claude can answer in a sentence.
 
 **4. Spoken replies (ElevenLabs).** If you choose the paid voice, the text to be spoken is sent
-to ElevenLabs on your own key. The free Windows voice sends nothing.
+to ElevenLabs on your own key. The free Windows and natural voices send nothing.
 
 **5. Meeting summaries (Anthropic).** When you press **Summarise** on a meeting, that meeting's
 transcript is sent so Claude can write a summary and the follow-up tasks. It is never automatic:
@@ -71,20 +72,29 @@ it happens for that meeting, when you ask, and at no other time. The recording i
 sent, and the PDF is made on your computer. Like calendar and mail answers, the request is given
 no tools, because a transcript is other people's words.
 
-**7. Next steps and draft replies for a task (Anthropic).** On the Tasks page, pressing **Next
-steps** or **Draft reply** on one flagged email sends that email — its sender name, subject, dates
-and text — so Claude can suggest what to do or draft a reply. Only that one email, only when you
-press the button, and never in the background. The request has no tools: the reply is text on
-the page, and nothing is sent, saved to Outlook or acted on. If it is a work mailbox, check your
-employer allows work email to go to an outside AI service.
-
 **6. Sync between your computers (your own folder).** If you turn on Settings ▸ Sync, your API
-keys, the Google client secret, the Gmail app password, calendar links, your preferences and your
-dictionary are written to one file in a folder you choose — usually your own OneDrive, so it is
-stored by Microsoft under your account. The file is **encrypted with a passphrase only you know**
-(PBKDF2-SHA256, 600,000 iterations, then AES-256-GCM), so OneDrive, and anyone who obtains the
-file, sees only scrambled data. Your dictation history, meetings, signed-in account tokens and
-audio are never in it. Turning sync off stops it; delete the file to remove it.
+keys, the Google client secret, the Gmail app password, calendar links, your preferences, your
+dictionary and your tasks (with their notes) are written to one file in a folder you choose —
+usually your own Google Drive or OneDrive, so it is stored by Google or Microsoft under your
+account. The file is **encrypted with a passphrase only you know** (PBKDF2-SHA256, 600,000
+iterations, then AES-256-GCM), so the storage provider, and anyone who obtains the file, sees
+only scrambled data. Your dictation history, meetings, signed-in account tokens and audio are
+never in it. Turning sync off stops it; delete the file to remove it.
+
+**7. Next steps and draft replies for a task (Anthropic).** On the Tasks page, pressing **Next
+steps** or **Draft reply** sends the email you pasted or dropped into that task, with the task's
+title, category and due date and any steer you typed, so Claude can suggest what to do or draft a
+reply. Only that one email, only when you press the button, and never in the background. The
+request has no tools: the reply is text on the page for you to copy, and nothing is sent or acted
+on. If it is a work email, check your employer allows it to go to an outside AI service.
+
+**Emails you drag in stay local.** Dropping an email from Outlook onto the Tasks page copies its
+text into the task on this computer. TeezyFlow never connects to Outlook or your mailbox to do
+it, reads nothing beyond what you dropped, and writes nothing back.
+
+**The natural voices are downloaded once, when you ask.** Pressing **Download** in Settings fetches
+the Kokoro voice files from Hugging Face; like the speech model's download, that request carries
+nothing about you. After that the voice runs on your computer and the text it reads never leaves.
 
 Requests to Anthropic and ElevenLabs are subject to those companies' own terms and privacy
 policies, under your own account with them.
@@ -101,7 +111,7 @@ TeezyFlow can read your **calendar** (Microsoft, Google, or a published calendar
   password is not limited by Google: it is full access to the mailbox. TeezyFlow opens your inbox
   read-only and never changes anything, but that is TeezyFlow's own restraint, not a limit Google
   enforces.
-- **A calendar link** is a calendar you published from Outlook. The link itself is the access, so
+- **A calendar link** is a calendar you published (from Outlook.com, Google or another calendar). The link itself is the access, so
   TeezyFlow stores it encrypted like a token, fetches it only over HTTPS, and has no way to change the
   calendar behind it.
 - **Microsoft and Google accounts sign in on the provider's own page**, in your own browser. No

@@ -6,6 +6,7 @@ using Teezy.Core.Meetings;
 using Teezy.Cleanup;
 using Teezy.Core.Formatting;
 using Teezy.Core.History;
+using Teezy.Core.Tasks;
 using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -81,18 +82,12 @@ public partial class App : Application
     private ISecretStore? _secrets;
     private SyncService? _sync;
 
-    /// <summary>Reads New Outlook's calendar on this computer, when that route is switched on.</summary>
-    private readonly OutlookWatcher _outlook;
+    /// <summary>The task list, which the Tasks page, Home, reminders and sync all share.</summary>
+    private readonly TaskStore _tasks = new();
 
-    /// <summary>Flagged emails from classic Outlook, as the Tasks page's list.</summary>
-    private readonly ClassicOutlookMail _mailTasks = new();
+    private ReminderWindow? _reminders;
+    private DispatcherTimer? _reminderTimer;
 
-    public App()
-    {
-        // Built here rather than at startup so the timer exists from the first moment; it reads
-        // nothing until the route is switched on in Settings.
-        _outlook = new OutlookWatcher(() => _settings.ReadOutlookWindow);
-    }
     private ClaudeFormatter? _claude;
     private MainWindow? _main;
     private WindowsAudioCapture? _audio;
@@ -123,6 +118,10 @@ public partial class App : Application
         }
 
         _settings = TeezySettings.Load();
+
+        // What 1.13's Outlook-window reading left behind. That route is gone.
+        try { File.Delete(Path.Combine(Path.GetDirectoryName(TeezySettings.DefaultPath)!, "outlook-calendar.json")); }
+        catch (Exception problem) when (problem is IOException or UnauthorizedAccessException) { }
         _dictionary = new DictionaryStore(DictionaryStore.DefaultPath);
         EnsureDictionaryFileExists();
         WatchDictionaryFile();
@@ -173,9 +172,12 @@ public partial class App : Application
             updated => ApplySettings(updated),
             _secrets,
             DictionaryStore.DefaultPath,
-            [ApiKeyName, ElevenLabsKeyName, GoogleSecretName, GmailPasswordName]);
+            [ApiKeyName, ElevenLabsKeyName, GoogleSecretName, GmailPasswordName],
+            _tasks);
         secrets.Changed += name => Dispatch(() => _sync?.SecretChanged(name));
+        _tasks.Changed += () => Dispatch(() => _sync?.LocalChanged());
         _sync.Start();
+        StartReminders();
 
         // Composed so the offline rules always run and their output is the floor: the LLM is
         // asked to improve an already-clean string, and every failure path returns it.
@@ -263,7 +265,10 @@ public partial class App : Application
             new ElevenLabsSpeaker(
                 () => _secrets.Read(ElevenLabsKeyName),
                 () => _settings.ElevenLabsModel,
-                _voiceUsage));
+                _voiceUsage),
+
+            // Loads its model on first use, not here: most people never switch it on.
+            new KokoroSpeaker(new KokoroSynth(new KokoroModel())));
 
         // Every one of these fires on a background thread. WPF objects may only be touched
         // from the UI thread, so each hops the dispatcher rather than assuming.
@@ -468,6 +473,7 @@ public partial class App : Application
         menu.Items.Add(_updateItem);
         menu.Items.Add(open);
         menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add("Tasks…", null, (_, _) => ShowMainWindow(Page.Tasks));
         menu.Items.Add("Settings…", null, (_, _) => ShowMainWindow(Page.Settings));
         menu.Items.Add("Dictionary…", null, (_, _) => ShowMainWindow(Page.Dictionary));
         menu.Items.Add("Meetings…", null, (_, _) => ShowMainWindow(Page.Meetings));
@@ -555,11 +561,10 @@ public partial class App : Application
             updater: _updater,
             restartToUpdate: RestartToUpdate,
             sync: _sync,
-            outlook: _outlook,
-            tasks: _mailTasks,
+            tasks: _tasks,
 
             // The key is the cleanup tier's: the same Anthropic account. Called only when a
-            // button on one email is pressed.
+            // button under a pasted email is pressed.
             advisor: new Teezy.Assistant.ClaudeMailAdvisor(
                 () => _secrets?.Read(ApiKeyName),
                 () => _settings.AssistantModel,
@@ -570,6 +575,42 @@ public partial class App : Application
         _main.Activate();
         _main.ShowPage(page);
         _main.RefreshCurrentPage();
+    }
+
+    /// <summary>Opens the window at one task, from a reminder.</summary>
+    private void ShowTask(string id)
+    {
+        ShowMainWindow(Page.Tasks);
+        _main!.ShowTask(id);
+    }
+
+    /// <summary>
+    /// Looks every half minute for tasks whose reminder time has come, and puts them on the card.
+    /// </summary>
+    /// <remarks>
+    /// Each is marked as reminded here before it is shown, so it is shown once on this computer;
+    /// the mark does not travel, so each computer that is on at the time shows it.
+    /// </remarks>
+    private void StartReminders()
+    {
+        _reminderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _reminderTimer.Tick += (_, _) => CheckReminders();
+        _reminderTimer.Start();
+
+        // A first look shortly after start, once the tray is up, for anything missed while off.
+        var first = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+        first.Tick += (_, _) => { first.Stop(); CheckReminders(); };
+        first.Start();
+    }
+
+    private void CheckReminders()
+    {
+        var due = TaskPlan.DueForReminder(_tasks.Visible, DateTime.Now);
+        if (due.Count == 0) return;
+
+        foreach (var task in due) _tasks.MarkReminded(task.Id);
+        _reminders ??= new ReminderWindow(_tasks, ShowTask);
+        _reminders.Remind(due);
     }
 
     /// <summary>Applies and persists a settings change from any window.</summary>
@@ -611,9 +652,12 @@ public partial class App : Application
         // handing a SAPI voice name to ElevenLabs would silently leave it with no voice.
         if (_speaker is not null)
         {
-            _speaker.PreferredVoice = _settings.VoiceProvider == VoiceProvider.ElevenLabs
-                ? _settings.ElevenLabsVoice
-                : _settings.SpeechVoice;
+            _speaker.PreferredVoice = _settings.VoiceProvider switch
+            {
+                VoiceProvider.ElevenLabs => _settings.ElevenLabsVoice,
+                VoiceProvider.Kokoro => _settings.KokoroVoice,
+                _ => _settings.SpeechVoice,
+            };
         }
 
         SetTrayState($"Ready — hold {_settings.Hotkey.Display} to dictate", _modelReady);
@@ -655,7 +699,7 @@ public partial class App : Application
         _speaker?.Dispose();
         _updater.Dispose();
         _sync?.Dispose();
-        _outlook.Dispose();
+        _reminderTimer?.Stop();
         if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
         TrayIcons.Dispose();
         base.OnExit(e);

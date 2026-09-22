@@ -67,8 +67,8 @@ public sealed class CombinedCalendar(Func<IReadOnlyList<ICalendar>> accounts)
             if (failed is { } source && !unavailable.Contains(source)) unavailable.Add(source);
         }
 
-        // The same diary reached two ways — an account signed in and the same calendar read from
-        // Outlook's window, or a link to it — would otherwise list every meeting twice. Same
+        // The same diary reached two ways — an account signed in and a published link to the same
+        // calendar — would otherwise list every meeting twice. Same
         // subject at the same times is the same meeting, whichever way it arrived.
         events = [.. events.DistinctBy(e => (e.Subject.Trim(), e.Start.UtcDateTime, e.End.UtcDateTime, e.IsAllDay))];
 

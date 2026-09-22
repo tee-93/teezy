@@ -53,15 +53,15 @@ public class CombinedCalendarTests
     [Fact]
     public async Task TheSameMeetingReachedTwoWaysIsListedOnce()
     {
-        // A signed-in account and the same diary read from Outlook's window.
+        // A signed-in account and the same diary through its published link.
         var signedIn = new FakeCalendar(CalendarSource.Microsoft);
         signedIn.Events.Add(Meeting("Review", 14, CalendarSource.Microsoft));
 
-        var fromOutlook = new FakeCalendar(CalendarSource.File);
-        fromOutlook.Events.Add(Meeting("Review", 14, CalendarSource.File));
-        fromOutlook.Events.Add(Meeting("Review", 16, CalendarSource.File));
+        var fromLink = new FakeCalendar(CalendarSource.Ics);
+        fromLink.Events.Add(Meeting("Review", 14, CalendarSource.Ics));
+        fromLink.Events.Add(Meeting("Review", 16, CalendarSource.Ics));
 
-        var reading = await Read(signedIn, fromOutlook);
+        var reading = await Read(signedIn, fromLink);
 
         reading.Events.Count.ShouldBe(2);
     }

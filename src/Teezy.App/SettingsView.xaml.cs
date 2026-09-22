@@ -361,6 +361,8 @@ public partial class SettingsView : UserControl
     [
         (VoiceProvider.Windows, "Windows — free",
             "The voices already on this machine. Free, offline, and instant."),
+        (VoiceProvider.Kokoro, "Natural — free",
+            "Kokoro, a voice made on this computer. Free and offline, far better than Windows; a one-off 170 MB download, and about a second before it starts."),
         (VoiceProvider.ElevenLabs, "ElevenLabs — paid",
             "Much better to listen to. Costs a subscription, and waits for the network before it starts."),
     ];
@@ -380,11 +382,20 @@ public partial class SettingsView : UserControl
         VoiceProviderHint.Text = VoiceProviders[VoiceProviderPicker.SelectedIndex].Hint;
 
         var paid = settings.VoiceProvider == VoiceProvider.ElevenLabs;
+        var natural = settings.VoiceProvider == VoiceProvider.Kokoro;
         ElevenLabsDetail.Visibility = paid ? Visibility.Visible : Visibility.Collapsed;
         if (paid) ShowElevenKeyState();
+        KokoroDetail.Visibility = natural ? Visibility.Visible : Visibility.Collapsed;
+        if (natural) ShowKokoroState();
 
         var voices = _speaker.Voices();
         var rows = new List<VoiceChoice>();
+
+        if (natural)
+        {
+            PopulateKokoroVoices(settings, voices);
+            return;
+        }
 
         // No automatic row for the paid tier: its voices belong to an account rather than a
         // fixed set, so there is nothing sensible to fall back to and an unchosen voice means
@@ -445,9 +456,12 @@ public partial class SettingsView : UserControl
         var chosen = rows[VoicePicker.SelectedIndex];
         var settings = _read();
 
-        _write(settings.VoiceProvider == VoiceProvider.ElevenLabs
-            ? settings with { ElevenLabsVoice = chosen.Id }
-            : settings with { SpeechVoice = chosen.Id });
+        _write(settings.VoiceProvider switch
+        {
+            VoiceProvider.ElevenLabs => settings with { ElevenLabsVoice = chosen.Id },
+            VoiceProvider.Kokoro => settings with { KokoroVoice = chosen.Id },
+            _ => settings with { SpeechVoice = chosen.Id },
+        });
 
         // Applied and demonstrated at once. Choosing a voice from a list of names without
         // hearing it is guessing, and the whole point of the row is what it sounds like.
@@ -552,13 +566,10 @@ public partial class SettingsView : UserControl
 
         public string DisplayName => Account.DisplayName;
 
-        public string Detail => Account.Id == Connectors.ConnectedAccounts.OutlookWindowId
-            ? "Read from Outlook on this computer · read-only"
-            : Account.Source switch
+        public string Detail => Account.Source switch
         {
             CalendarSource.Microsoft => "Microsoft",
             CalendarSource.Google => "Google",
-            CalendarSource.File => "Calendar file from Power Automate · read-only",
             _ => "Calendar link · read-only",
         };
 

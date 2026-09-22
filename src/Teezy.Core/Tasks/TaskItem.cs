@@ -1,0 +1,145 @@
+namespace Teezy.Core.Tasks;
+
+/// <summary>A note on a task, stamped when it was written.</summary>
+public sealed record TaskNote(DateTimeOffset At, string Text);
+
+/// <summary>One task.</summary>
+/// <param name="Id">Stable across computers, so sync can match the same task on each.</param>
+/// <param name="Title">What to do.</param>
+/// <param name="Category">A free-text category, e.g. "Quotes". Null for none.</param>
+/// <param name="Start">Not before this day; until then it sits under "Not started". Null for now.</param>
+/// <param name="Due">The day it is due. Null for no date.</param>
+/// <param name="DueTime">A time on the due day, for a reminder. Null for no reminder.</param>
+/// <param name="Notes">Running notes, oldest first.</param>
+/// <param name="Created">When it was made.</param>
+/// <param name="Closed">When it was closed; null while open.</param>
+/// <param name="FollowUpOf">The task this follows up, which makes a chain: quote sent, chased, chased again.</param>
+/// <param name="Modified">When it last changed, anywhere. The newer copy wins when computers disagree.</param>
+/// <param name="Deleted">Deleted, kept as a marker so the deletion reaches the other computers.</param>
+/// <param name="Reminded">When its reminder was shown, so it is shown once.</param>
+public sealed record TaskItem(
+    string Id,
+    string Title,
+    string? Category,
+    DateOnly? Start,
+    DateOnly? Due,
+    TimeOnly? DueTime,
+    IReadOnlyList<TaskNote> Notes,
+    DateTimeOffset Created,
+    DateTimeOffset? Closed,
+    string? FollowUpOf,
+    DateTimeOffset Modified,
+    bool Deleted = false,
+    DateTimeOffset? Reminded = null)
+{
+    public bool IsOpen => Closed is null && !Deleted;
+
+    public static TaskItem New(string title, DateTimeOffset now, string? category = null,
+        DateOnly? start = null, DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null) =>
+        new(Guid.NewGuid().ToString("N"), title.Trim(), Clean(category), start, due, dueTime, [], now, null, followUpOf, now);
+
+    internal static string? Clean(string? category) =>
+        string.IsNullOrWhiteSpace(category) ? null : category.Trim();
+}
+
+/// <summary>Where an open task sits on the list, in the order the list shows them.</summary>
+public enum TaskBucket
+{
+    Overdue,
+    Today,
+    Upcoming,
+    NoDate,
+    NotStarted,
+}
+
+/// <summary>How the list is arranged, and what "today" means for it.</summary>
+public static class TaskPlan
+{
+    /// <summary>Where an open task belongs on a given day.</summary>
+    /// <remarks>
+    /// A start date in the future parks a task under Not started whatever its due date, so a
+    /// follow-up booked for next Friday does not clutter today. Once started it is placed by its
+    /// due date; a started task with no due date is No date.
+    /// </remarks>
+    public static TaskBucket BucketOf(TaskItem task, DateOnly today) =>
+        task.Start is { } start && start > today ? TaskBucket.NotStarted
+        : task.Due is not { } due ? TaskBucket.NoDate
+        : due < today ? TaskBucket.Overdue
+        : due == today ? TaskBucket.Today
+        : TaskBucket.Upcoming;
+
+    /// <summary>Open tasks grouped by bucket, each group due-first then newest.</summary>
+    public static IReadOnlyList<(TaskBucket Bucket, IReadOnlyList<TaskItem> Tasks)> Arrange(
+        IEnumerable<TaskItem> tasks, DateOnly today, string? category = null) =>
+        tasks
+            .Where(t => t.IsOpen)
+            .Where(t => category is null || string.Equals(t.Category, category, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(t => BucketOf(t, today))
+            .OrderBy(g => g.Key)
+            .Select(g => (g.Key, (IReadOnlyList<TaskItem>)g
+                .OrderBy(t => t.Due ?? DateOnly.MaxValue)
+                .ThenBy(t => t.DueTime ?? TimeOnly.MaxValue)
+                .ThenByDescending(t => t.Created)
+                .ToList()))
+            .ToList();
+
+    /// <summary>What needs doing today: overdue, then due today.</summary>
+    public static IReadOnlyList<TaskItem> DueToday(IEnumerable<TaskItem> tasks, DateOnly today) =>
+        Arrange(tasks, today)
+            .Where(g => g.Bucket is TaskBucket.Overdue or TaskBucket.Today)
+            .SelectMany(g => g.Tasks)
+            .ToList();
+
+    /// <summary>Open tasks whose reminder time has come and whose reminder has not been shown here.</summary>
+    /// <remarks>
+    /// Only tasks with a time: a task due on a day with no time is for the day's list, not a
+    /// pop-up. A reminder missed while the computer was off is shown when it next looks.
+    /// </remarks>
+    public static IReadOnlyList<TaskItem> DueForReminder(IEnumerable<TaskItem> tasks, DateTime now) =>
+        tasks
+            .Where(t => t.IsOpen && t.Reminded is null && t.Due is not null && t.DueTime is not null)
+            .Where(t => t.Start is not { } start || start <= DateOnly.FromDateTime(now))
+            .Where(t => t.Due!.Value.ToDateTime(t.DueTime!.Value) <= now)
+            .OrderBy(t => t.Due!.Value.ToDateTime(t.DueTime!.Value))
+            .ToList();
+
+    /// <summary>The day itself, or the Monday after if it falls on a weekend — for follow-ups at work.</summary>
+    public static DateOnly Workday(DateOnly day) => day.DayOfWeek switch
+    {
+        DayOfWeek.Saturday => day.AddDays(2),
+        DayOfWeek.Sunday => day.AddDays(1),
+        _ => day,
+    };
+
+    /// <summary>Every category in use, for the pickers, in name order.</summary>
+    public static IReadOnlyList<string> Categories(IEnumerable<TaskItem> tasks) =>
+        tasks.Where(t => !t.Deleted && t.Category is not null)
+            .Select(t => t.Category!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    /// <summary>The whole follow-up chain a task belongs to, oldest first.</summary>
+    public static IReadOnlyList<TaskItem> Chain(IReadOnlyList<TaskItem> tasks, string id)
+    {
+        var byId = tasks.Where(t => !t.Deleted).ToDictionary(t => t.Id);
+        if (!byId.TryGetValue(id, out var task)) return [];
+
+        // Up to the first task, guarding against a loop.
+        var first = task;
+        var seen = new HashSet<string> { first.Id };
+        while (first.FollowUpOf is { } parent && byId.TryGetValue(parent, out var up) && seen.Add(up.Id)) first = up;
+
+        // Then down, following each task's follow-up.
+        var chain = new List<TaskItem> { first };
+        var children = byId.Values.Where(t => t.FollowUpOf is not null).ToLookup(t => t.FollowUpOf!);
+        var current = first;
+        while (children[current.Id].OrderBy(t => t.Created).FirstOrDefault() is { } next && !chain.Contains(next))
+        {
+            chain.Add(next);
+            current = next;
+        }
+
+        return chain;
+    }
+}

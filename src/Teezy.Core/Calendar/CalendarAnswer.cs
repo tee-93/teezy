@@ -237,7 +237,6 @@ public static class CalendarAnswer
     {
         CalendarSource.Microsoft => "Microsoft",
         CalendarSource.Google => "Google",
-        CalendarSource.File => "work",
         _ => "linked",
     };
 }

@@ -223,6 +223,9 @@ public sealed record TeezySettings
     /// <summary>The ElevenLabs voice id. Unset means that tier is not ready.</summary>
     public string? ElevenLabsVoice { get; init; }
 
+    /// <summary>The Kokoro voice, e.g. <c>bf_emma</c>. Null picks the default British one.</summary>
+    public string? KokoroVoice { get; init; }
+
     /// <summary>
     /// Which ElevenLabs model synthesises.
     /// </summary>
@@ -339,12 +342,6 @@ public sealed record TeezySettings
     /// </remarks>
     public string? SyncFolder { get; init; }
 
-    /// <summary>
-    /// Read the meetings New Outlook shows on this computer, as the work-calendar route of last
-    /// resort. Per computer: it is the work laptop's Outlook, and its calendar stays there.
-    /// </summary>
-    public bool ReadOutlookWindow { get; init; }
-
     /// <summary>The saved-at time of the last sync file this computer applied or wrote.</summary>
     /// <remarks>What stops a computer re-applying its own write, or an older file over a newer one.</remarks>
     public DateTimeOffset? SyncAppliedAt { get; init; }
@@ -364,7 +361,7 @@ public sealed record TeezySettings
     public static readonly IReadOnlySet<string> LocalOnly = new HashSet<string>(StringComparer.Ordinal)
     {
         nameof(InputDeviceId), nameof(InputDeviceName), nameof(NumThreads), nameof(ModelPath),
-        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt), nameof(ReadOutlookWindow),
+        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt),
     };
 
     /// <summary>Everything that should be the same on every computer, as JSON.</summary>
@@ -432,9 +429,20 @@ public sealed record TeezySettings
         }
     }
 
-    /// <summary>Converts a settings file written before hotkeys became combinations.</summary>
+    /// <summary>
+    /// Converts a settings file written before hotkeys became combinations, and drops calendar
+    /// accounts from the retired work-Outlook routes.
+    /// </summary>
     internal static TeezySettings Migrate(TeezySettings loaded)
     {
+        if (loaded.ConnectedAccounts.Any(a => a.Source == Calendar.CalendarSource.File))
+        {
+            loaded = loaded with
+            {
+                ConnectedAccounts = [.. loaded.ConnectedAccounts.Where(a => a.Source != Calendar.CalendarSource.File)],
+            };
+        }
+
         if (loaded.LegacyPushToTalkKey is not { Length: > 0 } legacy)
         {
             // A file with neither form - hand-edited, or truncated - still needs a usable key.

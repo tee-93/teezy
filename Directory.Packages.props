@@ -2,40 +2,32 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Speech. sherpa-onnx bundles its own ONNX Runtime; do NOT also reference
          Microsoft.ML.OnnxRuntime or two copies get loaded. -->
+    <PackageVersion Include="MsgReader" Version="6.1.2" />
     <PackageVersion Include="org.k2fsa.sherpa.onnx" Version="1.13.5" />
     <PackageVersion Include="org.k2fsa.sherpa.onnx.runtime.win-x64" Version="1.13.5" />
     <PackageVersion Include="org.k2fsa.sherpa.onnx.runtime.win-arm64" Version="1.13.5" />
-
     <!-- Audio. PINNED TO 2.3.0: NAudio 3.x will not restore here. -->
     <PackageVersion Include="NAudio" Version="2.3.0" />
-
     <!-- Text to speech for assistant answers. SAPI: free, offline, installed everywhere,
          and it sounds like it. The better voice is what a paid tier would be for. -->
     <PackageVersion Include="System.Speech" Version="10.0.12" />
-
     <!-- Optional LLM cleanup tier. The app runs fully without it. -->
     <PackageVersion Include="Anthropic" Version="12.42.0" />
-
     <!-- Gmail over IMAP. Google classes its Gmail read scope as *restricted*, so the API
          route needs verification; an app password over IMAP needs no Cloud project at all.
          MailKit is MIT. -->
     <PackageVersion Include="MailKit" Version="4.14.0" />
-
     <!-- Meeting notes as PDF. PDFsharp and MigraDoc are MIT; Teezy.Documents gives the
          platform-neutral build its fonts, so it needs no GDI or WPF. -->
     <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.1" />
-
     <!-- Calendars published as ICS links. Ical.Net is MIT, and expands recurrence, exceptions
          and Outlook's Windows time-zone names correctly — measured against an Outlook-style feed. -->
     <PackageVersion Include="Ical.Net" Version="5.2.3" />
-
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
-
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

@@ -1,6 +1,6 @@
 # TeezyFlow privacy policy
 
-_Last updated: 22 September 2026 (1.16)_
+_Last updated: 22 September 2026 (1.19)_
 
 TeezyFlow is a push-to-talk dictation and voice assistant app that runs on your own Windows PC.
 There is no TeezyFlow account, no TeezyFlow server, and no TeezyFlow company collecting anything. Nothing
@@ -15,7 +15,7 @@ machine does with what it can see.
 - **Everything is local until you switch something on.** Speech recognition, the command
   vocabulary, your dictionary, your history, your tasks, meeting transcription and the voices —
   Windows' own and the natural (Kokoro) ones — all run on-device.
-- **Seven optional tiers leave the machine**, each off by default, each on your own API key, your
+- **Eight optional tiers leave the machine**, each off by default, each on your own API key, your
   own account or your own storage, and each listed below.
 - **No analytics, no telemetry, no crash reporting, no advertising, no tracking of any kind.**
   TeezyFlow does not phone home, and there is no build of it that does. The one request it
@@ -92,6 +92,14 @@ reply. Only that one email, only when you press the button, and never in the bac
 request has no tools: the reply is text on the page for you to edit and copy — kept with the task
 on your computer — and nothing is sent or acted on. If it is a work email, check your employer
 allows it to go to an outside AI service.
+
+**8. The AI plan in the morning briefing (Anthropic).** The morning briefing itself — what is late,
+the day in order, the week's follow-ups — is made on your computer and sends nothing. Only if you
+switch on **Add an AI plan for the day** (Settings ▸ Tasks) are your open tasks (titles, due
+dates, categories and each one's latest note) and today's meeting names sent, once a morning, so
+Claude can write two or three sentences on how to tackle the day. Attached emails are never
+sent. The request has no tools — meeting names are written by whoever sent the invitation — and
+the answer is only shown to you.
 
 **Emails you drag in stay local.** Dropping an email from Outlook onto the Tasks page copies its
 text into the task on this computer. TeezyFlow never connects to Outlook or your mailbox to do

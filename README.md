@@ -9,8 +9,8 @@ had focus. Hold a *different* key and it does what you said instead: opens an ap
 volume, skips a track, locks the PC, and can answer you out loud. It also records a meeting and
 transcribes it once the call is over, and keeps a task list for the follow-ups. **Local by
 default** — after the one-time model download, dictation, commands, meeting transcription, tasks,
-your dictionary and the voices all run on-device and stay there. Seven optional tiers are the
-exception — five Claude, one ElevenLabs, and an encrypted sync file in your own Google Drive or
+your dictionary and the voices all run on-device and stay there. Eight optional tiers are the
+exception — six Claude, one ElevenLabs, and an encrypted sync file in your own Google Drive or
 OneDrive — every one of them off until you switch it on.
 The only request TeezyFlow makes by itself is a check for updates against this repository.
 
@@ -215,11 +215,14 @@ email out of Outlook, every route ran into the employer's lockdown, and all of i
   merged: each task keeps when it last changed and the newer copy wins, so tasks added on two
   computers while apart both survive. Deletions travel too.
 
-**Emails in.** Drag a message from Outlook onto a task to attach it, or anywhere else on the page
-to make a new task from it, named after its subject. The email is kept beside the notes, not in
-them: a folded **Email** section shows who and what in one line, and **Open** reads it in full in
-its own window. Classic Outlook's `.msg`, New Outlook's `.eml`, saved message files and plain
-text all work, and an email can be pasted in instead. Nothing is read from Outlook beyond what
+**Emails in.** Drag a message straight out of Outlook — classic or New — onto a task to attach it,
+or anywhere else on the page to make a new task from it, named after its subject. A dashed box
+under quick add (and on Home's Today panel) shows where, and lights up with what the drop will do
+while an email is over the page. The email is kept beside the notes, not in them: a folded
+**Email** section shows who and what in one line, and **Open** reads it in full in its own
+window. Classic Outlook's `.msg`, New Outlook's `.eml`, saved message files and plain text all
+work — New Outlook only hands an email over to an *asynchronous* drop, which WPF does not speak,
+so TeezyFlow does that handshake itself — and an email can be pasted in instead. Nothing is read from Outlook beyond what
 you drop, and nothing is written back.
 
 **Next steps and draft replies.** In the folded **Next steps and reply** section, press **Next
@@ -229,6 +232,40 @@ request carries no tools, so an email written to manipulate an AI has nothing to
 answer is kept on the task and can be edited before you copy it or save it to the notes. If it
 is a work mailbox, check your employer is happy with work email going to an outside AI service
 first.
+
+### The focus list
+
+A small card of the tasks you are working through right now — a call list, say — that stays on
+top of everything else. Open it from **Focus list** on Home or the Tasks page, or from the tray.
+It has no title bar: drag it by its header, resize it from any edge, and it stays where you put
+it, and comes back at start if it was open.
+
+- **Pin** a task from its panel on the Tasks page (**Pin to focus**); pinned tasks wear a
+  *Focus* tag in the list. Anything typed into the card's own box is added and pinned at once,
+  with the same *fri 2pm #Quotes* quick add understands.
+- **Tick** one to close it, with Undo for a slip.
+- **Click** one to open a notes box right in the card. What you type is saved to that task's
+  notes, under your name, with Save or Ctrl+Enter — and kept if you open another task or close
+  the card. Clicking into the CRM mid-call does not split a note into pieces.
+- **Unpin** takes it off the card and leaves the task open. A pinned task's follow-up stays
+  pinned.
+
+Pins travel with the tasks in Sync; where the card sits is per computer.
+
+### The morning briefing
+
+On working days a briefing opens at **8:30** — or the first time TeezyFlow is open after that, if
+the computer was off — once a day per computer. It says the day in one line, then lists what is
+**late**, **today** in order (timed tasks, reminders and meetings, then anything due at any
+time), the **follow-ups this week**, unread email where a mailbox is connected, and what you
+closed the working day before. Tasks can be ticked off or opened from it; **Read it to me** reads
+it aloud in your chosen voice. It opens without taking the keyboard, in case you are already
+typing. **Briefing** on Home and **Morning briefing** in the tray show it any time.
+
+Settings ▸ Tasks ▸ Morning briefing sets the time (6 to 11 am), weekends, and an optional **AI
+plan for the day**: two or three sentences from Claude on how to tackle it, sent your open
+tasks, their latest notes and today's meeting names — never an attached email — with no tools,
+since meeting names are strangers' writing. The list itself is always made on the computer.
 
 ---
 
@@ -904,7 +941,7 @@ licence**, so no code was copied from it — only independently re-verified fact
 ## Privacy
 
 TeezyFlow runs no servers and collects nothing. Speech recognition, commands, meeting transcription,
-tasks, the voices, your dictionary and your history stay on the machine; seven optional tiers can leave it, each off
+tasks, the voices, your dictionary and your history stay on the machine; eight optional tiers can leave it, each off
 until you switch it on and each on your own account. Meeting audio is deleted once it has been
 transcribed. Connected calendars and mailboxes are read, never copied or stored. The full
 statement is in [PRIVACY.md](PRIVACY.md).

@@ -242,6 +242,27 @@ public sealed record TeezySettings
     /// <summary>Home panels folded to their header.</summary>
     public IReadOnlyList<string> HomeCollapsed { get; init; } = [];
 
+    /// <summary>Show the morning briefing on working days.</summary>
+    public bool BriefingOn { get; init; } = true;
+
+    /// <summary>When the morning briefing appears, or at the first look after it if the computer was off.</summary>
+    public TimeOnly BriefingTime { get; init; } = new(8, 30);
+
+    /// <summary>Weekends too, not just Monday to Friday.</summary>
+    public bool BriefingWeekends { get; init; }
+
+    /// <summary>Add a short AI-written plan for the day to the top of the briefing. Off by default: it sends tasks and meeting names to Claude.</summary>
+    public bool BriefingSummary { get; init; }
+
+    /// <summary>The day the briefing was last shown on this computer, so it appears once a day.</summary>
+    public DateOnly? BriefingShownOn { get; init; }
+
+    /// <summary>Where the focus card sits on this screen: left, top, width, height. Null for the default corner.</summary>
+    public double[]? FocusBounds { get; init; }
+
+    /// <summary>The focus card was open when TeezyFlow last closed, so it comes back at start.</summary>
+    public bool FocusOpen { get; init; }
+
     /// <summary>The categories a task can have, in the order the picker shows them.</summary>
     /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
     public IReadOnlyList<string> TaskCategories { get; init; } = [];
@@ -400,7 +421,8 @@ public sealed record TeezySettings
     public static readonly IReadOnlySet<string> LocalOnly = new HashSet<string>(StringComparer.Ordinal)
     {
         nameof(InputDeviceId), nameof(InputDeviceName), nameof(NumThreads), nameof(ModelPath),
-        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt), nameof(CloseAction),
+        "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt), nameof(CloseAction), nameof(BriefingShownOn),
+        nameof(FocusBounds), nameof(FocusOpen),
     };
 
     /// <summary>Everything that should be the same on every computer, as JSON.</summary>

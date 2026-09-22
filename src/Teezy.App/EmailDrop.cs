@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using Teezy.Core.Tasks;
 using ComDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
@@ -37,7 +38,81 @@ internal static class EmailDrop
     /// <summary>Whether a drag looks like something the task list can take.</summary>
     public static bool CanTake(System.Windows.IDataObject data) =>
         data.GetDataPresent(Descriptor) || data.GetDataPresent(DataFormats.FileDrop)
-        || data.GetDataPresent(DataFormats.UnicodeText) || data.GetDataPresent(DataFormats.Text);
+        || data.GetDataPresent("FileNameW") || data.GetDataPresent(DataFormats.UnicodeText) || data.GetDataPresent(DataFormats.Text);
+
+    /// <summary>Every email in the drop, waiting for one the source only hands over afterwards.</summary>
+    /// <remarks>
+    /// <para>
+    /// Chromium apps — New Outlook, Outlook on the web — write a dragged message to a file only
+    /// for a drop target that takes it <b>asynchronously</b> (the shell's
+    /// <c>IDataObjectAsyncCapability</c>): during the drag, and after a plain drop, they refuse
+    /// it (<c>DV_E_FORMATETC</c>, measured both ways). WinForms speaks that protocol, WPF does
+    /// not, so it is done here: the operation is started inside the drop, the drop returns, and
+    /// the file is read once Chromium has written it.
+    /// </para>
+    /// <para>
+    /// Must be called from the drop handler, and awaited there: everything up to the first
+    /// <c>await</c> runs inside the drop, which is what makes the source hold on.
+    /// </para>
+    /// </remarks>
+    public static async Task<IReadOnlyList<DroppedEmail>> ReadAsync(System.Windows.IDataObject data)
+    {
+        var late = !data.GetDataPresent(Descriptor)
+            && (data.GetDataPresent(DataFormats.FileDrop) || data.GetDataPresent("FileNameW"));
+        if (!late) return Read(data);
+
+        var now = Read(data);
+        if (now.Count > 0) return now;
+
+        IDataObjectAsyncCapability? operation = null;
+        try
+        {
+            if (Source(data) is IDataObjectAsyncCapability capable)
+            {
+                capable.GetAsyncMode(out var isAsync);
+                if (isAsync)
+                {
+                    capable.StartOperation(IntPtr.Zero);
+                    operation = capable;
+                }
+            }
+        }
+        catch (Exception e) when (e is COMException or InvalidCastException) { operation = null; }
+
+        IReadOnlyList<DroppedEmail> found = [];
+        try
+        {
+            // Let the drop return: the source only writes the file after that.
+            for (var attempt = 0; attempt < 4 && found.Count == 0; attempt++)
+            {
+                await Task.Delay(attempt == 0 ? 50 : 300);
+                found = Read(data);
+            }
+        }
+        finally
+        {
+            if (operation is not null)
+            {
+                const int Ok = 0, Failed = unchecked((int)0x80004005);
+                const uint Copy = 1;
+                try { operation.EndOperation(found.Count > 0 ? Ok : Failed, IntPtr.Zero, found.Count > 0 ? Copy : 0); }
+                catch (COMException) { }
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>The shell's asynchronous-drop handshake, as a drop source offers it.</summary>
+    [ComImport, Guid("3D8B0590-F691-11d2-8EA9-006097DF5BD4"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IDataObjectAsyncCapability
+    {
+        void SetAsyncMode([MarshalAs(UnmanagedType.Bool)] bool doAsync);
+        void GetAsyncMode([MarshalAs(UnmanagedType.Bool)] out bool isAsync);
+        void StartOperation(IntPtr reserved);
+        void InOperation([MarshalAs(UnmanagedType.Bool)] out bool inOperation);
+        void EndOperation(int result, IntPtr reserved, uint effects);
+    }
 
     /// <summary>Every email in the drop; plain text as one "email" with no sender.</summary>
     public static IReadOnlyList<DroppedEmail> Read(System.Windows.IDataObject data)
@@ -47,7 +122,7 @@ internal static class EmailDrop
         try { found.AddRange(VirtualFiles(data)); }
         catch (Exception e) when (e is COMException or IOException or InvalidOperationException or ExternalException) { }
 
-        if (found.Count == 0 && data.GetData(DataFormats.FileDrop) is string[] paths)
+        if (found.Count == 0 && DroppedPaths(data) is { Count: > 0 } paths)
         {
             foreach (var path in paths)
             {
@@ -70,6 +145,116 @@ internal static class EmailDrop
 
         return found;
     }
+
+    /// <summary>The files a drag carries, however the source offers them.</summary>
+    /// <remarks>
+    /// <para>
+    /// New Outlook is a Chromium app, and writes a dragged message to a temporary <c>.eml</c>
+    /// only once an asynchronous drop has begun (see <see cref="ReadAsync"/>). Even then WPF's
+    /// own <c>GetData(FileDrop)</c> returns null for it (measured), so the list is asked of the
+    /// source's OLE object directly (<c>CF_HDROP</c>), and failing that read from the
+    /// single-file <c>FileNameW</c> entry Chromium also offers.
+    /// </para>
+    /// </remarks>
+    private static List<string> DroppedPaths(System.Windows.IDataObject data)
+    {
+        try
+        {
+            if (data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } wpf) return [.. wpf];
+        }
+        catch (Exception e) when (e is COMException or ExternalException) { }
+
+        if (Source(data) is { } com)
+        {
+            try
+            {
+                var format = new FORMATETC
+                {
+                    cfFormat = 15, // CF_HDROP
+                    dwAspect = DVASPECT.DVASPECT_CONTENT,
+                    lindex = -1,
+                    ptd = IntPtr.Zero,
+                    tymed = TYMED.TYMED_HGLOBAL,
+                };
+                com.GetData(ref format, out var medium);
+                try
+                {
+                    var count = DragQueryFile(medium.unionmember, 0xFFFFFFFF, null, 0);
+                    List<string> paths = [];
+                    for (uint i = 0; i < count; i++)
+                    {
+                        var length = DragQueryFile(medium.unionmember, i, null, 0);
+                        var buffer = new StringBuilder((int)length + 1);
+                        if (DragQueryFile(medium.unionmember, i, buffer, (uint)buffer.Capacity) > 0) paths.Add(buffer.ToString());
+                    }
+
+                    if (paths.Count > 0) return paths;
+                }
+                finally
+                {
+                    ReleaseStgMedium(ref medium);
+                }
+            }
+            catch (Exception e) when (e is COMException or ExternalException or ArgumentException) { }
+        }
+
+        try
+        {
+            switch (data.GetData("FileNameW"))
+            {
+                case string name when name.Length > 0:
+                    return [name.TrimEnd('\0')];
+                case MemoryStream stream:
+                    var text = Encoding.Unicode.GetString(stream.ToArray()).TrimEnd('\0');
+                    if (text.Length > 0) return [text];
+                    break;
+            }
+        }
+        catch (Exception e) when (e is COMException or ExternalException) { }
+
+        return [];
+    }
+
+    /// <summary>The drag source's own OLE object, beneath WPF's wrapper.</summary>
+    /// <remarks>
+    /// WPF's <see cref="DataObject"/> answers COM <c>GetData</c> from what it can convert itself,
+    /// and for Chromium's late-written file that is nothing (<c>DV_E_FORMATETC</c>, measured). The
+    /// source's object is held privately inside it; asking that one directly makes Chromium write
+    /// the file. In .NET 10 it sits as a runtime COM object two wrappers down
+    /// (<c>DataObject → Composition → _runtimeDataObject</c>), so the search looks for the first
+    /// real COM object, not a name. If WPF's insides ever change, this finds nothing and the
+    /// other routes remain.
+    /// </remarks>
+    private static ComDataObject? Source(System.Windows.IDataObject data)
+    {
+        const System.Reflection.BindingFlags Fields = System.Reflection.BindingFlags.Instance
+            | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+
+        var level = new List<object> { data };
+        for (var depth = 0; depth < 3 && level.Count > 0; depth++)
+        {
+            var next = new List<object>();
+            foreach (var node in level)
+            {
+                foreach (var field in node.GetType().GetFields(Fields))
+                {
+                    if (field.FieldType.IsValueType || field.FieldType == typeof(string)) continue;
+                    object? value;
+                    try { value = field.GetValue(node); }
+                    catch (Exception e) when (e is FieldAccessException or NotSupportedException) { continue; }
+                    if (value is null || ReferenceEquals(value, node)) continue;
+                    if (Marshal.IsComObject(value) && value is ComDataObject com) return com;
+                    next.Add(value);
+                }
+            }
+            level = next;
+        }
+
+        return null;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "DragQueryFileW")]
+    private static extern uint DragQueryFile(IntPtr drop, uint index, StringBuilder? file, uint size);
 
     private static string FirstLine(string text)
     {

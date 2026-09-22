@@ -26,10 +26,15 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <StackPanel Margin="0,0,0,16">
-                <TextBlock Text="Tasks" Style="{StaticResource H1}"/>
-                <TextBlock x:Name="Lede" Style="{StaticResource Lede}" Margin="0,4,0,0"/>
-            </StackPanel>
+            <Grid Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Tasks" Style="{StaticResource H1}"/>
+                    <TextBlock x:Name="Lede" Style="{StaticResource Lede}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button x:Name="FocusButton" Content="Focus list" Style="{StaticResource Secondary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Click="OnShowFocus" Visibility="Collapsed"
+                        ToolTip="A small always-on-top list of pinned tasks, for calls"/>
+            </Grid>
 
             <!-- Quick add: a date, a time and a #category can go at the end. -->
             <StackPanel Grid.Row="1" Margin="0,0,0,14">
@@ -37,12 +42,15 @@
                     <Grid>
                         <TextBlock x:Name="AddPlaceholder" Style="{StaticResource Hint}" VerticalAlignment="Center"
                                    IsHitTestVisible="False"
-                                   Text="Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes — or drag an email here"/>
+                                   Text="Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes"/>
                         <TextBox x:Name="AddBox" Style="{StaticResource BareText}"
                                  TextChanged="OnAddTyped" KeyDown="OnAddKey"/>
                     </Grid>
                 </Border>
                 <TextBlock x:Name="AddPreview" Style="{StaticResource FormHint}" Margin="2,4,0,0" Visibility="Collapsed"/>
+                <!-- Where emails go, in view before any drag; a drop anywhere on the page works too. -->
+                <local:DropZone x:Name="EmailZone" Margin="0,10,0,0"
+                                Resting="Drag an email from Outlook here to make a task — or onto a task to add it there"/>
             </StackPanel>
 
             <!-- Category filter, built from the categories in use. -->
@@ -95,9 +103,13 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock x:Name="DetailState" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
-                        <Button Grid.Column="1" Content="Close panel" Style="{StaticResource Quiet}" Click="OnDeselect"/>
+                        <!-- On the focus list: the small always-on-top card for calls. -->
+                        <Button x:Name="PinButton" Grid.Column="1" Style="{StaticResource Quiet}" Click="OnPin"
+                                Margin="0,0,4,0" ToolTip="The focus list is a small always-on-top card of pinned tasks, for calls"/>
+                        <Button Grid.Column="2" Content="Close panel" Style="{StaticResource Quiet}" Click="OnDeselect"/>
                     </Grid>
 
                     <TextBox x:Name="TitleBox" Style="{StaticResource Field}" Height="Auto" MinHeight="34"

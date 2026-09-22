@@ -238,6 +238,18 @@ public partial class TasksView : UserControl
         };
 
         var meta = new WrapPanel { Margin = new Thickness(0, 3, 0, 0) };
+        if (task.Pinned && task.IsOpen)
+        {
+            meta.Children.Add(new Border
+            {
+                Style = Styled("Tag"),
+                Background = Brush("AccentSoft"),
+                Margin = new Thickness(0, 0, 8, 0),
+                ToolTip = "On the focus list",
+                Child = new TextBlock { Text = "Focus", Style = Styled("TagText"), Foreground = Brush("AccentInk") },
+            });
+        }
+
         if (task.Category is { } category)
         {
             meta.Children.Add(new Border
@@ -504,6 +516,7 @@ public partial class TasksView : UserControl
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
+       
         if (LeaveToTextBox(e)) return;
         if (!EmailDrop.CanTake(e.Data))
         {
@@ -523,19 +536,26 @@ public partial class TasksView : UserControl
             if (row is not null) row.Background = Brush("AccentSoft");
         }
 
-        AddPreview.Text = target is not null && _store.Find(target) is { } task
+        EmailZone.Ready(target is not null && _store.Find(target) is { } task
             ? $"Drop to add this email to “{task.Title}”"
-            : "Drop to make a task from this email";
-        AddPreview.Visibility = Visibility.Visible;
+            : "Drop to make a task from this email");
     }
 
-    private void OnDragLeave(object sender, DragEventArgs e) => EndDrag();
+    /// <remarks>
+    /// WPF raises a leave each time the pointer crosses from one child to another, so a leave
+    /// still over the page ends the drag only if no drag-over follows — otherwise the drop box
+    /// flickers off, and a drag cancelled with Esc would leave it lit.
+    /// </remarks>
+    private void OnDragLeave(object sender, DragEventArgs e)
+    {
+        if (sender is FrameworkElement page && DropZone.StillOver(page, e)) EmailZone.MaybeLeft(ClearDropRow);
+        else EndDrag();
+    }
 
     private void EndDrag()
     {
         ClearDropRow();
-        AddPreview.Visibility = AddBox.Text.Trim().Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (AddBox.Text.Trim().Length > 0) OnAddTyped(AddBox, null!);
+        EmailZone.Rest();
     }
 
     private void ClearDropRow()
@@ -545,15 +565,18 @@ public partial class TasksView : UserControl
         _dropRow = null;
     }
 
-    private void OnDrop(object sender, DragEventArgs e)
+    private async void OnDrop(object sender, DragEventArgs e)
     {
         if (LeaveToTextBox(e)) return;
         e.Handled = true;
+        e.Effects = DragDropEffects.Copy;
 
         var target = DropTarget(e, out _);
         EndDrag();
 
-        var emails = EmailDrop.Read(e.Data);
+        EmailZone.Reading();
+        var emails = await EmailDrop.ReadAsync(e.Data);
+        EmailZone.Rest();
         if (emails.Count == 0)
         {
             _undo = null;

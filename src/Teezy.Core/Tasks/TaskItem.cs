@@ -43,6 +43,7 @@ public sealed record TaskEmail(DateTimeOffset Added, string Subject, string? Fro
 /// <param name="Modified">When it last changed, anywhere. The newer copy wins when computers disagree.</param>
 /// <param name="Deleted">Deleted, kept as a marker so the deletion reaches the other computers.</param>
 /// <param name="Reminded">When its reminder was shown, so it is shown once.</param>
+/// <param name="Pinned">On the focus list — the small always-on-top card for calls. Travels with sync.</param>
 public sealed record TaskItem(
     string Id,
     string Title,
@@ -59,7 +60,8 @@ public sealed record TaskItem(
     DateTimeOffset? Reminded = null,
     DateTimeOffset? Remind = null,
     IReadOnlyList<TaskEmail>? Emails = null,
-    string? Advice = null)
+    string? Advice = null,
+    bool Pinned = false)
 {
     public bool IsOpen => Closed is null && !Deleted;
 
@@ -101,6 +103,18 @@ public static class TaskPlan
         : due < today ? TaskBucket.Overdue
         : due == today ? TaskBucket.Today
         : TaskBucket.Upcoming;
+
+    /// <summary>
+    /// The focus list: pinned open tasks, late and dated ones first by when they are due, then
+    /// undated ones in the order they were pinned (oldest first, so a call list reads top down).
+    /// </summary>
+    public static IReadOnlyList<TaskItem> Focus(IEnumerable<TaskItem> tasks) =>
+        tasks.Where(t => t.IsOpen && t.Pinned)
+            .OrderBy(t => t.Due is null)
+            .ThenBy(t => t.Due)
+            .ThenBy(t => t.DueTime ?? TimeOnly.MaxValue)
+            .ThenBy(t => t.Created)
+            .ToList();
 
     /// <summary>Open tasks grouped by bucket, each group due-first then newest.</summary>
     public static IReadOnlyList<(TaskBucket Bucket, IReadOnlyList<TaskItem> Tasks)> Arrange(

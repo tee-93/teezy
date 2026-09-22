@@ -60,9 +60,10 @@ public sealed class TaskStore
     }
 
     public TaskItem Add(string title, string? category = null, DateOnly? start = null,
-        DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null, DateTimeOffset? remind = null)
+        DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null, DateTimeOffset? remind = null,
+        bool pinned = false)
     {
-        var task = TaskItem.New(title, _now(), category, start, due, dueTime, followUpOf, remind);
+        var task = TaskItem.New(title, _now(), category, start, due, dueTime, followUpOf, remind) with { Pinned = pinned };
         Change(list => list.Add(task));
         return task;
     }
@@ -93,6 +94,12 @@ public sealed class TaskStore
         Update(task with { Notes = [.. task.Notes, new TaskNote(_now(), text.Trim(), by)] });
     }
 
+    /// <summary>Puts a task on the focus list, or takes it off.</summary>
+    public void Pin(string id, bool pinned)
+    {
+        if (Find(id) is { } task && task.Pinned != pinned) Update(task with { Pinned = pinned });
+    }
+
     public void Close(string id)
     {
         if (Find(id) is { IsOpen: true } task) Update(task with { Closed = _now() });
@@ -116,7 +123,7 @@ public sealed class TaskStore
         var task = Find(id) ?? throw new InvalidOperationException("That task no longer exists.");
 
         // A reminder moves with the follow-up, at the same time of day; so do the emails, since
-        // the follow-up is about the same thread.
+        // the follow-up is about the same thread. A pinned task's follow-up stays on the focus list.
         DateTimeOffset? remind = task.Remind is { } was
             ? TaskPlan.At(due, TimeOnly.FromDateTime(was.LocalDateTime))
             : null;
@@ -124,7 +131,7 @@ public sealed class TaskStore
         var followUp = TaskItem.New(
             string.IsNullOrWhiteSpace(title) ? FollowUpTitle(task.Title) : title,
             _now(), task.Category, due: due, dueTime: dueTime, followUpOf: task.Id, remind: remind)
-            with { Emails = task.Emails };
+            with { Emails = task.Emails, Pinned = task.Pinned };
 
         var closed = task with
         {

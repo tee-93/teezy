@@ -17,7 +17,8 @@ namespace Teezy.App;
 
 /// <summary>What Home can ask the window to do.</summary>
 /// <param name="MatchCategory">A typed #category in the list's spelling, added to the list if new.</param>
-public sealed record HomeActions(Action<string> OpenTask, Action<Page> OpenPage, Func<string?, string?> MatchCategory);
+public sealed record HomeActions(Action<string> OpenTask, Action<Page> OpenPage, Func<string?, string?> MatchCategory, Action? ShowBriefing = null,
+    Action? ShowFocus = null);
 
 /// <summary>Home: the day's update — a greeting and a line, tiles, and two columns of panels.</summary>
 /// <remarks>
@@ -75,6 +76,8 @@ public partial class HomeView : UserControl
         _meetingStore = meetings;
 
         HotkeyChip.Text = hotkey?.Invoke() ?? string.Empty;
+        BriefingButton.Visibility = actions.ShowBriefing is null ? Visibility.Collapsed : Visibility.Visible;
+        FocusButton.Visibility = actions.ShowFocus is null ? Visibility.Collapsed : Visibility.Visible;
 
         // Tasks change from the Tasks page, reminders and sync; Home follows while it is showing.
         _tasks.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
@@ -175,6 +178,10 @@ public partial class HomeView : UserControl
             return null;
         }
     }
+
+    private void OnBriefing(object sender, RoutedEventArgs e) => _actions.ShowBriefing?.Invoke();
+
+    private void OnFocus(object sender, RoutedEventArgs e) => _actions.ShowFocus?.Invoke();
 
     // ---- the page's shape ----
 

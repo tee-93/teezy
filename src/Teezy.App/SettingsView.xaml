@@ -600,6 +600,73 @@
                         <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
                                    Text="The order here is the order in the task list's filter and picker. Renaming a category renames it on every task that has it; removing one leaves those tasks as they are."/>
 
+                        <TextBlock Text="MORNING BRIEFING" Style="{StaticResource SectionLabel}" Margin="0,24,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <StackPanel>
+                                <Border Style="{StaticResource FormRowFirst}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="Show a morning briefing" Style="{StaticResource FormLabel}"/>
+                                            <TextBlock Style="{StaticResource FormHint}"
+                                                       Text="What's late, the day in order, and the week's follow-ups — once a day, at the time below or the first time TeezyFlow is open after it."/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="BriefingOnBox" Grid.Column="1" Style="{StaticResource Switch}"
+                                                  VerticalAlignment="Center" Click="OnBriefingChanged"/>
+                                    </Grid>
+                                </Border>
+                                <StackPanel x:Name="BriefingDetail">
+                                    <Border Style="{StaticResource FormRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="At" Style="{StaticResource FormLabel}" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="BriefingTimePicker" Grid.Column="1" Width="130"
+                                                      SelectionChanged="OnBriefingTimeChosen"/>
+                                        </Grid>
+                                    </Border>
+                                    <Border Style="{StaticResource FormRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                                <TextBlock Text="Weekends too" Style="{StaticResource FormLabel}"/>
+                                                <TextBlock Style="{StaticResource FormHint}" Text="Off: Monday to Friday only."/>
+                                            </StackPanel>
+                                            <CheckBox x:Name="BriefingWeekendsBox" Grid.Column="1" Style="{StaticResource Switch}"
+                                                      VerticalAlignment="Center" Click="OnBriefingChanged"/>
+                                        </Grid>
+                                    </Border>
+                                    <Border Style="{StaticResource FormRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                                <TextBlock Text="Add an AI plan for the day" Style="{StaticResource FormLabel}"/>
+                                                <TextBlock Style="{StaticResource FormHint}"
+                                                           Text="Two or three sentences from Claude on how to tackle the day, on your Anthropic key. Sends your open tasks, their latest notes and today's meeting names — never attached emails. The list itself is always made on this computer."/>
+                                            </StackPanel>
+                                            <CheckBox x:Name="BriefingSummaryBox" Grid.Column="1" Style="{StaticResource Switch}"
+                                                      VerticalAlignment="Center" Click="OnBriefingChanged"/>
+                                        </Grid>
+                                    </Border>
+                                    <Border Style="{StaticResource FormRow}">
+                                        <Button Content="Show it now" Style="{StaticResource Secondary}" HorizontalAlignment="Left"
+                                                Click="OnShowBriefingNow"/>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock Text="NOTES" Style="{StaticResource SectionLabel}" Margin="0,24,0,6"/>
                         <Border Style="{StaticResource FormRows}">
                             <Border Style="{StaticResource FormRowFirst}">

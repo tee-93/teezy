@@ -277,6 +277,52 @@ public sealed class TaskStoreTests : IDisposable
 
         TaskPlan.Categories(store.Visible).ShouldBe(["Admin", "Quotes"]);
     }
+
+    [Fact]
+    public void PinsSurviveARestartAndSync()
+    {
+        var store = Store();
+        var task = store.Add("Ring Priya about the Cessnock quote");
+        _now = _now.AddMinutes(1);
+        store.Pin(task.Id, true);
+
+        Store().Find(task.Id)!.Pinned.ShouldBeTrue();
+        TaskStore.FromJson(store.ToSyncJson()).Single().Pinned.ShouldBeTrue();
+
+        _now = _now.AddMinutes(1);
+        store.Pin(task.Id, false);
+        store.Find(task.Id)!.Pinned.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AFollowUpStaysOnTheFocusList()
+    {
+        var store = Store();
+        var task = store.Add("Chase Cessnock quote", pinned: true);
+
+        var next = store.CloseAndFollowUp(task.Id, Today.AddDays(2));
+
+        next.Pinned.ShouldBeTrue();
+        TaskPlan.Focus(store.Visible).Select(t => t.Id).ShouldBe([next.Id]);
+    }
+
+    [Fact]
+    public void TheFocusListIsOpenPinnedTasksDueFirstThenInPinnedOrder()
+    {
+        var store = Store();
+        var first = store.Add("Ring Priya", pinned: true);
+        _now = _now.AddMinutes(1);
+        var second = store.Add("Ring Dale", pinned: true);
+        _now = _now.AddMinutes(1);
+        var dueFriday = store.Add("Send the Newcastle price", due: Today.AddDays(3), pinned: true);
+        var late = store.Add("Chase the Orikan order", due: Today.AddDays(-1), pinned: true);
+        store.Add("Not pinned", due: Today.AddDays(-5));
+        var done = store.Add("Already rang", pinned: true);
+        store.Close(done.Id);
+
+        TaskPlan.Focus(store.Visible).Select(t => t.Id).ShouldBe([late.Id, dueFriday.Id, first.Id, second.Id]);
+    }
+
 }
 
 public class TaskInputTests

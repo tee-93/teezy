@@ -61,6 +61,8 @@ public partial class SettingsView
         for (var i = 0; i < list.Count; i++) CategoryRows.Children.Add(CategoryRow(list, i));
         CategoryAddRow.Style = (Style)FindResource(list.Count == 0 ? "FormRowFirst" : "FormRow");
 
+        ShowBriefingSettings(settings);
+
         if (!AuthorBox.IsKeyboardFocused) AuthorBox.Text = settings.TaskAuthor ?? string.Empty;
         AuthorHint.Text = $"Shown on every note you write. Empty uses “{TeezySettings.FirstName(Environment.UserName)}”, from your Windows account.";
     }
@@ -197,6 +199,56 @@ public partial class SettingsView
         NewCategoryBox.Clear();
         ShowTaskSettings();
     }
+
+    // ---- the morning briefing ----
+
+    /// <summary>Shows the briefing now, from Show it now. Set by the window.</summary>
+    internal Action? ShowBriefing { get; set; }
+
+    private bool _briefingFilling;
+
+    private void ShowBriefingSettings(TeezySettings settings)
+    {
+        _briefingFilling = true;
+        BriefingOnBox.IsChecked = settings.BriefingOn;
+        BriefingWeekendsBox.IsChecked = settings.BriefingWeekends;
+        BriefingSummaryBox.IsChecked = settings.BriefingSummary;
+        BriefingDetail.Visibility = settings.BriefingOn ? Visibility.Visible : Visibility.Collapsed;
+
+        if (BriefingTimePicker.Items.Count == 0)
+        {
+            for (var minutes = 6 * 60; minutes <= 11 * 60; minutes += 15)
+            {
+                var time = new TimeOnly(minutes / 60, minutes % 60);
+                BriefingTimePicker.Items.Add(new ComboBoxItem { Content = TasksView.Clock(time), Tag = time });
+            }
+        }
+
+        BriefingTimePicker.SelectedItem = BriefingTimePicker.Items.Cast<ComboBoxItem>()
+            .FirstOrDefault(i => i.Tag is TimeOnly t && t == settings.BriefingTime)
+            ?? BriefingTimePicker.Items.Cast<ComboBoxItem>().First(i => i.Tag is TimeOnly t && t == new TimeOnly(8, 30));
+        _briefingFilling = false;
+    }
+
+    private void OnBriefingChanged(object sender, RoutedEventArgs e)
+    {
+        if (_briefingFilling) return;
+        _write(_read() with
+        {
+            BriefingOn = BriefingOnBox.IsChecked == true,
+            BriefingWeekends = BriefingWeekendsBox.IsChecked == true,
+            BriefingSummary = BriefingSummaryBox.IsChecked == true,
+        });
+        ShowBriefingSettings(_read());
+    }
+
+    private void OnBriefingTimeChosen(object sender, SelectionChangedEventArgs e)
+    {
+        if (_briefingFilling || BriefingTimePicker.SelectedItem is not ComboBoxItem { Tag: TimeOnly time }) return;
+        if (time != _read().BriefingTime) _write(_read() with { BriefingTime = time });
+    }
+
+    private void OnShowBriefingNow(object sender, RoutedEventArgs e) => ShowBriefing?.Invoke();
 
     // ---- Advanced ▸ When I close the window (kept here with the other small pickers) ----
 

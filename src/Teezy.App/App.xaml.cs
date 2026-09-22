@@ -293,6 +293,9 @@ public partial class App : Application
 
         if (modelPresent) ShowMainWindow();
 
+        // The focus card comes back if it was open when TeezyFlow last closed.
+        if (_settings.FocusOpen) ShowFocus();
+
         await LoadModelAsync().ConfigureAwait(false);
 
         // Back off the UI thread after the await, so this hops the dispatcher like everything
@@ -466,6 +469,8 @@ public partial class App : Application
         menu.Items.Add(open);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Tasks…", null, (_, _) => ShowMainWindow(Page.Tasks));
+        menu.Items.Add("Focus list", null, (_, _) => ShowFocus());
+        menu.Items.Add("Morning briefing", null, (_, _) => _ = ShowBriefingAsync());
         menu.Items.Add("Settings…", null, (_, _) => ShowMainWindow(Page.Settings));
         menu.Items.Add("Dictionary…", null, (_, _) => ShowMainWindow(Page.Dictionary));
         menu.Items.Add("Meetings…", null, (_, _) => ShowMainWindow(Page.Meetings));
@@ -509,12 +514,14 @@ public partial class App : Application
     /// <summary>Installs the ready update now and comes back afterwards.</summary>
     private void RestartToUpdate()
     {
+        _focus?.Quitting();
         if (_updater.Install(relaunch: true)) Shutdown();
     }
 
     /// <summary>Quit, installing a ready update on the way out, as Fivebar does.</summary>
     internal void Quit()
     {
+        _focus?.Quitting();
         _updater.Install(relaunch: false);
         Shutdown();
     }
@@ -560,7 +567,9 @@ public partial class App : Application
             advisor: new Teezy.Assistant.ClaudeMailAdvisor(
                 () => _secrets?.Read(ApiKeyName),
                 () => _settings.AssistantModel,
-                TimeSpan.FromSeconds(45)));
+                TimeSpan.FromSeconds(45)),
+            showBriefing: () => _ = ShowBriefingAsync(),
+            showFocus: ShowFocus);
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
@@ -597,6 +606,8 @@ public partial class App : Application
 
     private void CheckReminders()
     {
+        CheckBriefing();
+
         var due = TaskPlan.DueForReminder(_tasks.Visible, DateTimeOffset.Now);
         if (due.Count == 0) return;
 
@@ -605,7 +616,103 @@ public partial class App : Application
         _reminders.Remind(due);
     }
 
-    /// <summary>Applies and persists a settings change from any window.</summary>
+    // ============================== the focus list ==============================
+
+    private FocusWindow? _focus;
+
+    /// <summary>Opens the focus card, or brings it forward if it is already out.</summary>
+    internal void ShowFocus()
+    {
+        if (_focus is { IsLoaded: true })
+        {
+            if (_focus.WindowState == WindowState.Minimized) _focus.WindowState = WindowState.Normal;
+            _focus.Activate();
+            return;
+        }
+
+        _focus = new FocusWindow(_tasks, () => _settings, ApplySettings,
+            id => { if (id.Length == 0) ShowMainWindow(Page.Tasks); else ShowTask(id); },
+            MatchCategory);
+        _focus.Closed += (_, _) => _focus = null;
+        _focus.Show();
+        _focus.Activate();
+    }
+
+    /// <summary>A #category typed in the focus card, in the list's spelling; added to the list if new.</summary>
+    private string? MatchCategory(string? typed)
+    {
+        if (typed is not { Length: > 0 }) return null;
+        var match = _settings.TaskCategories.FirstOrDefault(c => c.Equals(typed, StringComparison.OrdinalIgnoreCase));
+        if (match is not null) return match;
+        ApplySettings(_settings with { TaskCategories = [.. _settings.TaskCategories, typed] });
+        return typed;
+    }
+
+    // ============================== the morning briefing ==============================
+
+    private BriefingWindow? _briefing;
+    private Teezy.Assistant.ClaudeBriefer? _briefer;
+
+    /// <summary>On the reminder timer: shows the briefing once a day, at the first look after its time.</summary>
+    private void CheckBriefing()
+    {
+        var now = DateTimeOffset.Now;
+        if (!_settings.BriefingOn || _briefing is { IsVisible: true }) return;
+        if (!Teezy.Core.Home.MorningBriefing.IsDue(now, _settings.BriefingTime, _settings.BriefingWeekends, _settings.BriefingShownOn)) return;
+
+        // Marked first, so a slow calendar read cannot let the next tick show it twice.
+        ApplySettings(_settings with { BriefingShownOn = DateOnly.FromDateTime(now.LocalDateTime) });
+        _ = ShowBriefingAsync();
+    }
+
+    /// <summary>Builds the briefing from this computer's tasks, plus the calendar and mail where connected, and shows it.</summary>
+    internal async Task ShowBriefingAsync()
+    {
+        var now = DateTimeOffset.Now;
+        var today = DateOnly.FromDateTime(now.LocalDateTime);
+
+        IReadOnlyList<CalendarEvent>? events = null;
+        if (_diary is { IsConnected: true } diary)
+        {
+            try
+            {
+                var reading = await diary.BetweenAsync(CalendarWeek.Midnight(today), CalendarWeek.Midnight(today.AddDays(1)));
+                events = CalendarWeek.On(reading.Events, today);
+            }
+            catch (CalendarUnavailableException) { }
+        }
+
+        Teezy.Core.Mail.MailReading? mail = null;
+        if (_mail is { IsConnected: true } box)
+        {
+            try
+            {
+                var (since, atMost) = MailAnswer.Window(MailAsk.Unread, now);
+                mail = await box.RecentAsync(since, atMost);
+            }
+            catch (MailUnavailableException) { }
+        }
+
+        IReadOnlyList<DateTimeOffset> meetings;
+        try { meetings = [.. (_meetingStore?.List() ?? []).Select(m => m.Info.Started)]; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { meetings = []; }
+
+        var usage = Teezy.Core.History.UsageStats.From(_history?.Load() ?? [], today);
+        var snapshot = new Teezy.Core.Home.HomeSnapshot(now, _tasks.Visible, usage, meetings, events, mail);
+        var briefing = Teezy.Core.Home.MorningBriefing.For(snapshot, _settings.NoteAuthor);
+
+        _briefer ??= new Teezy.Assistant.ClaudeBriefer(
+            () => _secrets?.Read(ApiKeyName), () => _settings.AssistantModel, TimeSpan.FromSeconds(30));
+        Func<Task<string?>>? summarise = _settings.BriefingSummary
+            ? () => _briefer.SummariseAsync(Teezy.Core.Home.MorningBriefing.Material(snapshot), now)
+            : null;
+        Action<string>? speak = _speaker is { IsAvailable: true } ? text => _ = _speaker.SpeakAsync(text) : null;
+
+        _briefing?.Close();
+        _briefing = new BriefingWindow(briefing, _tasks, ShowTask, () => ShowMainWindow(), summarise, speak);
+        _briefing.Show();
+    }
+
     /// <summary>Every mailbox that is set up, whichever way it was set up.</summary>
     /// <remarks>
     /// The two arrive completely differently — Microsoft through OAuth as a connected account,
@@ -625,6 +732,7 @@ public partial class App : Application
         return boxes;
     }
 
+    /// <summary>Applies and persists a settings change from any window.</summary>
     private void ApplySettings(TeezySettings updated)
     {
         var keyChanged = updated.Hotkey != _settings.Hotkey

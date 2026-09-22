@@ -60,10 +60,15 @@ public partial class HomeView
     // ============================== Today ==============================
 
     /// <summary>The day on one timeline: late first, then what has a time, then the rest of today.</summary>
+    /// <summary>Today's email drop box, lit while an email is dragged over the panel.</summary>
+    private DropZone? _todayZone;
+
     private Border TodayPanel(HomeSnapshot s)
     {
         var body = new StackPanel();
         body.Children.Add(QuickAdd());
+        _todayZone = new DropZone { Resting = "Drag an email from Outlook here to make a task for today", Margin = new Thickness(0, 6, 0, 8) };
+        body.Children.Add(_todayZone);
 
         var open = s.Tasks.Where(t => t.IsOpen).ToList();
         var late = open.Where(t => TaskPlan.BucketOf(t, s.Date) == TaskBucket.Overdue).OrderBy(t => t.Due).ToList();
@@ -121,6 +126,12 @@ public partial class HomeView
         panel.AllowDrop = true;
         panel.PreviewDragOver += OnTaskDragOver;
         panel.PreviewDrop += OnTaskDrop;
+        panel.PreviewDragLeave += (_, e) =>
+        {
+           
+            if (DropZone.StillOver(panel, e)) _todayZone?.MaybeLeft();
+            else _todayZone?.Rest();
+        };
         return panel;
     }
 
@@ -591,7 +602,7 @@ public partial class HomeView
     {
         var placeholder = new TextBlock
         {
-            Text = "Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes — or drag an email here",
+            Text = "Add a task — e.g. Chase Cessnock quote fri 2pm #Quotes",
             Style = (Style)FindResource("Hint"),
             Margin = new Thickness(0),
             VerticalAlignment = VerticalAlignment.Center,
@@ -626,19 +637,28 @@ public partial class HomeView
         if (e.OriginalSource is DependencyObject over && FindBox(over) is not null
             && !e.Data.GetDataPresent("FileGroupDescriptorW") && !e.Data.GetDataPresent(DataFormats.FileDrop)) return;
 
-        e.Effects = EmailDrop.CanTake(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+        var can = EmailDrop.CanTake(e.Data);
+        e.Effects = can ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
+        if (can) _todayZone?.Ready("Drop to make a task for today");
     }
 
     /// <summary>An email dropped on Today: a task for today, with the email attached.</summary>
-    private void OnTaskDrop(object sender, DragEventArgs e)
+    private async void OnTaskDrop(object sender, DragEventArgs e)
     {
+       
         if (e.OriginalSource is DependencyObject over && FindBox(over) is not null
             && !e.Data.GetDataPresent("FileGroupDescriptorW") && !e.Data.GetDataPresent(DataFormats.FileDrop)) return;
         e.Handled = true;
+        e.Effects = DragDropEffects.Copy;
 
         var today = DateOnly.FromDateTime(DateTime.Today);
-        foreach (var email in EmailDrop.Read(e.Data))
+       
+        var zone = _todayZone;
+        zone?.Reading();
+        var emails = await EmailDrop.ReadAsync(e.Data);
+        zone?.Rest();
+        foreach (var email in emails)
         {
             var made = _tasks.Add(email.TaskTitle, due: today);
             _tasks.AddEmail(made.Id, email.ToTaskEmail(DateTimeOffset.Now));

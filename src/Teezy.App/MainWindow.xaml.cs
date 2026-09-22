@@ -78,7 +78,9 @@ public partial class MainWindow : Window
         Action? restartToUpdate = null,
         SyncService? sync = null,
         TaskStore? tasks = null,
-        IMailAdvisor? advisor = null)
+        IMailAdvisor? advisor = null,
+        Action? showBriefing = null,
+        Action? showFocus = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -105,6 +107,8 @@ public partial class MainWindow : Window
         _sync = sync;
         _tasks = tasks;
         _advisor = advisor;
+        _showBriefing = showBriefing;
+        _showFocus = showFocus;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -140,6 +144,8 @@ public partial class MainWindow : Window
     private readonly SyncService? _sync;
     private readonly TaskStore? _tasks;
     private readonly IMailAdvisor? _advisor;
+    private readonly Action? _showBriefing;
+    private readonly Action? _showFocus;
     private TasksView? _tasksView;
 
     /// <summary>Closed with its 'Later' button, which lasts until the next version.</summary>
@@ -228,7 +234,7 @@ public partial class MainWindow : Window
     {
         if (_tasks is null) return;
 
-        _tasksView ??= new TasksView(_tasks, _advisor, _settings, _saveSettings) { OpenTaskSettings = () => ShowSettingsTab("TabTasks") };
+        _tasksView ??= new TasksView(_tasks, _advisor, _settings, _saveSettings) { OpenTaskSettings = () => ShowSettingsTab("TabTasks"), ShowFocus = _showFocus };
         _tasksView.Refresh();
         PageHost.Content = _tasksView;
     }
@@ -269,7 +275,7 @@ public partial class MainWindow : Window
             _tasks ?? new TaskStore(),
             _settings,
             _saveSettings,
-            new HomeActions(ShowTask, ShowPage, MatchCategory),
+            new HomeActions(ShowTask, ShowPage, MatchCategory, _showBriefing, _showFocus),
             () => _settings().Hotkey.Display,
             _diary,
             _mail,
@@ -345,6 +351,7 @@ public partial class MainWindow : Window
             restartToUpdate: _restartToUpdate);
         _settingsView.AttachSync(_sync);
         _settingsView.AttachTasks(_tasks);
+        _settingsView.ShowBriefing = _showBriefing;
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

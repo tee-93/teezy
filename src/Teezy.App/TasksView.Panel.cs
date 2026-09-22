@@ -35,6 +35,29 @@ public partial class TasksView
     /// <summary>Opens Settings ▸ Tasks, for the Manage categories link. Set by the window.</summary>
     internal Action? OpenTaskSettings { get; set; }
 
+    /// <summary>Opens the focus card. Set by the window; the button is hidden without it.</summary>
+    internal Action? ShowFocus
+    {
+        get => _showFocus;
+        set
+        {
+            _showFocus = value;
+            FocusButton.Visibility = value is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+    }
+
+    private Action? _showFocus;
+
+    private void OnShowFocus(object sender, RoutedEventArgs e) => _showFocus?.Invoke();
+
+    /// <summary>Pins or unpins the task; pinning brings the focus card out, since that is where it went.</summary>
+    private void OnPin(object sender, RoutedEventArgs e)
+    {
+        if (_selected is not { } id || _store.Find(id) is not { } task) return;
+        _store.Pin(id, !task.Pinned);
+        if (!task.Pinned) _showFocus?.Invoke();
+    }
+
     private void InitPanel()
     {
         AiSection.Visibility = _advisor is not null ? Visibility.Visible : Visibility.Collapsed;
@@ -124,6 +147,8 @@ public partial class TasksView
 
         DueField.Set(task.Due, task.DueTime);
         RemindField.Set(task.Remind);
+        PinButton.Content = task.Pinned ? "Unpin from focus" : "Pin to focus";
+        PinButton.Visibility = task.IsOpen ? Visibility.Visible : Visibility.Collapsed;
 
         var bucket = TaskPlan.BucketOf(task, Today);
         DetailState.Text = task.IsOpen

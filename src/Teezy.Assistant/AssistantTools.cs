@@ -46,6 +46,11 @@ internal static class AssistantTools
             ("key", "string", "One of: play_pause, next, previous.")),
 
         Define("lock_screen", "Lock the PC."),
+
+        Define("add_task",
+            "Add a task to the user's TeezyFlow task list, e.g. when they ask to be reminded to do something or to put something on their list.",
+            ("title", "string", "What to do, as a short task title in the user's words, e.g. \"Chase the Cessnock quote\". No date or time in it."),
+            ("when", "string", "When it is due, exactly as the user said it, e.g. \"friday 2pm\", \"tomorrow\", \"in 3 days\"; an empty string if they gave no time.")),
     ];
 
     private static ToolUnion Define(
@@ -105,6 +110,10 @@ internal static class AssistantTools
             },
 
             "lock_screen" => new VoiceCommand.LockScreen(),
+
+            "add_task" => Text(args, "title") is { Length: > 1 } title
+                ? new VoiceCommand.AddTask(title.Trim(), Text(args, "when")?.Trim() ?? string.Empty)
+                : null,
 
             // Includes the model inventing a tool, which is the case this exists for.
             _ => null,

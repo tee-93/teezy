@@ -45,9 +45,16 @@ public static partial class TaskInput
         DateOnly? due = null;
         TimeOnly? time = null;
 
-        // From the end: a time, then a date, each at most once.
-        for (var pass = 0; pass < 3 && words.Count > 1; pass++)
+        // From the end: a time, then a date, each at most once. A joining word left between them
+        // — "Friday at 2pm", "chase quote by Friday" — is dropped so the next one can be read.
+        for (var pass = 0; pass < 4 && words.Count > 1; pass++)
         {
+            if ((due is not null || time is not null) && words.Count > 1 && IsJoin(words[^1]))
+            {
+                words.RemoveAt(words.Count - 1);
+                continue;
+            }
+
             if (time is null && TryTime(words[^1], out var t)) { time = t; words.RemoveAt(words.Count - 1); continue; }
 
             if (due is null)
@@ -78,11 +85,14 @@ public static partial class TaskInput
             break;
         }
 
-        // A trailing "by" or "on" belonged to the date.
-        if (due is not null && words.Count > 1 && words[^1] is "by" or "on" or "By" or "On") words.RemoveAt(words.Count - 1);
+        // A trailing "by", "on", "for" or "at" belonged to the date or time.
+        while ((due is not null || time is not null) && words.Count > 1 && IsJoin(words[^1])) words.RemoveAt(words.Count - 1);
 
         return new ParsedTask(string.Join(' ', words), due, time, category);
     }
+
+    private static bool IsJoin(string word) =>
+        word.ToLowerInvariant() is "by" or "on" or "for" or "at" or "due" or "before";
 
     /// <summary>A date typed in a box or at the end of a task: words, weekdays, or day/month.</summary>
     public static bool TryDate(string text, DateOnly today, out DateOnly date)

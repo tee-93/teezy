@@ -44,4 +44,9 @@ public abstract record VoiceCommand
     public sealed record Media(MediaKey Key) : VoiceCommand;
 
     public sealed record LockScreen : VoiceCommand;
+
+    /// <summary>Add a task to TeezyFlow's own list. Reversible with a tick, so safe to offer the model.</summary>
+    /// <param name="Title">What to do.</param>
+    /// <param name="When">When, in the user's words — "friday 2pm", "tomorrow" — read by <see cref="Tasks.TaskInput"/>; empty for no date.</param>
+    public sealed record AddTask(string Title, string When) : VoiceCommand;
 }

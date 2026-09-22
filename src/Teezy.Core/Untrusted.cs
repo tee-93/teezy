@@ -10,6 +10,9 @@ public enum MaterialKind
 {
     Calendar,
     Mail,
+
+    /// <summary>The user's own task list: titles, dates and categories, never attached emails.</summary>
+    Tasks,
 }
 
 /// <summary>Content written by other people, rendered ready to show a model.</summary>

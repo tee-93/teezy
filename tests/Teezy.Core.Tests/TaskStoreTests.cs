@@ -312,6 +312,20 @@ public class TaskInputTests
         parsed.Category.ShouldBe("Sales Excellence");
     }
 
+    [Theory]
+    [InlineData("Call Sam Friday at 2pm", "Call Sam", 2026, 9, 25, 14)]
+    [InlineData("Chase the quote for tomorrow", "Chase the quote", 2026, 9, 23, null)]
+    [InlineData("Send the PO due Friday", "Send the PO", 2026, 9, 25, null)]
+    public void JoiningWordsBetweenTitleDayAndTimeGo(string text, string title, int y, int m, int d, int? hour)
+    {
+        var parsed = TaskInput.Parse(text, Today);
+
+        parsed.Title.ShouldBe(title);
+        parsed.Due.ShouldBe(new DateOnly(y, m, d));
+        parsed.DueTime?.Hour.ShouldBe(hour ?? 0);
+        (parsed.DueTime is null).ShouldBe(hour is null);
+    }
+
     [Fact]
     public void LeavesDateWordsInsideTheTitleAlone()
     {

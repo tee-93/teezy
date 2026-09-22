@@ -59,9 +59,13 @@ punctuated and tidied. Billed to your own Anthropic API key.
 recognise what you said, your words are sent so Claude can interpret them. It is sent **your
 words and nothing else** — never your screen, your clipboard, your files or your history.
 
-**3. Calendar and mail answers (Anthropic).** Questions like "what's on today" are answered on
-your machine and send nothing. Only an unusual phrasing that TeezyFlow cannot compose an answer to
-sends the relevant events or message summaries so Claude can answer in a sentence.
+**3. Calendar, mail and task answers (Anthropic).** Questions like "what's on today" or "what
+tasks do I have today" are answered on your machine and send nothing, and adding or closing a
+task by voice never leaves it. Only an unusual phrasing that TeezyFlow cannot compose an answer
+to sends the relevant events, message summaries or open tasks (titles, due dates and categories —
+never notes or attached emails) so Claude can answer in a sentence. If the smarter assistant tier
+is on, a request TeezyFlow's own patterns do not recognise — "jot down that I should ring the
+builder" — is sent as before, and Claude may answer by adding a task.
 
 **4. Spoken replies (ElevenLabs).** If you choose the paid voice, the text to be spoken is sent
 to ElevenLabs on your own key. The free Windows and natural voices send nothing.

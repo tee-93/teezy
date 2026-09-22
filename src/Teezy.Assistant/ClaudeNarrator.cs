@@ -40,8 +40,8 @@ public sealed class ClaudeNarrator(
     /// </remarks>
     private const string SystemPrompt = """
         You are the voice assistant built into TeezyFlow, a Windows dictation app. The user held a
-        key and asked a question about their own calendar or email. You are shown the part of it
-        the question needs, and the current time.
+        key and asked a question about their own calendar, email or task list. You are shown the
+        part of it the question needs, and the current time.
 
         Answer them directly, in at most two short sentences. Your reply appears in a small
         floating panel and may be read aloud, so be brief, use no lists, no markdown and no

@@ -2,6 +2,7 @@ using Teezy.Core.Calendar;
 using Teezy.Core.Mail;
 using Teezy.Core.Commands;
 using Teezy.Core.Hotkeys;
+using Teezy.Core.Tasks;
 
 namespace Teezy.Core;
 
@@ -50,6 +51,7 @@ public sealed class AssistantController
     private readonly CombinedCalendar? _calendar;
     private readonly CombinedMailbox? _mailbox;
     private readonly IUntrustedNarrator? _narrator;
+    private readonly Tasks.TaskStore? _tasks;
     private readonly Func<DateTimeOffset> _now;
 
     /// <summary>Raised when a command has been dealt with, however it turned out.</summary>
@@ -66,6 +68,7 @@ public sealed class AssistantController
     /// <param name="fallback">Null, or switched off, means the local vocabulary is all there is.</param>
     /// <param name="calendar">Null, or nothing connected, means diary questions are not claimed.</param>
     /// <param name="narrator">Null means only the everyday diary phrasings can be answered.</param>
+    /// <param name="tasks">Null means task questions and commands are not claimed.</param>
     /// <param name="now">Overridable so the phrasing can be tested at a fixed hour.</param>
     public AssistantController(
         VoiceSession session,
@@ -74,6 +77,7 @@ public sealed class AssistantController
         CombinedCalendar? calendar = null,
         CombinedMailbox? mailbox = null,
         IUntrustedNarrator? narrator = null,
+        Tasks.TaskStore? tasks = null,
         Func<DateTimeOffset>? now = null)
     {
         _runner = runner;
@@ -81,6 +85,7 @@ public sealed class AssistantController
         _calendar = calendar;
         _mailbox = mailbox;
         _narrator = narrator;
+        _tasks = tasks;
         _now = now ?? (() => DateTimeOffset.Now);
         session.Handle(HotkeyAction.Assistant, OnSpoken);
     }
@@ -94,6 +99,10 @@ public sealed class AssistantController
             await Perform(heard, local).ConfigureAwait(false);
             return;
         }
+
+        // Tasks next: the list is on this computer, so these are answered instantly, offline,
+        // and on the work laptop too, which can connect no calendar.
+        if (_tasks is not null && await HandleTasks(heard).ConfigureAwait(false)) return;
 
         // Ahead of the general fallback, because a connected diary is the better answer to
         // "what's on today" than a model guessing, and because the diary path deliberately
@@ -182,7 +191,16 @@ public sealed class AssistantController
 
         if (CalendarAnswer.For(ask, reading, now) is { } composed)
         {
-            Finished?.Invoke(new AssistantOutcome(heard, null, composed, AssistantResult.Answered));
+            // "What's on today" is about the day, not only the diary: the tasks due come too.
+            var today = DateOnly.FromDateTime(now.LocalDateTime);
+            var also = (ask, _tasks) switch
+            {
+                (CalendarAsk.Today, { } tasks) => Tasks.TaskAnswer.Also(tasks.Visible, today, today),
+                (CalendarAsk.Tomorrow, { } tasks) => Tasks.TaskAnswer.Also(tasks.Visible, today.AddDays(1), today),
+                _ => null,
+            };
+
+            Finished?.Invoke(new AssistantOutcome(heard, null, also is null ? composed : $"{composed} {also}", AssistantResult.Answered));
             return;
         }
 
@@ -274,8 +292,121 @@ public sealed class AssistantController
             : new AssistantOutcome(heard, null, answer.Trim(), AssistantResult.Answered));
     }
 
+    // ============================== tasks ==============================
+
+    /// <summary>Claims the utterance if it is about tasks, and deals with it.</summary>
+    /// <returns>False when it was not about tasks, so the rest of the chain can try.</returns>
+    private async Task<bool> HandleTasks(string heard)
+    {
+        var tasks = _tasks!;
+        var now = _now();
+        var today = DateOnly.FromDateTime(now.LocalDateTime);
+
+        if (TaskVoice.Add(heard, today) is { } adding)
+        {
+            AddTask(heard, adding, command: null);
+            return true;
+        }
+
+        // Closing needs a clear match; with none, the words were probably not about a task
+        // ("close Chrome"), so they carry on down the chain rather than being refused here.
+        if (TaskVoice.Close(heard) is { } described)
+        {
+            var match = TaskVoice.Find(described, tasks.Visible, out var candidates);
+            if (match is not null)
+            {
+                tasks.Close(match.Id);
+                Finished?.Invoke(new AssistantOutcome(heard, null,
+                    $"Closed: {match.Title}. Reopen it on the Tasks page if that was the wrong one.", AssistantResult.Did));
+                return true;
+            }
+
+            if (candidates.Count > 1)
+            {
+                Finished?.Invoke(new AssistantOutcome(heard, null,
+                    $"Which one — {candidates[0].Title}, or {candidates[1].Title}?", AssistantResult.NotUnderstood));
+                return true;
+            }
+        }
+
+        var ask = TaskVoice.Classify(heard);
+
+        // On a computer with no calendar — the work laptop — "what's on today" is still a good
+        // question, and the task list is the day's answer to it.
+        if (ask == TaskAsk.None && _calendar is not { IsConnected: true })
+        {
+            ask = CalendarQuestion.Classify(heard) switch
+            {
+                CalendarAsk.Today or CalendarAsk.Next => TaskAsk.Today,
+                CalendarAsk.Tomorrow => TaskAsk.Tomorrow,
+                _ => TaskAsk.None,
+            };
+        }
+
+        if (ask == TaskAsk.None) return false;
+
+        if (TaskAnswer.For(ask, tasks.Visible, now) is { } composed)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, composed, AssistantResult.Answered));
+            return true;
+        }
+
+        // An unusual question about tasks: the narrator, with no tools, if it is switched on.
+        if (_narrator is not { IsAvailable: true })
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null,
+                "I can tell you what’s due today, tomorrow or this week, what’s late, and your follow-ups.",
+                AssistantResult.NotUnderstood));
+            return true;
+        }
+
+        Thinking?.Invoke();
+        string? answer;
+        try
+        {
+            answer = await _narrator.AnswerAsync(heard, TaskAnswer.Material(tasks.Visible, now), now).ConfigureAwait(false);
+        }
+        catch (AssistantUnavailableException e)
+        {
+            Finished?.Invoke(new AssistantOutcome(heard, null, e.Message, AssistantResult.Failed));
+            return true;
+        }
+
+        Finished?.Invoke(string.IsNullOrWhiteSpace(answer)
+            ? new AssistantOutcome(heard, null, "I can’t do that yet", AssistantResult.NotUnderstood)
+            : new AssistantOutcome(heard, null, answer.Trim(), AssistantResult.Answered));
+        return true;
+    }
+
+    /// <summary>Adds a task, from the local patterns or from the smarter tier's add_task.</summary>
+    private void AddTask(string heard, ParsedTask task, VoiceCommand? command)
+    {
+        var today = DateOnly.FromDateTime(_now().LocalDateTime);
+
+        // A time with no day means today; a time is a reminder too.
+        var due = task.Due ?? (task.DueTime is not null ? today : null);
+        DateTimeOffset? remind = due is { } day && task.DueTime is { } time ? TaskPlan.At(day, time) : null;
+        _tasks!.Add(task.Title, due: due, dueTime: task.DueTime, remind: remind);
+
+        var when = due is { } d
+            ? " — due " + (d == today ? "today" : d == today.AddDays(1) ? "tomorrow" : d.ToString("dddd d MMM", System.Globalization.CultureInfo.GetCultureInfo("en-AU")))
+              + (task.DueTime is { } t ? $" at {Spoken.Clock(TaskPlan.At(d, t))}" : string.Empty)
+            : string.Empty;
+        Finished?.Invoke(new AssistantOutcome(heard, command, $"Added: {task.Title}{when}", AssistantResult.Did));
+    }
+
     private async Task Perform(string heard, VoiceCommand command)
     {
+        // The task list is TeezyFlow's own, so a task the smarter tier chose is added here
+        // rather than handed to the platform's runner.
+        if (command is VoiceCommand.AddTask add && _tasks is not null)
+        {
+            var today = DateOnly.FromDateTime(_now().LocalDateTime);
+            var when = TaskInput.Parse("x " + TaskVoice.SpokenTimes(add.When), today);
+            AddTask(heard, new ParsedTask(add.Title, when.Due, when.DueTime, null), command);
+            return;
+        }
+
         if (_runner is null)
         {
             Finished?.Invoke(new AssistantOutcome(heard, command, Describe(command), AssistantResult.Did));
@@ -307,6 +438,7 @@ public sealed class AssistantController
         VoiceCommand.Media { Key: MediaKey.Previous } => "Would skip back",
         VoiceCommand.Media => "Would play or pause",
         VoiceCommand.LockScreen => "Would lock the PC",
+        VoiceCommand.AddTask t => $"Would add the task {t.Title}",
         _ => "Understood",
     };
 }

@@ -289,6 +289,21 @@ want, and TeezyFlow does it rather than typing it.
 | Volume | "volume up", "set the volume to 40", "mute" |
 | Media | "play", "skip", "previous track" |
 | Lock | "lock the computer" |
+| Ask about tasks | "what tasks do I have today", "what's overdue", "any follow-ups this week", "what's due tomorrow" |
+| Add a task | "add a task to chase the Cessnock quote Friday at 2 p.m.", "remind me tomorrow to send the PO", "put the Newcastle PO on my list for Thursday" |
+| Close a task | "mark the Cessnock quote as done", "tick off the expense report" |
+
+**Tasks are answered on this computer, instantly**, so they work on the work laptop too. There,
+with no calendar to read, "what's on today" is answered from the task list; where a calendar is
+connected, the day's answer adds the tasks due ("…You also have three tasks due, one late").
+Spoken times are understood as said — "2 p.m.", "two o'clock", "noon", "remind me at 3 to…".
+**Closing is careful:** it needs a clear verb and exactly one open task that matches; two
+equally good matches get "Which one — …?", and none at all lets the words carry on to the rest
+of the assistant, so "close Chrome" is not mistaken for a task. With the smarter tier on, Claude
+can also add a task when the wording is unusual; it is handed the day in your own words and
+TeezyFlow works out the date, since the model is not told the date. Unusual questions about
+tasks ("when is the Cessnock quote due?") go to the narrator with the task list's titles, dates
+and categories — never an attached email.
 
 **It is local, like everything else.** No key, no account, no network, no per-command cost —
 the same promise as dictation, which is why this came before anything cleverer.

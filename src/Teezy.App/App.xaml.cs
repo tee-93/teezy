@@ -248,7 +248,7 @@ public partial class App : Application
         _meetingSummariser = new ClaudeMeetingSummariser(() => _secrets!.Read(ApiKeyName));
 
         _assistant = new AssistantController(
-            _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator);
+            _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator, _tasks);
 
         _voiceUsage = new VoiceUsage();
 

@@ -1,6 +1,6 @@
 # TeezyFlow privacy policy
 
-_Last updated: 22 September 2026_
+_Last updated: 22 September 2026 (1.16)_
 
 TeezyFlow is a push-to-talk dictation and voice assistant app that runs on your own Windows PC.
 There is no TeezyFlow account, no TeezyFlow server, and no TeezyFlow company collecting anything. Nothing
@@ -43,7 +43,7 @@ These live in `%LOCALAPPDATA%\Teezy` and are never transmitted:
 | `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed |
 | `settings.json` | Your preferences, and which accounts you have connected |
 | `dictionary.txt` | Words and names you have taught it |
-| `tasks.json` | Your task list: titles, dates, categories and notes, including any email you dropped or pasted into a task |
+| `tasks.json` | Your task list: titles, dates, categories, notes (with who wrote them), any email you dropped or pasted into a task, and the last AI suggestion you kept |
 | `models\` | The speech model, and the natural voices if you downloaded them |
 | `secrets\` | API keys, account tokens, the Gmail app password and calendar links, encrypted (see below) |
 
@@ -74,7 +74,7 @@ no tools, because a transcript is other people's words.
 
 **6. Sync between your computers (your own folder).** If you turn on Settings ▸ Sync, your API
 keys, the Google client secret, the Gmail app password, calendar links, your preferences, your
-dictionary and your tasks (with their notes) are written to one file in a folder you choose —
+dictionary and your tasks (with their notes and attached emails) are written to one file in a folder you choose —
 usually your own Google Drive or OneDrive, so it is stored by Google or Microsoft under your
 account. The file is **encrypted with a passphrase only you know** (PBKDF2-SHA256, 600,000
 iterations, then AES-256-GCM), so the storage provider, and anyone who obtains the file, sees
@@ -85,8 +85,9 @@ never in it. Turning sync off stops it; delete the file to remove it.
 steps** or **Draft reply** sends the email you pasted or dropped into that task, with the task's
 title, category and due date and any steer you typed, so Claude can suggest what to do or draft a
 reply. Only that one email, only when you press the button, and never in the background. The
-request has no tools: the reply is text on the page for you to copy, and nothing is sent or acted
-on. If it is a work email, check your employer allows it to go to an outside AI service.
+request has no tools: the reply is text on the page for you to edit and copy — kept with the task
+on your computer — and nothing is sent or acted on. If it is a work email, check your employer
+allows it to go to an outside AI service.
 
 **Emails you drag in stay local.** Dropping an email from Outlook onto the Tasks page copies its
 text into the task on this computer. TeezyFlow never connects to Outlook or your mailbox to do

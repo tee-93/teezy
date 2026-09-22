@@ -53,6 +53,14 @@ public sealed partial record DroppedEmail(string Subject, string? From, DateTime
         }
     }
 
+    /// <summary>The email as a task keeps it, cut to <see cref="MaxBody"/>.</summary>
+    public TaskEmail ToTaskEmail(DateTimeOffset now)
+    {
+        var body = Body.Trim();
+        return new TaskEmail(now, Subject.Trim(), From, Received,
+            body.Length > MaxBody ? body[..MaxBody] + "\n[…the rest is omitted]" : body);
+    }
+
     /// <summary>The note it becomes: who, when, what, then the text.</summary>
     public string ToNote()
     {

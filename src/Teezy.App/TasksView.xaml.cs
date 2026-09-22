@@ -31,6 +31,8 @@ public partial class TasksView : UserControl
 
     private readonly TaskStore _store;
     private readonly IMailAdvisor? _advisor;
+    private readonly Func<Teezy.Core.TeezySettings> _settings;
+    private readonly Action<Teezy.Core.TeezySettings> _saveSettings;
     private string? _selected;
     private string? _category;
     private bool _showClosed;
@@ -38,18 +40,45 @@ public partial class TasksView : UserControl
     // What Undo puts back: the task closed, and the follow-up made with it, if any.
     private (string Closed, string? FollowUp)? _undo;
 
-    internal TasksView(TaskStore store, IMailAdvisor? advisor)
+    internal TasksView(TaskStore store, IMailAdvisor? advisor,
+        Func<Teezy.Core.TeezySettings> settings, Action<Teezy.Core.TeezySettings> saveSettings)
     {
         InitializeComponent();
         _store = store;
         _advisor = advisor;
-        EmailSection.Visibility = advisor is not null ? Visibility.Visible : Visibility.Collapsed;
-        SteerBox.TextChanged += (_, _) =>
-            SteerPlaceholder.Visibility = SteerBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        _settings = settings;
+        _saveSettings = saveSettings;
+        InitPanel();
 
         // Changes arrive from sync and reminders on other threads.
         _store.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) Refresh(); });
         Loaded += (_, _) => Refresh();
+    }
+
+    /// <summary>
+    /// The categories to offer: Settings ▸ Tasks, plus any a task has that the list lacks (one
+    /// made on a computer with an older list, or since removed), so none is ever hidden.
+    /// </summary>
+    private IReadOnlyList<string> Categories(IReadOnlyList<TaskItem> all)
+    {
+        var listed = _settings().TaskCategories;
+        var extra = TaskPlan.Categories(all).Where(c => !listed.Contains(c, StringComparer.OrdinalIgnoreCase));
+        return [.. listed, .. extra];
+    }
+
+    /// <summary>
+    /// A category typed in quick add, matched to the list's own spelling; one not yet on the
+    /// list is added to it, so "#quotes" and the picker agree.
+    /// </summary>
+    private string? Category(string? typed)
+    {
+        if (typed is not { Length: > 0 }) return null;
+        var settings = _settings();
+        var match = settings.TaskCategories.FirstOrDefault(c => c.Equals(typed, StringComparison.OrdinalIgnoreCase));
+        if (match is not null) return match;
+
+        _saveSettings(settings with { TaskCategories = [.. settings.TaskCategories, typed] });
+        return typed;
     }
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
@@ -67,7 +96,7 @@ public partial class TasksView : UserControl
         var all = _store.Visible;
         var today = Today;
 
-        if (_category is not null && !TaskPlan.Categories(all).Contains(_category, StringComparer.OrdinalIgnoreCase))
+        if (_category is not null && !Categories(all).Contains(_category, StringComparer.OrdinalIgnoreCase))
         {
             _category = null;
         }
@@ -103,9 +132,10 @@ public partial class TasksView : UserControl
         var parsed = TaskInput.Parse(AddBox.Text, Today);
         if (parsed.Title.Length == 0) return;
 
-        // A time with no day means today.
+        // A time with no day means today, and a time is a reminder too.
         var due = parsed.Due ?? (parsed.DueTime is not null ? Today : null);
-        _store.Add(parsed.Title, parsed.Category ?? _category, due: due, dueTime: parsed.DueTime);
+        DateTimeOffset? remind = due is { } day && parsed.DueTime is { } time ? TaskPlan.At(day, time) : null;
+        _store.Add(parsed.Title, Category(parsed.Category) ?? _category, due: due, dueTime: parsed.DueTime, remind: remind);
         AddBox.Clear();
     }
 
@@ -114,7 +144,7 @@ public partial class TasksView : UserControl
     private void BuildFilters(IReadOnlyList<TaskItem> all)
     {
         Filters.Children.Clear();
-        var categories = TaskPlan.Categories(all);
+        var categories = Categories(all);
         if (categories.Count == 0) return;
 
         var row = new StackPanel { Orientation = Orientation.Horizontal };
@@ -356,7 +386,7 @@ public partial class TasksView : UserControl
 
         var next = _store.CloseAndFollowUp(id, due, dueTime: task.DueTime);
         _selected = next.Id;
-        FollowUpBox.Clear();
+        FollowUpDay.Set(null, null);
         OfferUndo($"Closed, and following up {Day(due)}: {task.Title}", id, next.Id);
         Refresh();
     }
@@ -388,28 +418,6 @@ public partial class TasksView : UserControl
     private void OnReopen(object sender, RoutedEventArgs e)
     {
         if (_selected is { } id) _store.Reopen(id);
-    }
-
-    private void OnFollowUpOn(object sender, RoutedEventArgs e) => FollowUpFromBox();
-
-    private void OnFollowUpKey(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter) return;
-        e.Handled = true;
-        FollowUpFromBox();
-    }
-
-    private void FollowUpFromBox()
-    {
-        if (TaskInput.TryDate(FollowUpBox.Text, Today, out var day))
-        {
-            DateProblem.Visibility = Visibility.Collapsed;
-            FollowUp(day);
-        }
-        else
-        {
-            ShowProblem("Try a day like fri, next week, in 10 days or 3/10.");
-        }
     }
 
     private void BuildFollowUpChoices()
@@ -453,367 +461,6 @@ public partial class TasksView : UserControl
         _store.Delete(id);
         _selected = null;
         Refresh();
-    }
-
-    // ============================== the panel ==============================
-
-    private void OnDeselect(object sender, RoutedEventArgs e)
-    {
-        _selected = null;
-        Refresh();
-    }
-
-    private bool DetailHasFocus() =>
-        Detail.Visibility == Visibility.Visible && Detail.IsKeyboardFocusWithin;
-
-    /// <param name="fields">Whether to refill the text boxes, which is skipped while one is being typed in.</param>
-    private void ShowDetail(bool fields)
-    {
-        var task = _selected is { } id ? _store.Find(id) : null;
-        if (task is null)
-        {
-            _selected = null;
-            Detail.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        var shown = Detail.Tag as string;
-        var changed = shown != task.Id;
-        Detail.Tag = task.Id;
-        Detail.Visibility = Visibility.Visible;
-
-        if (changed)
-        {
-            EmailBox.Clear();
-            SteerBox.Clear();
-            NoteBox.Clear();
-            FollowUpBox.Clear();
-            AdvicePanel.Children.Clear();
-            AdvicePanel.Visibility = Visibility.Collapsed;
-            DateProblem.Visibility = Visibility.Collapsed;
-            DeleteButton.Tag = null;
-            DeleteButton.Content = "Delete task";
-        }
-
-        if (fields || changed)
-        {
-            TitleBox.Text = task.Title;
-            DueBox.Text = BoxDate(task.Due);
-            TimeBox.Text = task.DueTime is { } t ? Clock(t) : string.Empty;
-            StartBox.Text = BoxDate(task.Start);
-            CategoryBox.Text = task.Category ?? string.Empty;
-        }
-
-        DetailState.Text = task.IsOpen
-            ? BucketName(TaskPlan.BucketOf(task, Today))
-            : $"CLOSED {Day(DateOnly.FromDateTime(task.Closed!.Value.LocalDateTime)).ToUpper(Display)}";
-        DetailState.Foreground = task.IsOpen && TaskPlan.BucketOf(task, Today) == TaskBucket.Overdue
-            ? Brush("CautionBorder")
-            : Brush("Muted");
-
-        OpenActions.Visibility = task.IsOpen ? Visibility.Visible : Visibility.Collapsed;
-        ReopenButton.Visibility = task.IsOpen ? Visibility.Collapsed : Visibility.Visible;
-
-        BuildFollowUpChoices();
-        BuildCategoryChips(task);
-        BuildNotes(task);
-        BuildChain(task);
-    }
-
-    private void BuildCategoryChips(TaskItem task)
-    {
-        CategoryChips.Children.Clear();
-        foreach (var category in TaskPlan.Categories(_store.Visible))
-        {
-            if (string.Equals(category, task.Category, StringComparison.OrdinalIgnoreCase)) continue;
-            var chip = new Button { Content = category, Style = Styled("Quiet"), Padding = new Thickness(6, 2, 6, 2), FontSize = 12 };
-            chip.Click += (_, _) =>
-            {
-                if (_store.Find(task.Id) is { } current) _store.Update(current with { Category = category });
-            };
-            CategoryChips.Children.Add(chip);
-        }
-    }
-
-    private void BuildNotes(TaskItem task)
-    {
-        NotesList.Children.Clear();
-        if (task.Notes.Count == 0)
-        {
-            NotesList.Children.Add(new TextBlock { Text = "No notes yet.", Style = Styled("FormHint"), Margin = new Thickness(0, 0, 0, 8) });
-            return;
-        }
-
-        foreach (var note in task.Notes)
-        {
-            var block = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
-            block.Children.Add(new TextBlock
-            {
-                Text = note.At.LocalDateTime.ToString("ddd d MMM, h:mm tt", Display),
-                Style = Styled("FormHint"),
-                Margin = new Thickness(0),
-            });
-
-            // A read-only box so a note can be selected and copied.
-            block.Children.Add(new TextBox
-            {
-                Text = note.Text,
-                IsReadOnly = true,
-                TextWrapping = TextWrapping.Wrap,
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Foreground = Brush("Body"),
-                FontFamily = (FontFamily)FindResource("UiFont"),
-                FontSize = 13,
-                Padding = new Thickness(0),
-                Margin = new Thickness(-2, 2, 0, 0),
-            });
-            NotesList.Children.Add(block);
-        }
-    }
-
-    private void BuildChain(TaskItem task)
-    {
-        ChainList.Children.Clear();
-        var chain = TaskPlan.Chain(_store.Visible, task.Id);
-        ChainSection.Visibility = chain.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        if (chain.Count < 2) return;
-
-        for (var i = 0; i < chain.Count; i++)
-        {
-            var link = chain[i];
-            var when = link.Closed is { } closed
-                ? $"closed {Day(DateOnly.FromDateTime(closed.LocalDateTime))}"
-                : link.Due is { } due ? $"open · due {Day(due)}" : "open";
-
-            var text = new StackPanel();
-            text.Children.Add(new TextBlock
-            {
-                Text = link.Title,
-                Foreground = link.Id == task.Id ? Brush("AccentInk") : link.IsOpen ? Brush("Ink") : Brush("Muted"),
-                FontWeight = link.Id == task.Id ? FontWeights.SemiBold : FontWeights.Normal,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-            });
-            text.Children.Add(new TextBlock { Text = when, FontSize = 12, Foreground = Brush("Muted") });
-
-            var row = new Border
-            {
-                Padding = new Thickness(10, 7, 10, 7),
-                BorderBrush = Brush("Hairline"),
-                BorderThickness = new Thickness(0, i == 0 ? 0 : 1, 0, 0),
-                Background = Brushes.Transparent,
-                Cursor = link.Id == task.Id ? Cursors.Arrow : Cursors.Hand,
-                Child = text,
-            };
-            if (link.Id != task.Id)
-            {
-                row.MouseEnter += (_, _) => row.Background = Brush("Raised");
-                row.MouseLeave += (_, _) => row.Background = Brushes.Transparent;
-                row.MouseLeftButtonUp += (_, _) => Select(link.Id);
-            }
-
-            ChainList.Children.Add(row);
-        }
-    }
-
-    // ---- editing ----
-
-    private void OnFieldKey(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape)
-        {
-            ShowDetail(fields: true);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key != Key.Enter) return;
-        e.Handled = true;
-        if (sender == TitleBox) CommitTitle();
-        else CommitDates();
-    }
-
-    private void OnTitleCommit(object sender, KeyboardFocusChangedEventArgs e) => CommitTitle();
-
-    private void OnDatesCommit(object sender, KeyboardFocusChangedEventArgs e) => CommitDates();
-
-    private void CommitTitle()
-    {
-        if (_selected is not { } id || _store.Find(id) is not { } task) return;
-        var title = TitleBox.Text.Trim();
-        if (title.Length == 0) { TitleBox.Text = task.Title; return; }
-        if (title != task.Title) _store.Update(task with { Title = title });
-    }
-
-    private void CommitDates()
-    {
-        if (_selected is not { } id || _store.Find(id) is not { } task) return;
-        var today = Today;
-
-        if (!ReadDate(DueBox, task.Due, today, out var due))
-        {
-            ShowProblem("That due date wasn’t understood. Try fri, tomorrow, in 3 days or 25/9.");
-            return;
-        }
-
-        if (!ReadDate(StartBox, task.Start, today, out var start))
-        {
-            ShowProblem("That start date wasn’t understood. Try mon, next week or 1/10.");
-            return;
-        }
-
-        TimeOnly? time = null;
-        var timeText = TimeBox.Text.Trim();
-        if (timeText.Length > 0)
-        {
-            if (!TaskInput.TryTime(timeText, out var parsed))
-            {
-                ShowProblem("That time wasn’t understood. Try 2pm, 9:30am or 14:30.");
-                return;
-            }
-            time = parsed;
-        }
-
-        // A reminder needs a day; a time alone means today.
-        if (time is not null && due is null) due = today;
-
-        DateProblem.Visibility = Visibility.Collapsed;
-        var category = CategoryBox.Text.Trim().TrimStart('#');
-        var edited = task with
-        {
-            Due = due,
-            DueTime = time,
-            Start = start,
-            Category = category.Length == 0 ? null : category,
-        };
-
-        if (edited == task) return;
-
-        // A moved reminder is a new reminder.
-        if (edited.Due != task.Due || edited.DueTime != task.DueTime) edited = edited with { Reminded = null };
-        _store.Update(edited);
-    }
-
-    private static bool ReadDate(TextBox box, DateOnly? current, DateOnly today, out DateOnly? value)
-    {
-        var text = box.Text.Trim();
-        value = current;
-        if (text == BoxDate(current)) return true;
-        if (text.Length == 0) { value = null; return true; }
-        if (!TaskInput.TryDate(text, today, out var parsed)) return false;
-        value = parsed;
-        return true;
-    }
-
-    private void ShowProblem(string text)
-    {
-        DateProblem.Text = text;
-        DateProblem.Visibility = Visibility.Visible;
-    }
-
-    // ---- notes ----
-
-    private void OnNoteKey(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
-        {
-            e.Handled = true;
-            AddNote();
-        }
-    }
-
-    private void OnAddNote(object sender, RoutedEventArgs e) => AddNote();
-
-    private void AddNote()
-    {
-        if (_selected is not { } id || NoteBox.Text.Trim().Length == 0) return;
-        _store.AddNote(id, NoteBox.Text);
-        NoteBox.Clear();
-    }
-
-    // ============================== the AI, on request ==============================
-
-    private void OnNextSteps(object sender, RoutedEventArgs e) => _ = AdviseAsync(AdviceKind.NextSteps);
-
-    private void OnDraftReply(object sender, RoutedEventArgs e) => _ = AdviseAsync(AdviceKind.DraftReply);
-
-    private async Task AdviseAsync(AdviceKind kind)
-    {
-        if (_advisor is null || _selected is not { } id) return;
-
-        var email = EmailBox.Text.Trim();
-        AdvicePanel.Visibility = Visibility.Visible;
-        AdvicePanel.Children.Clear();
-
-        if (email.Length == 0)
-        {
-            AdvicePanel.Children.Add(new TextBlock { Text = "Paste the email into the box first.", Style = Styled("FormHint") });
-            return;
-        }
-
-        AdvicePanel.Children.Add(new TextBlock
-        {
-            Text = kind == AdviceKind.DraftReply ? "Drafting a reply…" : "Thinking about next steps…",
-            Style = Styled("FormHint"),
-        });
-        NextStepsButton.IsEnabled = DraftReplyButton.IsEnabled = false;
-
-        string? result;
-        try
-        {
-            result = await _advisor.AdviseAsync(kind, _store.Find(id), email, SteerBox.Text, DateTimeOffset.Now);
-        }
-        catch (AssistantUnavailableException problem)
-        {
-            AdvicePanel.Children.Clear();
-            AdvicePanel.Children.Add(new TextBlock { Text = problem.Message, Style = Styled("FormHint") });
-            return;
-        }
-        finally
-        {
-            NextStepsButton.IsEnabled = DraftReplyButton.IsEnabled = true;
-        }
-
-        // The panel may have moved on to another task while Claude was answering.
-        if (_selected != id) return;
-        AdvicePanel.Children.Clear();
-
-        var output = new TextBox
-        {
-            Text = result ?? "Nothing useful came back. Try again.",
-            IsReadOnly = true,
-            TextWrapping = TextWrapping.Wrap,
-            Background = Brush("Sunken"),
-            Foreground = Brush("Body"),
-            BorderBrush = Brush("Hairline"),
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(10, 8, 10, 8),
-            FontFamily = (FontFamily)FindResource("UiFont"),
-            FontSize = 13,
-        };
-        AdvicePanel.Children.Add(output);
-        if (result is null) return;
-
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-
-        var copy = new Button { Content = "Copy", Style = Styled("Primary") };
-        copy.Click += (_, _) =>
-        {
-            try { Clipboard.SetText(output.Text); copy.Content = "Copied"; }
-            catch (System.Runtime.InteropServices.COMException) { copy.Content = "Clipboard busy — try again"; }
-        };
-        buttons.Children.Add(copy);
-
-        var keep = new Button { Content = "Save to notes", Style = Styled("Secondary"), Margin = new Thickness(8, 0, 0, 0) };
-        keep.Click += (_, _) =>
-        {
-            _store.AddNote(id, (kind == AdviceKind.DraftReply ? "Draft reply:\n" : "Next steps:\n") + output.Text);
-            keep.Content = "Saved";
-            keep.IsEnabled = false;
-        };
-        buttons.Children.Add(keep);
-
-        AdvicePanel.Children.Add(buttons);
     }
 
     // ============================== emails dragged in ==============================
@@ -915,29 +562,39 @@ public partial class TasksView : UserControl
             return;
         }
 
-        // Onto a task: each email becomes a note on it.
+        var now = DateTimeOffset.Now;
+
+        // Onto a task: each email is attached to it, beside its notes rather than in them.
         if (target is not null && _store.Find(target) is { } task)
         {
-            foreach (var email in emails) _store.AddNote(task.Id, email.ToNote());
+            foreach (var email in emails)
+            {
+                _store.AddEmail(task.Id, email.ToTaskEmail(now));
+                _store.AddNote(task.Id, $"Email attached: {email.Subject}{From(email)}", TaskNote.App);
+            }
+
             _selected = task.Id;
+            _emailOpen = true;
             Refresh();
-            EmailBox.Text = emails[^1].ToNote();
             return;
         }
 
-        // Anywhere else: a task per email, with the email kept as its first note.
+        // Anywhere else: a task per email, with the email attached.
         string? first = null;
         foreach (var email in emails)
         {
             var made = _store.Add(email.TaskTitle, _category);
-            _store.AddNote(made.Id, email.ToNote());
+            _store.AddEmail(made.Id, email.ToTaskEmail(now));
+            _store.AddNote(made.Id, $"Created from an email{From(email)}", TaskNote.App);
             first ??= made.Id;
         }
 
         _selected = first;
+        _emailOpen = true;
         Refresh();
-        EmailBox.Text = emails[0].ToNote();
     }
+
+    private static string From(DroppedEmail email) => email.From is { Length: > 0 } from ? $" from {from}" : string.Empty;
 
     // ============================== helpers ==============================
 
@@ -953,10 +610,6 @@ public partial class TasksView : UserControl
             _ => day.Year == Today.Year ? day.ToString("ddd d MMM", Display) : day.ToString("ddd d MMM yyyy", Display),
         };
     }
-
-    /// <summary>What a date box shows: a date the reader reads back.</summary>
-    private static string BoxDate(DateOnly? day) =>
-        day is not { } d ? string.Empty : d.ToString(d.Year == Today.Year ? "d MMM" : "d MMM yyyy", CultureInfo.InvariantCulture);
 
     internal static string Clock(TimeOnly time) =>
         time.ToString(time.Minute == 0 ? "h tt" : "h:mm tt", CultureInfo.InvariantCulture).ToLowerInvariant().Replace(" ", string.Empty, StringComparison.Ordinal);

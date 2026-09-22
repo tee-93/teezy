@@ -226,6 +226,29 @@ public sealed record TeezySettings
     /// <summary>The Kokoro voice, e.g. <c>bf_emma</c>. Null picks the default British one.</summary>
     public string? KokoroVoice { get; init; }
 
+    /// <summary>The categories a task can have, in the order the picker shows them.</summary>
+    /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
+    public IReadOnlyList<string> TaskCategories { get; init; } = [];
+
+    /// <summary>The name on notes written here. Null uses the first part of the Windows account name.</summary>
+    public string? TaskAuthor { get; init; }
+
+    /// <summary>Who a note written on this computer is by.</summary>
+    [JsonIgnore]
+    public string NoteAuthor => TaskAuthor is { Length: > 0 } name ? name.Trim() : FirstName(Environment.UserName);
+
+    /// <summary>"ada.lovelace", "ada_" and "ada-l" are all Ada.</summary>
+    public static string FirstName(string? account)
+    {
+        var cut = (account ?? string.Empty).Split('.', '_', ' ', '-')[0];
+        return cut.Length switch
+        {
+            0 => "Me",
+            1 => cut.ToUpperInvariant(),
+            _ => char.ToUpperInvariant(cut[0]) + cut[1..],
+        };
+    }
+
     /// <summary>
     /// Which ElevenLabs model synthesises.
     /// </summary>

@@ -84,8 +84,16 @@ public partial class ReminderWindow : Window
             TextWrapping = TextWrapping.Wrap,
         });
 
-        var when = task.DueTime is { } time ? $"{TasksView.Day(task.Due ?? DateOnly.FromDateTime(DateTime.Today))} {TasksView.Clock(time)}" : "today";
-        var meta = task.Category is { } category ? $"{category} · due {when}" : $"Due {when}";
+        var when = task.Due is { } due
+            ? task.DueTime is { } time ? $"{TasksView.Day(due)} {TasksView.Clock(time)}" : TasksView.Day(due)
+            : null;
+        var meta = (task.Category, when) switch
+        {
+            ({ } category, { } w) => $"{category} · due {w}",
+            ({ } category, null) => category,
+            (null, { } w) => $"Due {w}",
+            _ => "Reminder",
+        };
         if (task.Notes.Count > 0) meta += $" · {task.Notes[^1].Text.Split('\n')[0]}";
         panel.Children.Add(new TextBlock
         {
@@ -115,23 +123,18 @@ public partial class ReminderWindow : Window
 
     private void Snooze(TaskItem task, TimeSpan by)
     {
-        var at = DateTime.Now + by;
-        _store.Update(task with
-        {
-            Due = DateOnly.FromDateTime(at),
-            DueTime = new TimeOnly(at.Hour, at.Minute),
-            Reminded = null,
-        });
+        // Only the reminder moves: the task is still due when it was.
+        _store.Update(task with { Remind = DateTimeOffset.Now + by, Reminded = null });
         Forget(task.Id);
     }
 
+    /// <summary>Tomorrow at the same time — the next working day — and the due date with it if it was today or earlier.</summary>
     private void Tomorrow(TaskItem task)
     {
-        _store.Update(task with
-        {
-            Due = TaskPlan.Workday(DateOnly.FromDateTime(DateTime.Today).AddDays(1)),
-            Reminded = null,
-        });
+        var day = TaskPlan.Workday(DateOnly.FromDateTime(DateTime.Today).AddDays(1));
+        var time = task.Remind is { } was ? TimeOnly.FromDateTime(was.LocalDateTime) : new TimeOnly(9, 0);
+        var due = task.Due is { } d && d > DateOnly.FromDateTime(DateTime.Today) ? d : day;
+        _store.Update(task with { Due = due, Remind = TaskPlan.At(day, time), Reminded = null });
         Forget(task.Id);
     }
 

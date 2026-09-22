@@ -52,6 +52,17 @@
                     </StackPanel>
                 </RadioButton>
 
+                <RadioButton x:Name="TabButtonTasks" Style="{StaticResource SettingsTab}" Padding="10,8"
+                             GroupName="SettingsTabs" Tag="TabTasks" Checked="OnTabChosen">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.6"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                              Data="M9,11 L12,14 L22,4 M21,12 L21,19 A2,2 0 0 1 19,21 L5,21 A2,2 0 0 1 3,19 L3,5 A2,2 0 0 1 5,3 L16,3"/>
+                        <TextBlock Text="Tasks" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </RadioButton>
+
                 <RadioButton Style="{StaticResource SettingsTab}" Padding="10,8" GroupName="SettingsTabs"
                              Tag="TabAccounts" Checked="OnTabChosen">
                     <StackPanel Orientation="Horizontal">
@@ -554,6 +565,61 @@
                     </StackPanel>
 
                     <!-- ============================== Accounts ============================== -->
+
+                    <!-- ============================== Tasks ============================== -->
+
+                    <StackPanel x:Name="TabTasks" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource Lede}" Margin="0,0,0,20"
+                                   Text="How the task list is organised. Categories and your name travel with Sync, so every computer offers the same list."/>
+
+                        <TextBlock Text="CATEGORIES" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <StackPanel>
+                                <StackPanel x:Name="CategoryRows"/>
+                                <Border x:Name="CategoryAddRow" Style="{StaticResource FormRow}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource FieldBox}">
+                                            <Grid>
+                                                <TextBlock x:Name="NewCategoryPlaceholder" Style="{StaticResource Hint}" Margin="0"
+                                                           VerticalAlignment="Center" IsHitTestVisible="False"
+                                                           Text="A new category, e.g. Quotes, Sales Excellence, Admin"/>
+                                                <TextBox x:Name="NewCategoryBox" Style="{StaticResource BareText}"
+                                                         TextChanged="OnNewCategoryTyped" KeyDown="OnNewCategoryKey"/>
+                                            </Grid>
+                                        </Border>
+                                        <Button x:Name="AddCategoryButton" Grid.Column="1" Content="Add" Style="{StaticResource Primary}"
+                                                Margin="8,0,0,0" IsEnabled="False" Click="OnAddCategory"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
+                                   Text="The order here is the order in the task list's filter and picker. Renaming a category renames it on every task that has it; removing one leaves those tasks as they are."/>
+
+                        <TextBlock Text="NOTES" Style="{StaticResource SectionLabel}" Margin="0,24,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <Border Style="{StaticResource FormRowFirst}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Your name on notes" Style="{StaticResource FormLabel}"/>
+                                        <TextBlock x:Name="AuthorHint" Style="{StaticResource FormHint}"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Style="{StaticResource FieldBox}" Width="200">
+                                        <TextBox x:Name="AuthorBox" Style="{StaticResource BareText}"
+                                                 LostKeyboardFocus="OnAuthorCommit" KeyDown="OnAuthorKey"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </Border>
+                    </StackPanel>
 
                     <StackPanel x:Name="TabAccounts" Visibility="Collapsed">
                         <!-- Calendar. Beside the assistant because it is only ever reached by asking the

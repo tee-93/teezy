@@ -228,7 +228,7 @@ public partial class MainWindow : Window
     {
         if (_tasks is null) return;
 
-        _tasksView ??= new TasksView(_tasks, _advisor);
+        _tasksView ??= new TasksView(_tasks, _advisor, _settings, _saveSettings) { OpenTaskSettings = () => ShowSettingsTab("TabTasks") };
         _tasksView.Refresh();
         PageHost.Content = _tasksView;
     }
@@ -272,7 +272,7 @@ public partial class MainWindow : Window
             expandedSections: () => _settings().ExpandedSections,
             saveExpandedSections: expanded => _saveSettings(_settings() with { ExpandedSections = expanded }),
             openBudget: () => NavBudget.IsChecked = true);
-        _home.AttachTasks(_tasks, ShowTask, () => NavTasks.IsChecked = true);
+        _home.AttachTasks(_tasks, ShowTask, () => NavTasks.IsChecked = true, MatchCategory);
         _home.Refresh();
         PageHost.Content = _home;
     }
@@ -306,6 +306,26 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Opens Settings at one section, e.g. "TabTasks" from the Tasks page's Manage categories.</summary>
+    private void ShowSettingsTab(string tab)
+    {
+        NavSettings.IsChecked = true;
+        ShowSettings();
+        _settingsView?.ShowTab(tab);
+    }
+
+    /// <summary>A #category typed in quick add, in the list's spelling; added to the list if new.</summary>
+    private string? MatchCategory(string? typed)
+    {
+        if (typed is not { Length: > 0 }) return null;
+        var settings = _settings();
+        var match = settings.TaskCategories.FirstOrDefault(c => c.Equals(typed, StringComparison.OrdinalIgnoreCase));
+        if (match is not null) return match;
+
+        _saveSettings(settings with { TaskCategories = [.. settings.TaskCategories, typed] });
+        return typed;
+    }
+
     private void ShowSettings()
     {
         _settingsView ??= new SettingsView(
@@ -323,6 +343,7 @@ public partial class MainWindow : Window
             updater: _updater,
             restartToUpdate: _restartToUpdate);
         _settingsView.AttachSync(_sync);
+        _settingsView.AttachTasks(_tasks);
         _settingsView.Refresh();
         PageHost.Content = _settingsView;
     }

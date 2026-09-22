@@ -170,18 +170,71 @@ public sealed class TaskStoreTests : IDisposable
     }
 
     [Fact]
-    public void RemindersComeDueOnceAndOnlyWithATime()
+    public void RemindersComeDueOnceAndOnlyWhenSet()
     {
         var store = Store();
-        var timed = store.Add("Call Sam", due: Today, dueTime: new TimeOnly(14, 0));
-        store.Add("No time", due: Today);
-        store.Add("Later", due: Today, dueTime: new TimeOnly(16, 0));
+        var timed = store.Add("Call Sam", due: Today, remind: TaskPlan.At(Today, new TimeOnly(14, 0)));
+        store.Add("Due at two, no reminder", due: Today, dueTime: new TimeOnly(14, 0));
+        store.Add("Later", due: Today, remind: TaskPlan.At(Today, new TimeOnly(16, 0)));
 
-        var at = Today.ToDateTime(new TimeOnly(14, 1));
+        var at = TaskPlan.At(Today, new TimeOnly(14, 1));
         TaskPlan.DueForReminder(store.Visible, at).Select(t => t.Title).ShouldBe(["Call Sam"]);
 
         store.MarkReminded(timed.Id);
         TaskPlan.DueForReminder(store.Visible, at).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void AReminderCanBeOnADifferentDayFromTheDueDate()
+    {
+        var store = Store();
+        store.Add("Quote due Friday, chase Wednesday", due: Today.AddDays(3), remind: TaskPlan.At(Today.AddDays(1), new TimeOnly(9, 0)));
+
+        TaskPlan.DueForReminder(store.Visible, TaskPlan.At(Today.AddDays(1), new TimeOnly(9, 5))).Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AnOldTasksTimeBecomesItsReminderOnceOnly()
+    {
+        // A 1.15 task: the due time was the reminder.
+        Directory.CreateDirectory(_folder);
+        var old = TaskItem.New("Call Sam", _now, due: Today, dueTime: new TimeOnly(14, 0));
+        File.WriteAllText(FilePath, System.Text.Json.JsonSerializer.Serialize(new[] { old }));
+
+        var upgraded = Store().Find(old.Id)!;
+        upgraded.Remind.ShouldBe(TaskPlan.At(Today, new TimeOnly(14, 0)));
+
+        // Cleared since: it stays cleared.
+        var store = Store();
+        store.Update(store.Find(old.Id)! with { Remind = null });
+        Store().Find(old.Id)!.Remind.ShouldBeNull();
+    }
+
+    [Fact]
+    public void NotesSayWhoWroteThem()
+    {
+        var store = Store();
+        var task = store.Add("Quote");
+        store.AddNote(task.Id, "Rang Priya", "Zack");
+        store.CloseAndFollowUp(task.Id, Today.AddDays(2));
+
+        var notes = store.Find(task.Id)!.Notes;
+        notes[0].By.ShouldBe("Zack");
+        notes[1].IsFromApp.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AFollowUpKeepsTheEmailAndMovesTheReminder()
+    {
+        var store = Store();
+        var task = store.Add("Quote", remind: TaskPlan.At(Today, new TimeOnly(10, 30)));
+        store.AddEmail(task.Id, new TaskEmail(_now, "Door schedule", "Priya", null, "Can you confirm?"));
+
+        var next = store.CloseAndFollowUp(task.Id, Today.AddDays(7));
+
+        next.AllEmails.Single().Subject.ShouldBe("Door schedule");
+        next.Remind.ShouldBe(TaskPlan.At(Today.AddDays(7), new TimeOnly(10, 30)));
+        store.Find(task.Id)!.Notes.ShouldAllBe(n => !n.Text.Contains("Can you confirm"));
     }
 
     [Fact]

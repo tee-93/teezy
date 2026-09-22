@@ -168,6 +168,9 @@ public partial class SettingsView : UserControl
         // Otherwise a tab opens at whatever depth the last one was scrolled to, which reads as
         // a page that has lost its top.
         TabScroll?.ScrollToTop();
+
+        // The category list may have grown from quick add since this page was last shown.
+        if (chosen == "TabTasks") ShowTaskSettings();
     }
 
     public void Refresh()

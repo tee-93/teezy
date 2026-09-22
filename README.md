@@ -194,33 +194,42 @@ email out of Outlook, every route ran into the employer's lockdown, and all of i
   *Chase Cessnock quote fri 2pm #Quotes*. Days read the way people write them: *today*,
   *tomorrow*, *fri*, *next week*, *in 3 days*, *25/9*, *3 Oct*. A word like "Friday" in the
   middle of a title stays part of the title.
-- **Grouped by when:** Overdue, Today, Upcoming, No date, and Not started — a start date in the
-  future keeps a task out of the way until that day. Filter by category along the top.
+- **Grouped by when:** Overdue, Today, Upcoming and No date. A task starts the moment it is made;
+  the panel shows when that was. Filter by category along the top.
+- **Due and Remind me are separate date-and-time pickers** — a small calendar (weeks from Monday)
+  with *Today*, *Tomorrow*, *Next Mon* and *In a week*, and a time in quarter hours. A reminder
+  can be on another day from the due date: due Friday, remind me Wednesday at 9.
+- **Categories** are a drop-down, managed in **Settings ▸ Tasks**: add, rename (every task with
+  it is renamed too), reorder, remove. A `#category` typed in quick add is added to the list.
 - **Close, or close and follow up.** Following up closes the task and makes the next one for a
   day you pick (*tomorrow*, *in 3 days*, *in a week*, *in 2 weeks*, or any day; weekends move to
-  Monday), linked back. The panel shows the whole chain — quote sent, chased, chased again.
-  Undo takes either back.
-- **Notes** on every task, timestamped.
-- **Reminders:** give a task a time and a card pops up above the tray when it comes due, with
-  *Done*, *In 1 hour*, *Tomorrow* and *Open*. It never takes the keyboard from what you are
-  typing, and it stays until dealt with.
+  Monday), linked back, with the reminder and the email carried over. The panel shows the whole
+  chain — quote sent, chased, chased again. Undo takes either back.
+- **Notes are a timeline**, newest first, each with who wrote it and when — the record to read
+  back in a review. The name is set in Settings ▸ Tasks; notes TeezyFlow writes itself (closed,
+  followed up, email attached) are shown quieter.
+- **Reminders:** a card pops up above the tray when one comes due, with *Done*, *In 1 hour*,
+  *Tomorrow* and *Open*. It never takes the keyboard from what you are typing, and it stays
+  until dealt with.
 - **Home** shows today's and late tasks, the week ahead, and a box to add one.
 - **Syncs task by task.** With Settings ▸ Sync on, tasks travel in the same encrypted file, but
   merged: each task keeps when it last changed and the newer copy wins, so tasks added on two
   computers while apart both survive. Deletions travel too.
 
-**Emails in.** Drag a message from Outlook onto a task to add it as a note, or anywhere else on
-the page to make a new task from it — named after its subject, with the email kept as the first
-note. Classic Outlook's `.msg`, New Outlook's `.eml`, saved message files and plain text all
-work; copying the text and pasting it into a task works everywhere. Nothing is read from Outlook
-beyond what you drop, and nothing is written back.
+**Emails in.** Drag a message from Outlook onto a task to attach it, or anywhere else on the page
+to make a new task from it, named after its subject. The email is kept beside the notes, not in
+them: a folded **Email** section shows who and what in one line, and **Open** reads it in full in
+its own window. Classic Outlook's `.msg`, New Outlook's `.eml`, saved message files and plain
+text all work, and an email can be pasted in instead. Nothing is read from Outlook beyond what
+you drop, and nothing is written back.
 
-**Next steps and draft replies.** Paste or drop an email into a task's panel and press **Next
+**Next steps and draft replies.** In the folded **Next steps and reply** section, press **Next
 steps** or **Draft reply** — an optional steer like *"yes, but not before Friday"* shapes it. Only
 that email and the task's title go to Claude, on your key, when you press the button. The
-request carries no tools, so an email written to manipulate an AI has nothing to act with; the
-answer is text to copy or save to the task's notes. If it is a work mailbox, check your employer
-is happy with work email going to an outside AI service first.
+request carries no tools, so an email written to manipulate an AI has nothing to act with. The
+answer is kept on the task and can be edited before you copy it or save it to the notes. If it
+is a work mailbox, check your employer is happy with work email going to an outside AI service
+first.
 
 ---
 

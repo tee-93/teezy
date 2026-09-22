@@ -605,7 +605,7 @@ public partial class App : Application
 
     private void CheckReminders()
     {
-        var due = TaskPlan.DueForReminder(_tasks.Visible, DateTime.Now);
+        var due = TaskPlan.DueForReminder(_tasks.Visible, DateTimeOffset.Now);
         if (due.Count == 0) return;
 
         foreach (var task in due) _tasks.MarkReminded(task.Id);

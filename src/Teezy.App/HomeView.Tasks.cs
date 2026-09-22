@@ -20,10 +20,14 @@ public partial class HomeView
     private Action? _openTasks;
 
     /// <summary>Hooked up by the window, which has the store.</summary>
-    internal void AttachTasks(TaskStore? tasks, Action<string> openTask, Action openTasks)
+    /// <summary>Matches a typed #category to the list in Settings, adding it if new. Set by the window.</summary>
+    private Func<string?, string?>? _category;
+
+    internal void AttachTasks(TaskStore? tasks, Action<string> openTask, Action openTasks, Func<string?, string?>? category = null)
     {
         if (_tasks is not null || tasks is null) return;
         _tasks = tasks;
+        _category = category;
         _openTask = openTask;
         _openTasks = openTasks;
         _tasks.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) ShowTasksCard(); });
@@ -195,7 +199,8 @@ public partial class HomeView
         foreach (var email in EmailDrop.Read(e.Data))
         {
             var made = _tasks.Add(email.TaskTitle, due: today);
-            _tasks.AddNote(made.Id, email.ToNote());
+            _tasks.AddEmail(made.Id, email.ToTaskEmail(DateTimeOffset.Now));
+            _tasks.AddNote(made.Id, email.From is { Length: > 0 } from ? $"Created from an email from {from}" : "Created from an email", TaskNote.App);
         }
     }
 
@@ -213,7 +218,9 @@ public partial class HomeView
         if (parsed.Title.Length == 0) return;
 
         // Added from Home with no day, it is for today — that is what this card shows.
-        _tasks.Add(parsed.Title, parsed.Category, due: parsed.Due ?? today, dueTime: parsed.DueTime);
+        var due = parsed.Due ?? today;
+        _tasks.Add(parsed.Title, _category?.Invoke(parsed.Category), due: due, dueTime: parsed.DueTime,
+            remind: parsed.DueTime is { } time ? TaskPlan.At(due, time) : null);
         TaskAddBox.Clear();
     }
 }

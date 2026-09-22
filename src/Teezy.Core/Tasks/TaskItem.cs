@@ -1,15 +1,34 @@
 namespace Teezy.Core.Tasks;
 
-/// <summary>A note on a task, stamped when it was written.</summary>
-public sealed record TaskNote(DateTimeOffset At, string Text);
+/// <summary>A note on a task: when, who, and what.</summary>
+/// <param name="By">Who wrote it: the name set in Settings ▸ Tasks, or "TeezyFlow" for notes it
+/// writes itself (closed, followed up). Null on notes from before 1.16.</param>
+public sealed record TaskNote(DateTimeOffset At, string Text, string? By = null)
+{
+    /// <summary>The author of notes TeezyFlow writes itself.</summary>
+    public const string App = "TeezyFlow";
+
+    public bool IsFromApp => By == App;
+}
+
+/// <summary>An email attached to a task — dropped or pasted in — kept apart from the notes.</summary>
+/// <param name="Added">When it was attached.</param>
+/// <param name="Body">Its text. Someone else's writing: shown, and sent to Claude only on request.</param>
+public sealed record TaskEmail(DateTimeOffset Added, string Subject, string? From, DateTimeOffset? Received, string Body);
 
 /// <summary>One task.</summary>
 /// <param name="Id">Stable across computers, so sync can match the same task on each.</param>
 /// <param name="Title">What to do.</param>
-/// <param name="Category">A free-text category, e.g. "Quotes". Null for none.</param>
-/// <param name="Start">Not before this day; until then it sits under "Not started". Null for now.</param>
+/// <param name="Category">One of the categories in Settings ▸ Tasks, e.g. "Quotes". Null for none.</param>
+/// <param name="Start">
+/// Retired from the page in 1.16 — a task starts when it is made. Still honoured for tasks that
+/// have one, which sit under "Not started" until that day.
+/// </param>
 /// <param name="Due">The day it is due. Null for no date.</param>
-/// <param name="DueTime">A time on the due day, for a reminder. Null for no reminder.</param>
+/// <param name="DueTime">A time on the due day. Null for any time that day.</param>
+/// <param name="Remind">When to pop the reminder card, independent of the due date. Null for none.</param>
+/// <param name="Emails">Emails attached to the task, oldest first.</param>
+/// <param name="Advice">The last next steps or draft reply, as edited by the user.</param>
 /// <param name="Notes">Running notes, oldest first.</param>
 /// <param name="Created">When it was made.</param>
 /// <param name="Closed">When it was closed; null while open.</param>
@@ -30,13 +49,21 @@ public sealed record TaskItem(
     string? FollowUpOf,
     DateTimeOffset Modified,
     bool Deleted = false,
-    DateTimeOffset? Reminded = null)
+    DateTimeOffset? Reminded = null,
+    DateTimeOffset? Remind = null,
+    IReadOnlyList<TaskEmail>? Emails = null,
+    string? Advice = null)
 {
     public bool IsOpen => Closed is null && !Deleted;
 
+    /// <summary>The attached emails, never null.</summary>
+    public IReadOnlyList<TaskEmail> AllEmails => Emails ?? [];
+
     public static TaskItem New(string title, DateTimeOffset now, string? category = null,
-        DateOnly? start = null, DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null) =>
-        new(Guid.NewGuid().ToString("N"), title.Trim(), Clean(category), start, due, dueTime, [], now, null, followUpOf, now);
+        DateOnly? start = null, DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null,
+        DateTimeOffset? remind = null) =>
+        new(Guid.NewGuid().ToString("N"), title.Trim(), Clean(category), start, due, dueTime, [], now, null, followUpOf, now,
+            Remind: remind);
 
     internal static string? Clean(string? category) =>
         string.IsNullOrWhiteSpace(category) ? null : category.Trim();
@@ -92,16 +119,18 @@ public static class TaskPlan
 
     /// <summary>Open tasks whose reminder time has come and whose reminder has not been shown here.</summary>
     /// <remarks>
-    /// Only tasks with a time: a task due on a day with no time is for the day's list, not a
-    /// pop-up. A reminder missed while the computer was off is shown when it next looks.
+    /// Only tasks with a reminder set: a task due on a day is for the day's list, not a pop-up.
+    /// A reminder missed while the computer was off is shown when it next looks.
     /// </remarks>
-    public static IReadOnlyList<TaskItem> DueForReminder(IEnumerable<TaskItem> tasks, DateTime now) =>
+    public static IReadOnlyList<TaskItem> DueForReminder(IEnumerable<TaskItem> tasks, DateTimeOffset now) =>
         tasks
-            .Where(t => t.IsOpen && t.Reminded is null && t.Due is not null && t.DueTime is not null)
-            .Where(t => t.Start is not { } start || start <= DateOnly.FromDateTime(now))
-            .Where(t => t.Due!.Value.ToDateTime(t.DueTime!.Value) <= now)
-            .OrderBy(t => t.Due!.Value.ToDateTime(t.DueTime!.Value))
+            .Where(t => t.IsOpen && t.Reminded is null && t.Remind is { } at && at <= now)
+            .OrderBy(t => t.Remind)
             .ToList();
+
+    /// <summary>A day and a time on this computer's clock, as a moment.</summary>
+    public static DateTimeOffset At(DateOnly day, TimeOnly time) =>
+        new(day.ToDateTime(time), TimeZoneInfo.Local.GetUtcOffset(day.ToDateTime(time)));
 
     /// <summary>The day itself, or the Monday after if it falls on a weekend — for follow-ups at work.</summary>
     public static DateOnly Workday(DateOnly day) => day.DayOfWeek switch

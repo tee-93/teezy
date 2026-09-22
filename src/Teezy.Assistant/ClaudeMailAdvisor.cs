@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Anthropic;
+using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 using Teezy.Core.Commands;
 using Teezy.Core.Cost;
@@ -113,6 +114,17 @@ public sealed class ClaudeMailAdvisor(
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {
             throw new AssistantUnavailableException("Couldn’t reach Claude.", e);
+        }
+        catch (AnthropicApiException e)
+        {
+            // Before 1.16 these escaped and the page sat on "Thinking…" for good.
+            throw new AssistantUnavailableException(e switch
+            {
+                AnthropicUnauthorizedException => "Claude rejected the API key. Check it in Settings ▸ Dictation.",
+                AnthropicRateLimitException => "Claude is rate limiting this key. Try again in a minute.",
+                AnthropicNotFoundException => "That Claude model isn’t available on this account. Choose another in Settings ▸ Assistant.",
+                _ => $"Claude couldn’t answer: {e.Message}",
+            }, e);
         }
     }
 

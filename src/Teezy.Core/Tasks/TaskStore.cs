@@ -60,11 +60,18 @@ public sealed class TaskStore
     }
 
     public TaskItem Add(string title, string? category = null, DateOnly? start = null,
-        DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null)
+        DateOnly? due = null, TimeOnly? dueTime = null, string? followUpOf = null, DateTimeOffset? remind = null)
     {
-        var task = TaskItem.New(title, _now(), category, start, due, dueTime, followUpOf);
+        var task = TaskItem.New(title, _now(), category, start, due, dueTime, followUpOf, remind);
         Change(list => list.Add(task));
         return task;
+    }
+
+    /// <summary>Attaches an email to a task, apart from its notes.</summary>
+    public void AddEmail(string id, TaskEmail email)
+    {
+        if (Find(id) is not { } task) return;
+        Update(task with { Emails = [.. task.AllEmails, email] });
     }
 
     /// <summary>Replaces a task with an edited copy of itself.</summary>
@@ -79,10 +86,11 @@ public sealed class TaskStore
         return stamped;
     }
 
-    public void AddNote(string id, string text)
+    /// <param name="by">Who wrote it; see <see cref="TaskNote.By"/>.</param>
+    public void AddNote(string id, string text, string? by = null)
     {
         if (string.IsNullOrWhiteSpace(text) || Find(id) is not { } task) return;
-        Update(task with { Notes = [.. task.Notes, new TaskNote(_now(), text.Trim())] });
+        Update(task with { Notes = [.. task.Notes, new TaskNote(_now(), text.Trim(), by)] });
     }
 
     public void Close(string id)
@@ -106,15 +114,23 @@ public sealed class TaskStore
     public TaskItem CloseAndFollowUp(string id, DateOnly due, string? title = null, TimeOnly? dueTime = null)
     {
         var task = Find(id) ?? throw new InvalidOperationException("That task no longer exists.");
+
+        // A reminder moves with the follow-up, at the same time of day; so do the emails, since
+        // the follow-up is about the same thread.
+        DateTimeOffset? remind = task.Remind is { } was
+            ? TaskPlan.At(due, TimeOnly.FromDateTime(was.LocalDateTime))
+            : null;
+
         var followUp = TaskItem.New(
             string.IsNullOrWhiteSpace(title) ? FollowUpTitle(task.Title) : title,
-            _now(), task.Category, due: due, dueTime: dueTime, followUpOf: task.Id);
+            _now(), task.Category, due: due, dueTime: dueTime, followUpOf: task.Id, remind: remind)
+            with { Emails = task.Emails };
 
         var closed = task with
         {
             Closed = _now(),
             Modified = _now(),
-            Notes = [.. task.Notes, new TaskNote(_now(), $"Closed, and followed up for {due:ddd d MMM}.")],
+            Notes = [.. task.Notes, new TaskNote(_now(), $"Closed, and followed up for {due:ddd d MMM}.", TaskNote.App)],
         };
 
         Change(list =>
@@ -229,7 +245,41 @@ public sealed class TaskStore
         File.Move(temp, _path, overwrite: true);
     }
 
+    /// <summary>
+    /// Before 1.16 a due time <i>was</i> the reminder. Such a task keeps its reminder, now as a
+    /// reminder of its own. Run once per computer (see <see cref="Load"/>), and not stamped as a
+    /// change: every computer makes the same upgrade.
+    /// </summary>
+    internal static TaskItem Upgrade(TaskItem task) =>
+        task is { Remind: null, Due: { } day, DueTime: { } time }
+            ? task with { Remind = TaskPlan.At(day, time) }
+            : task;
+
     private static List<TaskItem> Load(string path)
+    {
+        var tasks = Read(path);
+
+        // Once only, marked beside the file, so a reminder cleared later is not put back.
+        var upgraded = path + ".v2";
+        if (!File.Exists(upgraded))
+        {
+            tasks = [.. tasks.Select(Upgrade)];
+            try
+            {
+                if (tasks.Count > 0)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    File.WriteAllText(path, JsonSerializer.Serialize(tasks, Json));
+                }
+                File.WriteAllText(upgraded, "Reminders split from due times (TeezyFlow 1.16).");
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        }
+
+        return tasks;
+    }
+
+    private static List<TaskItem> Read(string path)
     {
         try
         {

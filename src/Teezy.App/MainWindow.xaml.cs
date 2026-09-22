@@ -1,3 +1,4 @@
+using Teezy.Core.Tasks;
 using System.Linq;
 using Teezy.Cleanup;
 using Teezy.Core.Hotkeys;
@@ -76,7 +77,9 @@ public partial class MainWindow : Window
         Updater? updater = null,
         Action? restartToUpdate = null,
         SyncService? sync = null,
-        OutlookWatcher? outlook = null)
+        OutlookWatcher? outlook = null,
+        IMailTasks? tasks = null,
+        IMailAdvisor? advisor = null)
     {
         InitializeComponent();
         DarkTitleBar.Apply(this);
@@ -102,6 +105,8 @@ public partial class MainWindow : Window
         _restartToUpdate = restartToUpdate;
         _sync = sync;
         _outlook = outlook;
+        _tasks = tasks;
+        _advisor = advisor;
 
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
@@ -136,6 +141,9 @@ public partial class MainWindow : Window
     private readonly Action? _restartToUpdate;
     private readonly SyncService? _sync;
     private readonly OutlookWatcher? _outlook;
+    private readonly IMailTasks? _tasks;
+    private readonly IMailAdvisor? _advisor;
+    private TasksView? _tasksView;
 
     /// <summary>Closed with its 'Later' button, which lasts until the next version.</summary>
     private Version? _hiddenUpdate;
@@ -181,6 +189,7 @@ public partial class MainWindow : Window
             case DictionaryView dictionary: dictionary.Refresh(); break;
             case SettingsView settings: settings.Refresh(); break;
             case MeetingsView meetings: meetings.Refresh(); break;
+            case TasksView tasks: tasks.Refresh(); break;
         }
     }
 
@@ -209,12 +218,22 @@ public partial class MainWindow : Window
         if (PageHost.Content is SettingsView leaving && sender != NavSettings) leaving.Leaving();
 
         if (sender == NavHome) ShowHome();
+        else if (sender == NavTasks) ShowTasks();
         else if (sender == NavTranscripts) ShowTranscripts();
         else if (sender == NavMeetings) ShowMeetings();
         else if (sender == NavBudget) ShowBudget();
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) ShowSettings();
+    }
+
+    private void ShowTasks()
+    {
+        if (_tasks is null) return;
+
+        _tasksView ??= new TasksView(_tasks, _advisor);
+        _tasksView.Refresh();
+        PageHost.Content = _tasksView;
     }
 
     private void ShowBudget()
@@ -276,6 +295,7 @@ public partial class MainWindow : Window
             case Page.Settings: NavSettings.IsChecked = true; break;
             case Page.Meetings: NavMeetings.IsChecked = true; break;
             case Page.Budget: NavBudget.IsChecked = true; break;
+            case Page.Tasks: NavTasks.IsChecked = true; break;
             default: NavHome.IsChecked = true; break;
         }
     }
@@ -325,4 +345,5 @@ public enum Page
     Settings,
     Meetings,
     Budget,
+    Tasks,
 }

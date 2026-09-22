@@ -116,19 +116,19 @@ internal static class ClassicOutlook
         }
     }
 
-    private static dynamic? Running()
+    internal static dynamic? Running()
     {
         if (CLSIDFromProgID("Outlook.Application", out var clsid) != 0) return null;   // not installed
         return GetActiveObject(ref clsid, IntPtr.Zero, out var instance) == 0 ? instance : null;
     }
 
-    private static DateTimeOffset Local(DateTime time)
+    internal static DateTimeOffset Local(DateTime time)
     {
         var local = DateTime.SpecifyKind(time, DateTimeKind.Local);
         return new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
     }
 
-    private static void Release(object? com)
+    internal static void Release(object? com)
     {
         if (com is not null && Marshal.IsComObject(com)) Marshal.ReleaseComObject(com);
     }

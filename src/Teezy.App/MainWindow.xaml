@@ -54,6 +54,15 @@
                         </StackPanel>
                     </RadioButton>
 
+                    <RadioButton x:Name="NavTasks" Style="{StaticResource TopTab}" GroupName="Nav"
+                                 Checked="OnNavChanged">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Style="{StaticResource TabIcon}"
+                                  Data="M4,5 L20,5 L20,20 L4,20 Z M8,12 L11,15 L16,9"/>
+                            <TextBlock Text="Tasks" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
                     <RadioButton x:Name="NavTranscripts" Style="{StaticResource TopTab}" GroupName="Nav"
                                  Checked="OnNavChanged">
                         <StackPanel Orientation="Horizontal">

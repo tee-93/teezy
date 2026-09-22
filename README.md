@@ -9,7 +9,7 @@ had focus. Hold a *different* key and it does what you said instead: opens an ap
 volume, skips a track, locks the PC, and can answer you out loud. It also records a meeting and
 transcribes it once the call is over. **Local by default** — after the one-time model download,
 dictation, commands, meeting transcription, your dictionary and the built-in voice all run
-on-device and stay there. Six optional tiers are the exception — four Claude, one ElevenLabs,
+on-device and stay there. Seven optional tiers are the exception — five Claude, one ElevenLabs,
 and an encrypted sync file in your own OneDrive — every one of them off until you switch it on.
 The only request TeezyFlow makes by itself is a check for updates against this repository.
 
@@ -232,6 +232,26 @@ calendar file*:
 
 If saving the flow says a connector is blocked by your organisation's data policy, use route 1
 instead. If the file stops changing, the flow has stopped — its run history says why.
+
+### Tasks: flagged emails from classic Outlook
+
+The **Tasks** tab is your flagged email, straight from classic Outlook's own To-Do List, grouped
+by category — due work first, overdue in amber. **The flag is the tick box:** tick a task and its
+flag is marked complete in Outlook; **Undo** puts it back. Flags and categories live in the
+mailbox, so the list matches New Outlook and your phone too. Pins do not — they are New
+Outlook's alone and classic Outlook cannot see them.
+
+- **Classic Outlook must be running** (minimised is fine). TeezyFlow never starts it.
+- **Only list fields are read in bulk** — sender name, subject, dates, categories. An email's
+  text is read only when you ask the AI about that one email, which keeps Outlook's security
+  guard quiet.
+- **Next steps** and **Draft reply** send that one email to Claude on your key, when you press
+  them and never otherwise. The request carries no tools, so an email written to manipulate an
+  AI has nothing to act with; the answer is text on the page. A draft is for you to copy into
+  Outlook — TeezyFlow never writes to your drafts and never sends anything. **Redraft** takes a
+  steer, e.g. *"say yes, but not before Friday"*.
+- If it is a work mailbox, check your employer is happy with work email going to an outside AI
+  service before using those two buttons. The rest of the page sends nothing anywhere.
 
 ---
 

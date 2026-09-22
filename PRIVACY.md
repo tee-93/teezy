@@ -15,7 +15,7 @@ machine does with what it can see.
 - **Everything is local until you switch something on.** Speech recognition, the command
   vocabulary, your dictionary, your history, meeting transcription and the built-in Windows voice
   all run on-device.
-- **Six optional tiers leave the machine**, each off by default, each on your own API key, your
+- **Seven optional tiers leave the machine**, each off by default, each on your own API key, your
   own account or your own storage, and each listed below.
 - **No analytics, no telemetry, no crash reporting, no advertising, no tracking of any kind.**
   TeezyFlow does not phone home, and there is no build of it that does. The one request it
@@ -70,6 +70,13 @@ transcript is sent so Claude can write a summary and the follow-up tasks. It is 
 it happens for that meeting, when you ask, and at no other time. The recording itself is never
 sent, and the PDF is made on your computer. Like calendar and mail answers, the request is given
 no tools, because a transcript is other people's words.
+
+**7. Next steps and draft replies for a task (Anthropic).** On the Tasks page, pressing **Next
+steps** or **Draft reply** on one flagged email sends that email — its sender name, subject, dates
+and text — so Claude can suggest what to do or draft a reply. Only that one email, only when you
+press the button, and never in the background. The request has no tools: the reply is text on
+the page, and nothing is sent, saved to Outlook or acted on. If it is a work mailbox, check your
+employer allows work email to go to an outside AI service.
 
 **6. Sync between your computers (your own folder).** If you turn on Settings ▸ Sync, your API
 keys, the Google client secret, the Gmail app password, calendar links, your preferences and your

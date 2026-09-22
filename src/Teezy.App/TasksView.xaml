@@ -1,0 +1,55 @@
+<UserControl x:Class="Teezy.App.TasksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Flagged emails from classic Outlook, as a task list. The flag is the tick box: done here is
+      done in Outlook. The AI sees one email, only when a button on that email is pressed.
+      Rows are built in code (see TasksView.xaml.cs) because each can open a panel of its own.
+    -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,24,28,24">
+
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Tasks" Style="{StaticResource H1}"/>
+                    <TextBlock x:Name="Lede" Style="{StaticResource Lede}" Margin="0,4,0,0"
+                               Text="Your flagged emails from Outlook, by category. Tick one off here and it’s done in Outlook too."/>
+                </StackPanel>
+                <Button x:Name="RefreshButton" Grid.Column="1" Content="Refresh" Style="{StaticResource Secondary}"
+                        VerticalAlignment="Top" Click="OnRefresh"/>
+            </Grid>
+
+            <!-- Shown after a tick, so a slip is one click to undo. -->
+            <Border x:Name="UndoBar" Style="{StaticResource CautionPanel}" Visibility="Collapsed" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="UndoText" VerticalAlignment="Center" Foreground="{StaticResource CautionInk}"/>
+                    <Button Grid.Column="1" Content="Undo" Style="{StaticResource Quiet}" Click="OnUndo"/>
+                </Grid>
+            </Border>
+
+            <!-- Why the list is empty, when it is. -->
+            <Border x:Name="EmptyState" Style="{StaticResource CardPanel}" Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center" Margin="0,24">
+                    <Image Source="{StaticResource MarkImage}" Width="36" Height="36" Margin="0,0,0,12"/>
+                    <TextBlock x:Name="EmptyTitle" Style="{StaticResource H2}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptyText" Style="{StaticResource Hint}" TextAlignment="Center"
+                               MaxWidth="460" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel x:Name="Groups"/>
+
+            <TextBlock x:Name="AiNote" Style="{StaticResource Hint}" Margin="0,16,0,0" Visibility="Collapsed"
+                       Text="Next steps and Draft reply send that one email to Claude on your own Anthropic key, only when you press them. Check your employer is happy with work email going to an outside AI service."/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

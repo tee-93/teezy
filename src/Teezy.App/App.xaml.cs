@@ -84,6 +84,9 @@ public partial class App : Application
     /// <summary>Reads New Outlook's calendar on this computer, when that route is switched on.</summary>
     private readonly OutlookWatcher _outlook;
 
+    /// <summary>Flagged emails from classic Outlook, as the Tasks page's list.</summary>
+    private readonly ClassicOutlookMail _mailTasks = new();
+
     public App()
     {
         // Built here rather than at startup so the timer exists from the first moment; it reads
@@ -552,7 +555,15 @@ public partial class App : Application
             updater: _updater,
             restartToUpdate: RestartToUpdate,
             sync: _sync,
-            outlook: _outlook);
+            outlook: _outlook,
+            tasks: _mailTasks,
+
+            // The key is the cleanup tier's: the same Anthropic account. Called only when a
+            // button on one email is pressed.
+            advisor: new Teezy.Assistant.ClaudeMailAdvisor(
+                () => _secrets?.Read(ApiKeyName),
+                () => _settings.AssistantModel,
+                TimeSpan.FromSeconds(45)));
 
         _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;

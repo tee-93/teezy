@@ -729,7 +729,7 @@
                                         <StackPanel>
                                             <TextBlock Text="Read my calendar from Outlook" Style="{StaticResource FormLabel}"/>
                                             <TextBlock Style="{StaticResource FormHint}"
-                                                       Text="For a work calendar nothing else can reach. TeezyFlow reads the meetings New Outlook is showing, the way a screen reader does, every few minutes. Leave Outlook open on the Calendar in Week or Month view — behind other windows is fine, minimised is not. Nothing leaves this computer, and it never syncs to your others."/>
+                                                       Text="For a work calendar nothing else can reach. Best with classic Outlook: keep it open (minimised is fine) and TeezyFlow reads your calendar from it every few minutes. With New Outlook instead, leave it open on the Calendar in Week view — behind other windows is fine, minimised is not. Nothing leaves this computer, and it never syncs to your others."/>
                                         </StackPanel>
                                         <CheckBox x:Name="OutlookReadBox" Grid.Column="1" Style="{StaticResource Switch}"
                                                   VerticalAlignment="Center" Margin="16,0,0,0" Click="OnOutlookReadToggled"/>

@@ -184,8 +184,18 @@ sign-in page, not secrets.
 When a work calendar can be neither signed in to (the organisation will not consent to an app
 it has not approved) nor published (IT has switched publishing off), there are two routes left.
 
-**1 · Read New Outlook on this computer — works when everything else is blocked.** Settings ▸
-Accounts ▸ *Read my calendar from Outlook*. New Outlook labels every meeting for screen readers
+**1 · Read Outlook on this computer — works when everything else is blocked.** Settings ▸
+Accounts ▸ *Read my calendar from Outlook*.
+
+**With classic Outlook running, this is the simple case.** Classic Outlook answers other programs
+on the same computer through its object model (COM), so TeezyFlow asks it for the week before and
+five weeks ahead every three minutes — every meeting, recurring ones expanded, whatever view is
+showing, with Outlook minimised or behind other windows. Only a running Outlook is asked; it is
+never started from TeezyFlow, since a hidden copy can stall on a sign-in prompt nobody sees.
+Only plain appointment fields are read, not attendees, which keeps Outlook's security guard out
+of it. *Not yet run against a live classic Outlook profile* — the laptop it was built on has none.
+
+**Without classic Outlook, it reads New Outlook's window instead.** New Outlook labels every meeting for screen readers
 with its subject, times, date and location; TeezyFlow reads those labels every three minutes,
 the way a screen reader does, and keeps a copy on this computer. No API, no sign-in, no flow,
 nothing installed in Outlook, and nothing for IT to approve. The copy never leaves the laptop and

@@ -76,10 +76,20 @@ public sealed class OutlookWatcher : IDisposable
 
         try
         {
+            // Classic Outlook first, when it is running: its own object model hands over every
+            // meeting in the range, minimised or not, with nothing to parse.
+            var today = DateTime.Today;
+            if (ClassicOutlook.Read(today.AddDays(-7), today.AddDays(35)) is { } classic)
+            {
+                SaveRange(classic, today.AddDays(-7), today.AddDays(35));
+                Report($"Read {classic.Count} meeting{(classic.Count == 1 ? "" : "s")} from classic Outlook at {DateTime.Now:h:mm tt}.");
+                return;
+            }
+
             var windows = OutlookWindows();
             if (windows.Count == 0)
             {
-                Report("New Outlook isn’t open. Using what it showed last time.", problem: true);
+                Report("Outlook isn’t open. Open classic Outlook (it can stay minimised), or New Outlook on the Calendar. Using what it showed last time.", problem: true);
                 return;
             }
 
@@ -121,6 +131,7 @@ public sealed class OutlookWatcher : IDisposable
             Report($"Read {events.Count} meeting{(events.Count == 1 ? "" : "s")} from Outlook at {DateTime.Now:h:mm tt}.");
         }
         catch (Exception e) when (e is ElementNotAvailableException or COMException or IOException
+                                      or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException
                                       or InvalidOperationException or UnauthorizedAccessException)
         {
             Report($"Couldn’t read Outlook just now: {e.Message}", problem: true);
@@ -166,11 +177,14 @@ public sealed class OutlookWatcher : IDisposable
         }
     }
 
-    private static void Save(IReadOnlyList<CalendarEvent> read)
+    /// <summary>New Outlook's window: the span covered is the span of what was seen.</summary>
+    private static void Save(IReadOnlyList<CalendarEvent> read) =>
+        SaveRange(read, read.Min(e => e.Start.Date), read.Max(e => e.End.Date));
+
+    /// <summary>Stores a read, replacing whatever was kept for the days it covered.</summary>
+    private static void SaveRange(IReadOnlyList<CalendarEvent> read, DateTime from, DateTime to)
     {
         // Keep what was stored outside the days this read covered.
-        var from = read.Min(e => e.Start.Date);
-        var to = read.Max(e => e.End.Date);
         var kept = Load().Where(e => e.End.Date < from || e.Start.Date > to);
 
         var items = new JsonArray();

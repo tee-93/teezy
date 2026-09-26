@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Teezy.Core;
+using Teezy.Core.Quotes;
 using Teezy.Core.Tasks;
 
 namespace Teezy.App;
@@ -55,6 +56,8 @@ public partial class SettingsView
                 _write(settings);
             }
         }
+
+        ShowCadence(settings);
 
         CategoryRows.Children.Clear();
         var list = settings.TaskCategories;
@@ -206,6 +209,44 @@ public partial class SettingsView
     internal Action? ShowBriefing { get; set; }
 
     private bool _briefingFilling;
+
+    /// <summary>How long after a quote goes out it is chased, and again after that.</summary>
+    private static readonly (int[] Days, string Label)[] Cadences =
+    [
+        ([2, 5, 10], "2, 5 and 10 days"),
+        ([3, 7, 14], "3 days, a week, a fortnight"),
+        ([7, 14, 28], "A week, a fortnight, a month"),
+        ([14], "A fortnight, then monthly"),
+    ];
+
+    private bool _cadenceFilling;
+
+    private void ShowCadence(TeezySettings settings)
+    {
+        _cadenceFilling = true;
+
+        if (CadencePicker.Items.Count == 0)
+        {
+            foreach (var (days, label) in Cadences)
+            {
+                CadencePicker.Items.Add(new ComboBoxItem { Content = label, Tag = days });
+            }
+        }
+
+        var chosen = CadencePicker.Items.Cast<ComboBoxItem>().FirstOrDefault(
+            i => i.Tag is int[] days && days.SequenceEqual(settings.QuoteCadence));
+
+        CadencePicker.SelectedItem = chosen ?? CadencePicker.Items.Cast<ComboBoxItem>()
+            .First(i => i.Tag is int[] days && days.SequenceEqual(QuotePlan.DefaultCadence));
+
+        _cadenceFilling = false;
+    }
+
+    private void OnCadenceChanged(object sender, RoutedEventArgs e)
+    {
+        if (_cadenceFilling || CadencePicker.SelectedItem is not ComboBoxItem { Tag: int[] days }) return;
+        _write(_read() with { QuoteCadence = days });
+    }
 
     private void ShowBriefingSettings(TeezySettings settings)
     {

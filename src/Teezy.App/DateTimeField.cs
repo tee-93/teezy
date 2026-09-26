@@ -50,6 +50,12 @@ public sealed class DateTimeField : UserControl
     /// <summary>The time a day gets when <see cref="TimeRequired"/> and none is set.</summary>
     public TimeOnly DefaultTime { get; set; } = new(9, 0);
 
+    /// <summary>
+    /// Whether a time can be chosen as well as a day. False for a date that is only ever a day —
+    /// the day a quote went out has no o'clock about it.
+    /// </summary>
+    public bool ShowTime { get; set; } = true;
+
     /// <summary>What the field says when empty.</summary>
     public string Placeholder { get; set; } = "No date";
 
@@ -241,7 +247,14 @@ public sealed class DateTimeField : UserControl
         bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        bottom.Children.Add(new TextBlock { Text = "Time", Foreground = Brush("Muted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+        var timeLabel = new TextBlock { Text = "Time", Foreground = Brush("Muted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) };
+        bottom.Children.Add(timeLabel);
+        Loaded += (_, _) =>
+        {
+            var shown = ShowTime ? Visibility.Visible : Visibility.Collapsed;
+            timeLabel.Visibility = shown;
+            _time.Visibility = shown;
+        };
         Grid.SetColumn(_time, 1);
         _time.HorizontalAlignment = HorizontalAlignment.Left;
         _time.SelectionChanged += (_, _) => OnTimeChosen();

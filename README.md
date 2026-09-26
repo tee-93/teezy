@@ -233,6 +233,40 @@ answer is kept on the task and can be edited before you copy it or save it to th
 is a work mailbox, check your employer is happy with work email going to an outside AI service
 first.
 
+### Quotes
+
+The **Quotes** tab is the pipeline: every quote you send, what it is worth, and the chasing that
+follows it. Three figures across the top — what is out there, what you have won this month, and
+your win rate — then the list, grouped by what needs doing: **chase today**, **gone quiet**,
+**out there**, **decided**.
+
+**A quote is the job; a chase is a task.** Adding a quote books its first chase in your ordinary
+task list, in the Quotes category, due on the day with a reminder. Tick that task off and the
+quote counts one more chase and books the next. Mark the quote won or lost and the chasing
+stops. Nothing new to keep on top of: reminders, the focus list, Home and the morning briefing
+already work on tasks.
+
+Four ways in, because quotes are sent from four different situations:
+
+- **Typed:** `Hunter Builders $4,200 door hardware sent friday`. The customer comes before the
+  figure, the job after it, and a day at the end means the day just gone — a quote is sent
+  before it is recorded. `4.2k`, `$4,207.35` and `#Q1042` all read.
+- **Dragged in:** drop the quote email you sent onto the page. The customer comes from who it
+  went to and the job from the subject; you add the value and press Enter, and the email is kept
+  on the quote.
+- **By voice:** hold the assistant key and say *"quoted Hunter Builders four thousand two hundred
+  for door hardware"*. Understood on this computer, free, with no key and no signal — and it
+  tells you when it will be chased.
+- **From the CRM:** **Import a CRM export** takes a spreadsheet saved as CSV. Columns are matched
+  by what they mean, and it says which column it read each field from before importing anything.
+  Re-importing the same file updates rather than duplicates, matching on your quote reference, so
+  a fresh export brings the outcomes with it.
+
+**Chasing** is 3 days, a week, then a fortnight by default, then monthly — changeable in
+Settings ▸ Tasks. A quote entered late is chased today rather than on a day already gone.
+Anything with no movement for three weeks is marked **gone quiet**. Quotes travel with Sync like
+tasks, merged one at a time.
+
 ### The focus list
 
 A small card of the tasks you are working through right now — a call list, say — that stays on
@@ -257,8 +291,8 @@ Pins travel with the tasks in Sync; where the card sits is per computer.
 On working days a briefing opens at **8:30** — or the first time TeezyFlow is open after that, if
 the computer was off — once a day per computer. It says the day in one line, then lists what is
 **late**, **today** in order (timed tasks, reminders and meetings, then anything due at any
-time), the **follow-ups this week**, unread email where a mailbox is connected, and what you
-closed the working day before. Tasks can be ticked off or opened from it; **Read it to me** reads
+time), the **follow-ups this week**, the **quotes** wanting a chase or gone quiet, unread email
+where a mailbox is connected, and what you closed the working day before. Tasks can be ticked off or opened from it; **Read it to me** reads
 it aloud in your chosen voice. It opens without taking the keyboard, in case you are already
 typing. **Briefing** on Home and **Morning briefing** in the tray show it any time.
 
@@ -312,14 +346,15 @@ Settings ▸ Advanced ▸ *When I close the window* changes it later.
 
 - A greeting, the date, and the day in one line — "3 tasks today, 1 late · 2 follow-ups this
   week", with meetings and unread mail added where a calendar or mailbox is connected.
-- **Tiles** across the top, after Pursiva's widget bar: up to five of Due today, Follow-ups this
-  week, Next reminder, Done this week, Dictated this week, Overdue, Time saved, Streak, Meetings
-  recorded, and — with accounts — Next meeting and Unread. Each opens what it counts.
+- **Tiles** across the top, after Pursiva's widget bar: up to five of Due today, Quotes out, Won
+  this month, Follow-ups this week, Next reminder, Done this week, Dictated this week, Overdue,
+  Time saved, Streak, Meetings recorded, and — with accounts — Next meeting and Unread. Each
+  opens what it counts.
 - **Two columns, 65 / 35**, stacking on a narrow window. Left: **Today** (late tasks, then the
   day's timed tasks, reminders and meetings on one timeline, then "any time today", with a
   quick-add box that also takes a dropped email) and **This week** (Monday to Sunday). Right:
-  **Coming up**, **Recent notes** (the latest notes across your tasks, who and when), **Meetings**,
-  and the **Inbox** where mail is connected. Each panel folds away.
+  **Quotes to chase**, **Coming up**, **Recent notes** (the latest notes across your tasks, who
+  and when), **Meetings**, and the **Inbox** where mail is connected. Each panel folds away.
 - **Customise** ticks and orders the tiles and panels; the choice travels with Sync. Parts that
   need an account are hidden where it is not connected — never shown empty — and kept in the
   saved choice, so the work laptop's edits do not remove the personal laptop's Inbox.
@@ -358,6 +393,7 @@ want, and TeezyFlow does it rather than typing it.
 | Lock | "lock the computer" |
 | Ask about tasks | "what tasks do I have today", "what's overdue", "any follow-ups this week", "what's due tomorrow" |
 | Add a task | "add a task to chase the Cessnock quote Friday at 2 p.m.", "remind me tomorrow to send the PO", "put the Newcastle PO on my list for Thursday" |
+| Record a quote | "quoted Hunter Builders four thousand two hundred for door hardware", "sent a quote to Orikan for nine hundred dollars" |
 | Close a task | "mark the Cessnock quote as done", "tick off the expense report" |
 
 **Tasks are answered on this computer, instantly**, so they work on the work laptop too. There,
@@ -913,8 +949,6 @@ synthesised key events).
    publisher-allowlist policy can block it with nothing we can do locally.
 4. **Elevated-window injection.** A non-elevated process cannot type into an elevated
    window. Elevating TeezyFlow would be worse than the problem.
-5. **Budget figures.** The Budget page and its dashboard widget exist; reading a Cashew export
-   and the bills that arrive by email does not yet, so both say so rather than show numbers.
 
 ---
 

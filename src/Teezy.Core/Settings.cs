@@ -286,6 +286,12 @@ public sealed record TeezySettings
     /// <summary>The focus card was open when TeezyFlow last closed, so it comes back at start.</summary>
     public bool FocusOpen { get; init; }
 
+    /// <summary>
+    /// Days after a quote goes out to chase it on. Copied onto each quote as it is made, so
+    /// changing this re-times the quotes sent from now on and leaves the ones already out alone.
+    /// </summary>
+    public IReadOnlyList<int> QuoteCadence { get; init; } = [3, 7, 14];
+
     /// <summary>The categories a task can have, in the order the picker shows them.</summary>
     /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
     public IReadOnlyList<string> TaskCategories { get; init; } = [];

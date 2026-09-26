@@ -39,6 +39,7 @@ public partial class HomeView : UserControl
 
     private readonly HistoryStore _history;
     private readonly TaskStore _tasks;
+    private readonly Teezy.Core.Quotes.QuoteStore? _quotes;
     private readonly CombinedCalendar? _calendar;
     private readonly CombinedMailbox? _mailbox;
     private readonly MeetingStore? _meetingStore;
@@ -63,7 +64,8 @@ public partial class HomeView : UserControl
         Func<string>? hotkey = null,
         CombinedCalendar? calendar = null,
         CombinedMailbox? mailbox = null,
-        MeetingStore? meetings = null)
+        MeetingStore? meetings = null,
+        Teezy.Core.Quotes.QuoteStore? quotes = null)
     {
         InitializeComponent();
         _history = history;
@@ -74,6 +76,7 @@ public partial class HomeView : UserControl
         _calendar = calendar;
         _mailbox = mailbox;
         _meetingStore = meetings;
+        _quotes = quotes;
 
         HotkeyChip.Text = hotkey?.Invoke() ?? string.Empty;
         BriefingButton.Visibility = actions.ShowBriefing is null ? Visibility.Collapsed : Visibility.Visible;
@@ -82,6 +85,7 @@ public partial class HomeView : UserControl
         // Tasks change from the Tasks page, reminders and sync; Home follows while it is showing.
         _tasks.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
         _history.Added += _ => Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
+        if (_quotes is not null) _quotes.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
 
         Refresh();
     }
@@ -124,7 +128,8 @@ public partial class HomeView : UserControl
             ? (IReadOnlyList<CalendarEvent>)CalendarWeek.On(week.Events, DateOnly.FromDateTime(now.LocalDateTime))
             : null;
 
-        return new HomeSnapshot(now, _tasks.Visible, usage, meetings, today, MailConnected ? _mail : null);
+        return new HomeSnapshot(now, _tasks.Visible, usage, meetings, today, MailConnected ? _mail : null,
+            _quotes?.Visible);
     }
 
     private IReadOnlyList<MeetingRecord> Meetings()

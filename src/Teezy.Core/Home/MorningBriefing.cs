@@ -94,6 +94,20 @@ public static class MorningBriefing
                 Day(t.Due!.Value, today), t.Id))]));
         }
 
+        // Quotes are money waiting on a phone call, so they come before the inbox — but only
+        // the ones that want something today; the rest of the pipeline is a page, not a briefing.
+        var chase = Quotes.QuotePlan.DueToChase(s.AllQuotes, today);
+        var quiet = s.AllQuotes.Where(q => Quotes.QuotePlan.IsQuiet(q, today) && !chase.Contains(q)).ToList();
+        if (chase.Count + quiet.Count > 0)
+        {
+            sections.Add(new BriefingSection("Quotes", [
+                .. chase.Select(q => new BriefingItem(
+                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · chase", Late: true)),
+                .. quiet.Select(q => new BriefingItem(
+                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · quiet {today.DayNumber - q.LastMoved.DayNumber} days")),
+            ]));
+        }
+
         if (s.Mail is { } mail && mail.Messages.Count(m => m.IsUnread) is var unread and > 0)
         {
             sections.Add(new BriefingSection("Inbox", [new BriefingItem(unread == 1 ? "1 unread email" : $"{unread} unread emails", null)]));
@@ -171,8 +185,33 @@ public static class MorningBriefing
             }
         }
 
+        if (s.AllQuotes.Any(q => q.IsOpen))
+        {
+            text.AppendLine();
+            text.AppendLine("Open quotes (the user's own words, values in dollars):");
+            foreach (var quote in s.AllQuotes.Where(q => q.IsOpen)
+                         .OrderBy(q => Quotes.QuotePlan.NextChase(q) ?? q.Sent).Take(20))
+            {
+                text.Append("- ").Append(quote.Customer);
+                if (quote.What.Length > 0) text.Append(" | ").Append(quote.What);
+                text.Append(" | ").Append(Quotes.QuotePlan.Money(quote.Amount));
+                text.Append(" | sent ").Append(quote.Sent.ToString("d MMMM", Display));
+                if (Quotes.QuotePlan.NextChase(quote) is { } next)
+                {
+                    text.Append(" | chase ").Append(next.ToString("dddd d MMMM", Display));
+                    if (next <= today) text.Append(" (due)");
+                }
+                if (Quotes.QuotePlan.IsQuiet(quote, today)) text.Append(" | gone quiet");
+                text.AppendLine();
+            }
+        }
+
         return text.ToString();
     }
+
+    /// <summary>A quote in one line, as the briefing lists it.</summary>
+    private static string Quote(Quotes.Quote quote) =>
+        quote.What.Length > 0 ? $"{quote.Customer} — {quote.What}" : quote.Customer;
 
     private static bool RemindsToday(TaskItem task, DateOnly today) =>
         task.Remind is { } at && DateOnly.FromDateTime(at.LocalDateTime) == today;

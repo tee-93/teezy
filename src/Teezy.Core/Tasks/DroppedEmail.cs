@@ -16,7 +16,7 @@ namespace Teezy.Core.Tasks;
 /// Claude only through <see cref="IMailAdvisor"/>, with no tools, when the user presses a button.
 /// </para>
 /// </remarks>
-public sealed partial record DroppedEmail(string Subject, string? From, DateTimeOffset? Received, string Body)
+public sealed partial record DroppedEmail(string Subject, string? From, DateTimeOffset? Received, string Body, string? To = null)
 {
     /// <summary>The most kept of a body in a note; long threads repeat everything below.</summary>
     public const int MaxBody = 8_000;

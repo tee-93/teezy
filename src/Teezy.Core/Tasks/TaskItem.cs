@@ -44,6 +44,7 @@ public sealed record TaskEmail(DateTimeOffset Added, string Subject, string? Fro
 /// <param name="Deleted">Deleted, kept as a marker so the deletion reaches the other computers.</param>
 /// <param name="Reminded">When its reminder was shown, so it is shown once.</param>
 /// <param name="Pinned">On the focus list — the small always-on-top card for calls. Travels with sync.</param>
+/// <param name="QuoteId">The quote this task is chasing, when it is one. Null for ordinary tasks.</param>
 public sealed record TaskItem(
     string Id,
     string Title,
@@ -61,7 +62,8 @@ public sealed record TaskItem(
     DateTimeOffset? Remind = null,
     IReadOnlyList<TaskEmail>? Emails = null,
     string? Advice = null,
-    bool Pinned = false)
+    bool Pinned = false,
+    string? QuoteId = null)
 {
     public bool IsOpen => Closed is null && !Deleted;
 

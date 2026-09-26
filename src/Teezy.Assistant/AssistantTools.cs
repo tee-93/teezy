@@ -51,6 +51,12 @@ internal static class AssistantTools
             "Add a task to the user's TeezyFlow task list, e.g. when they ask to be reminded to do something or to put something on their list.",
             ("title", "string", "What to do, as a short task title in the user's words, e.g. \"Chase the Cessnock quote\". No date or time in it."),
             ("when", "string", "When it is due, exactly as the user said it, e.g. \"friday 2pm\", \"tomorrow\", \"in 3 days\"; an empty string if they gave no time.")),
+
+        Define("add_quote",
+            "Record a quote the user has sent a customer, so TeezyFlow can chase it. Only when they say they quoted someone or sent a quote, and only when they said what it is worth.",
+            ("customer", "string", "Who the quote went to, in the user's words, e.g. \"Hunter Builders\"."),
+            ("amount", "string", "What it is worth, exactly as the user said it, e.g. \"four thousand two hundred\" or \"$4,200\"."),
+            ("what", "string", "What it is for, in a few words, e.g. \"door hardware\"; an empty string if they did not say.")),
     ];
 
     private static ToolUnion Define(
@@ -113,6 +119,11 @@ internal static class AssistantTools
 
             "add_task" => Text(args, "title") is { Length: > 1 } title
                 ? new VoiceCommand.AddTask(title.Trim(), Text(args, "when")?.Trim() ?? string.Empty)
+                : null,
+
+            "add_quote" => Text(args, "customer") is { Length: > 1 } customer
+                           && Text(args, "amount") is { Length: > 0 } amount
+                ? new VoiceCommand.AddQuote(customer.Trim(), amount.Trim(), Text(args, "what")?.Trim() ?? string.Empty)
                 : null,
 
             // Includes the model inventing a tool, which is the case this exists for.

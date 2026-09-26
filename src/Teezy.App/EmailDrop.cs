@@ -289,7 +289,12 @@ internal static class EmailDrop
 
         DateTimeOffset? when = message.SentOn;
         var subject = message.Subject is { Length: > 0 } subj ? subj : Path.GetFileNameWithoutExtension(name);
-        return new DroppedEmail(subject, sender, when, body.Replace("\r\n", "\n", StringComparison.Ordinal));
+
+        // Who it went to, which is who the customer is when the email is one you sent.
+        var to = message.GetEmailRecipients(MsgReader.Outlook.RecipientType.To, false, false);
+
+        return new DroppedEmail(subject, sender, when, body.Replace("\r\n", "\n", StringComparison.Ordinal),
+            string.IsNullOrWhiteSpace(to) ? null : to);
     }
 
     private static DroppedEmail FromEml(Stream stream)
@@ -300,8 +305,10 @@ internal static class EmailDrop
             : string.Empty;
 
         DateTimeOffset? when = message.Date == DateTimeOffset.MinValue ? null : message.Date;
+        var to = message.To.Count > 0 ? message.To.ToString() : null;
+
         return new DroppedEmail(message.Subject ?? "Email", message.From.ToString(), when,
-            body.Replace("\r\n", "\n", StringComparison.Ordinal));
+            body.Replace("\r\n", "\n", StringComparison.Ordinal), to);
     }
 
     private static DroppedEmail Text(Stream stream, string name)

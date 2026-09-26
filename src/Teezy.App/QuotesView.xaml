@@ -1,0 +1,226 @@
+<UserControl x:Class="Teezy.App.QuotesView" xmlns:local="clr-namespace:Teezy.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      The quotes you have out. The list on the left is grouped by what needs doing — chase today,
+      gone quiet, open, decided — and the quote chosen opens on the right. Rows and the panel's
+      changing parts are built in code (see QuotesView.xaml.cs).
+    -->
+    <!-- A quote email dropped anywhere on the page fills in the customer and the job. -->
+    <Grid Margin="28,24,28,24" Background="Transparent" AllowDrop="True"
+          PreviewDragOver="OnDragOver" PreviewDragLeave="OnDragLeave" PreviewDrop="OnDrop">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="380"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================== the pipeline ============================== -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Quotes" Style="{StaticResource H1}"/>
+                    <TextBlock x:Name="Lede" Style="{StaticResource Lede}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button x:Name="ImportButton" Content="Import a CRM export" Style="{StaticResource Quiet}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Click="OnImport"
+                        ToolTip="A spreadsheet saved as CSV. Re-importing the same file updates rather than duplicates."/>
+            </Grid>
+
+            <!-- What the month looks like, said in three figures. -->
+            <Grid Grid.Row="1" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardPanel}" Padding="14,12">
+                    <StackPanel>
+                        <TextBlock Text="OUT THERE" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock x:Name="OpenValue" Style="{StaticResource Display}" FontSize="24"/>
+                        <TextBlock x:Name="OpenCount" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="14,12">
+                    <StackPanel>
+                        <TextBlock Text="WON THIS MONTH" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock x:Name="WonValue" Style="{StaticResource Display}" FontSize="24"
+                                   Foreground="{StaticResource AccentInk}"/>
+                        <TextBlock x:Name="WonCount" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="4" Style="{StaticResource CardPanel}" Padding="14,12">
+                    <StackPanel>
+                        <TextBlock Text="WIN RATE" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock x:Name="WinRate" Style="{StaticResource Display}" FontSize="24"/>
+                        <TextBlock x:Name="WinRateHint" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Quick add: customer, figure, job, and a day if it did not go out today. -->
+            <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                <Border Style="{StaticResource FieldBox}" Height="36">
+                    <Grid>
+                        <TextBlock x:Name="AddPlaceholder" Style="{StaticResource Hint}" VerticalAlignment="Center"
+                                   IsHitTestVisible="False"
+                                   Text="Add a quote — e.g. Hunter Builders $4,200 door hardware sent friday"/>
+                        <TextBox x:Name="AddBox" Style="{StaticResource BareText}"
+                                 TextChanged="OnAddTyped" KeyDown="OnAddKey"/>
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="AddPreview" Style="{StaticResource FormHint}" Margin="2,4,0,0" Visibility="Collapsed"/>
+                <local:DropZone x:Name="EmailZone" Margin="0,10,0,0"
+                                Resting="Drag the quote email you sent here to start one from it"/>
+            </StackPanel>
+
+            <Border x:Name="NoticeBar" Grid.Row="3" Style="{StaticResource CautionPanel}" Visibility="Collapsed" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="NoticeText" VerticalAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{StaticResource CautionInk}"/>
+                    <Button x:Name="NoticeAction" Grid.Column="1" Style="{StaticResource Quiet}"
+                            Click="OnNoticeAction" Visibility="Collapsed"/>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border x:Name="EmptyState" Style="{StaticResource CardPanel}" Visibility="Collapsed">
+                        <StackPanel HorizontalAlignment="Center" Margin="0,24">
+                            <Image Source="{StaticResource MarkImage}" Width="36" Height="36" Margin="0,0,0,12"/>
+                            <TextBlock Text="No quotes yet" Style="{StaticResource H2}" HorizontalAlignment="Center"/>
+                            <TextBlock Style="{StaticResource Hint}" TextAlignment="Center" MaxWidth="460" Margin="0,6,0,0"
+                                       Text="Add one above, drag in the email you sent, say “quoted Hunter Builders four thousand two hundred for door hardware”, or import a CRM export. Each one books its own chases in your task list."/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel x:Name="Groups"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ============================== the chosen quote ============================== -->
+        <Border x:Name="Detail" Grid.Column="1" Width="420" Margin="20,0,0,0" Style="{StaticResource CardPanel}"
+                Padding="0" Visibility="Collapsed">
+            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18,16,18,18">
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="DetailState" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Close panel" Style="{StaticResource Quiet}" Click="OnDeselect"/>
+                    </Grid>
+
+                    <TextBox x:Name="CustomerBox" Style="{StaticResource Field}" Height="Auto" MinHeight="34"
+                             TextWrapping="Wrap" Padding="8,6" FontSize="15" FontWeight="SemiBold"
+                             LostKeyboardFocus="OnFieldCommit" KeyDown="OnFieldKey"/>
+                    <TextBox x:Name="WhatBox" Style="{StaticResource Field}" Margin="0,8,0,0"
+                             LostKeyboardFocus="OnFieldCommit" KeyDown="OnFieldKey"/>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="VALUE" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="ValueBox" Style="{StaticResource Field}"
+                                     LostKeyboardFocus="OnFieldCommit" KeyDown="OnFieldKey"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="SENT" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <local:DateTimeField x:Name="SentField" ShowTime="False"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="REFERENCE" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="ReferenceBox" Style="{StaticResource Field}"
+                                     LostKeyboardFocus="OnFieldCommit" KeyDown="OnFieldKey"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="CONTACT" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="ContactBox" Style="{StaticResource Field}"
+                                     LostKeyboardFocus="OnFieldCommit" KeyDown="OnFieldKey"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Where it stands: chases done, and when the next one is booked. -->
+                    <Border Style="{StaticResource ListCard}" Margin="0,16,0,0" Padding="12,10">
+                        <StackPanel>
+                            <TextBlock x:Name="ChaseState" TextWrapping="Wrap" Foreground="{StaticResource Body}"/>
+                            <Button x:Name="OpenChaseButton" Content="Open the chase task" Style="{StaticResource Quiet}"
+                                    HorizontalAlignment="Left" Margin="0,6,0,0" Click="OnOpenChase"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel x:Name="DecideRow" Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button x:Name="WonButton" Content="Won" Style="{StaticResource Primary}" Click="OnWon"/>
+                        <Button x:Name="LostButton" Content="Lost" Style="{StaticResource Secondary}"
+                                Margin="8,0,0,0" Click="OnLost"/>
+                        <Button x:Name="ReopenButton" Content="Reopen" Style="{StaticResource Secondary}"
+                                Margin="8,0,0,0" Click="OnReopen" Visibility="Collapsed"/>
+                    </StackPanel>
+
+                    <!-- Notes, newest last, the same timeline a task has. -->
+                    <Grid Margin="0,22,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="NOTES" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                        <Button x:Name="AddNoteButton" Grid.Column="1" Content="Save" Style="{StaticResource Quiet}"
+                                Click="OnAddNote"/>
+                    </Grid>
+                    <Border Style="{StaticResource FieldBox}" Height="Auto" Padding="8,4">
+                        <Grid>
+                            <TextBlock x:Name="NotePlaceholder" Style="{StaticResource Hint}" Margin="0,4,0,0"
+                                       IsHitTestVisible="False" Text="Add a note — Save or Ctrl+Enter"/>
+                            <TextBox x:Name="NoteBox" Style="{StaticResource BareText}" AcceptsReturn="True"
+                                     TextWrapping="Wrap" MinHeight="46" MaxHeight="150" Padding="0,4"
+                                     VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
+                                     TextChanged="OnNoteTyped" PreviewKeyDown="OnNoteKey"/>
+                        </Grid>
+                    </Border>
+                    <StackPanel x:Name="NoteList" Margin="0,10,0,0"/>
+
+                    <!-- The emails dragged onto it, folded away. -->
+                    <StackPanel x:Name="EmailSection" Margin="0,18,0,0" Visibility="Collapsed">
+                        <TextBlock Text="EMAILS" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <StackPanel x:Name="EmailList"/>
+                    </StackPanel>
+
+                    <Button x:Name="DeleteButton" Content="Delete quote" Style="{StaticResource Quiet}"
+                            HorizontalAlignment="Left" Margin="0,20,0,0" Click="OnDelete"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

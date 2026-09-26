@@ -52,6 +52,8 @@ public sealed class AssistantController
     private readonly CombinedMailbox? _mailbox;
     private readonly IUntrustedNarrator? _narrator;
     private readonly Tasks.TaskStore? _tasks;
+    private readonly Quotes.QuoteStore? _quotes;
+    private readonly Func<IReadOnlyList<int>>? _cadence;
     private readonly Func<DateTimeOffset> _now;
 
     /// <summary>Raised when a command has been dealt with, however it turned out.</summary>
@@ -69,6 +71,8 @@ public sealed class AssistantController
     /// <param name="calendar">Null, or nothing connected, means diary questions are not claimed.</param>
     /// <param name="narrator">Null means only the everyday diary phrasings can be answered.</param>
     /// <param name="tasks">Null means task questions and commands are not claimed.</param>
+    /// <param name="quotes">Null means a quote said out loud is not claimed.</param>
+    /// <param name="cadence">The chasing days a spoken quote is given; null uses the default.</param>
     /// <param name="now">Overridable so the phrasing can be tested at a fixed hour.</param>
     public AssistantController(
         VoiceSession session,
@@ -78,6 +82,8 @@ public sealed class AssistantController
         CombinedMailbox? mailbox = null,
         IUntrustedNarrator? narrator = null,
         Tasks.TaskStore? tasks = null,
+        Quotes.QuoteStore? quotes = null,
+        Func<IReadOnlyList<int>>? cadence = null,
         Func<DateTimeOffset>? now = null)
     {
         _runner = runner;
@@ -86,6 +92,8 @@ public sealed class AssistantController
         _mailbox = mailbox;
         _narrator = narrator;
         _tasks = tasks;
+        _quotes = quotes;
+        _cadence = cadence;
         _now = now ?? (() => DateTimeOffset.Now);
         session.Handle(HotkeyAction.Assistant, OnSpoken);
     }
@@ -102,6 +110,7 @@ public sealed class AssistantController
 
         // Tasks next: the list is on this computer, so these are answered instantly, offline,
         // and on the work laptop too, which can connect no calendar.
+        if (_quotes is not null && HandleQuotes(heard)) return;
         if (_tasks is not null && await HandleTasks(heard).ConfigureAwait(false)) return;
 
         // Ahead of the general fallback, because a connected diary is the better answer to
@@ -292,6 +301,29 @@ public sealed class AssistantController
             : new AssistantOutcome(heard, null, answer.Trim(), AssistantResult.Answered));
     }
 
+    // ============================== quotes ==============================
+
+    /// <summary>Claims the utterance if it is a quote being recorded.</summary>
+    private bool HandleQuotes(string heard)
+    {
+        var today = DateOnly.FromDateTime(_now().LocalDateTime);
+        if (Quotes.QuoteVoice.Add(heard, today) is not { } said) return false;
+
+        AddQuote(heard, said, command: null);
+        return true;
+    }
+
+    /// <summary>Records a quote, from the local patterns or from the smarter tier's add_quote.</summary>
+    private void AddQuote(string heard, Quotes.ParsedQuote said, VoiceCommand? command)
+    {
+        var today = DateOnly.FromDateTime(_now().LocalDateTime);
+        var quote = _quotes!.Add(said.Customer, said.What, said.AmountCents, said.Sent ?? today,
+            _cadence?.Invoke(), said.Reference);
+
+        Finished?.Invoke(new AssistantOutcome(
+            heard, command, $"Quoted {Quotes.QuoteVoice.Spoken(quote, today)}", AssistantResult.Did));
+    }
+
     // ============================== tasks ==============================
 
     /// <summary>Claims the utterance if it is about tasks, and deals with it.</summary>
@@ -399,6 +431,17 @@ public sealed class AssistantController
     {
         // The task list is TeezyFlow's own, so a task the smarter tier chose is added here
         // rather than handed to the platform's runner.
+        if (command is VoiceCommand.AddQuote quoted && _quotes is not null)
+        {
+            var today = DateOnly.FromDateTime(_now().LocalDateTime);
+            var said = Quotes.QuoteInput.Parse($"{quoted.Customer} {quoted.Amount} {quoted.What}", today);
+            if (said.IsUsable)
+            {
+                AddQuote(heard, said, command);
+                return;
+            }
+        }
+
         if (command is VoiceCommand.AddTask add && _tasks is not null)
         {
             var today = DateOnly.FromDateTime(_now().LocalDateTime);
@@ -439,6 +482,7 @@ public sealed class AssistantController
         VoiceCommand.Media => "Would play or pause",
         VoiceCommand.LockScreen => "Would lock the PC",
         VoiceCommand.AddTask t => $"Would add the task {t.Title}",
+        VoiceCommand.AddQuote q => $"Would add a quote for {q.Customer}",
         _ => "Understood",
     };
 }

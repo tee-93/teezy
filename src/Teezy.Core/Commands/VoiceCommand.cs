@@ -49,4 +49,7 @@ public abstract record VoiceCommand
     /// <param name="Title">What to do.</param>
     /// <param name="When">When, in the user's words — "friday 2pm", "tomorrow" — read by <see cref="Tasks.TaskInput"/>; empty for no date.</param>
     public sealed record AddTask(string Title, string When) : VoiceCommand;
+
+    /// <param name="Amount">The value as the user said it — "four thousand two hundred", "$4,200".</param>
+    public sealed record AddQuote(string Customer, string Amount, string What) : VoiceCommand;
 }

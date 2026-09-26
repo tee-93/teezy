@@ -117,6 +117,7 @@ public partial class HomeView
             case TileTarget.Tasks: _actions.OpenPage(Page.Tasks); break;
             case TileTarget.Insights: _actions.OpenPage(Page.Insights); break;
             case TileTarget.Meetings: _actions.OpenPage(Page.Meetings); break;
+            case TileTarget.Quotes: _actions.OpenPage(Page.Quotes); break;
         }
     }
 

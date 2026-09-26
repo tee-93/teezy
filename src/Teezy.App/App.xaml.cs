@@ -6,6 +6,7 @@ using Teezy.Core.Meetings;
 using Teezy.Cleanup;
 using Teezy.Core.Formatting;
 using Teezy.Core.History;
+using Teezy.Core.Quotes;
 using Teezy.Core.Tasks;
 using System.Threading.Tasks;
 using System;
@@ -85,6 +86,9 @@ public partial class App : Application
 
     /// <summary>The task list, which the Tasks page, Home, reminders and sync all share.</summary>
     private readonly TaskStore _tasks = new();
+    private readonly QuoteStore _quotes = new();
+    private QuoteChasing? _chasing;
+    private bool _following;
 
     private ReminderWindow? _reminders;
     private DispatcherTimer? _reminderTimer;
@@ -170,9 +174,19 @@ public partial class App : Application
             _secrets,
             DictionaryStore.DefaultPath,
             [ApiKeyName, ElevenLabsKeyName, GoogleSecretName, GmailPasswordName],
-            _tasks);
+            _tasks,
+            _quotes);
         secrets.Changed += name => Dispatch(() => _sync?.SecretChanged(name));
         _tasks.Changed += () => Dispatch(() => _sync?.LocalChanged());
+        _quotes.Changed += () => Dispatch(() => _sync?.LocalChanged());
+
+        // A chase is an ordinary task, and this is what keeps one booked for every quote still
+        // out: after any change to either list, and once at the start for whatever came in
+        // from another computer overnight.
+        _chasing = new QuoteChasing(_quotes, _tasks);
+        _tasks.Changed += () => Dispatch(FollowQuotes);
+        _quotes.Changed += () => Dispatch(FollowQuotes);
+        FollowQuotes();
         _sync.Start();
         StartReminders();
 
@@ -257,7 +271,8 @@ public partial class App : Application
         _meetingSummariser = new ClaudeMeetingSummariser(() => _secrets!.Read(ApiKeyName));
 
         _assistant = new AssistantController(
-            _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator, _tasks);
+            _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator, _tasks,
+            _quotes, () => _settings.QuoteCadence);
 
         _voiceUsage = new VoiceUsage();
 
@@ -571,6 +586,7 @@ public partial class App : Application
             restartToUpdate: RestartToUpdate,
             sync: _sync,
             tasks: _tasks,
+            quotes: _quotes,
 
             // The key is the cleanup tier's: the same Anthropic account. Called only when a
             // button under a pasted email is pressed.
@@ -624,6 +640,20 @@ public partial class App : Application
         foreach (var task in due) _tasks.MarkReminded(task.Id);
         _reminders ??= new ReminderWindow(_tasks, ShowTask);
         _reminders.Remind(due);
+    }
+
+    /// <summary>
+    /// Books, retimes or cancels the chases the quotes need. Guarded against itself: it changes
+    /// the task list, which raises the change that called it.
+    /// </summary>
+    private void FollowQuotes()
+    {
+        if (_chasing is null || _following) return;
+
+        _following = true;
+        try { _chasing.Follow(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        finally { _following = false; }
     }
 
     // ============================== the focus list ==============================

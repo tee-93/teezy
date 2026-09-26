@@ -51,6 +51,7 @@ public partial class HomeView
         "today" => TodayPanel(s),
         "week" => WeekPanel(s),
         "coming_up" => ComingUpPanel(s),
+        "quotes" => QuotesPanel(s),
         "notes" => NotesPanel(s),
         "meetings" => MeetingsPanel(s),
         "inbox" => InboxPanel(),
@@ -247,6 +248,71 @@ public partial class HomeView
         if (soon.Count == 0) body.Children.Add(Empty("Nothing in the next week", "Tasks due in the next seven days show here."));
 
         return Card("coming_up", "COMING UP", soon.Count == 0 ? null : $"{soon.Count} this week", body);
+    }
+
+    // ============================== Quotes ==============================
+
+    /// <summary>What wants chasing, and what has gone quiet — the two states worth acting on.</summary>
+    private Border QuotesPanel(HomeSnapshot s)
+    {
+        var body = new StackPanel();
+        var chase = Teezy.Core.Quotes.QuotePlan.DueToChase(s.AllQuotes, s.Date);
+        var quiet = s.AllQuotes.Where(q => Teezy.Core.Quotes.QuotePlan.IsQuiet(q, s.Date)).ToList();
+
+        if (chase.Count > 0)
+        {
+            body.Children.Add(Label($"TO CHASE  {chase.Count}", Brand.Brush("CautionBorder")));
+            foreach (var quote in chase.Take(MaxRows)) body.Children.Add(QuoteRow(quote, late: true));
+            if (chase.Count > MaxRows) body.Children.Add(More(chase.Count - MaxRows, Page.Quotes));
+        }
+
+        if (quiet.Count > 0)
+        {
+            body.Children.Add(Label($"GONE QUIET  {quiet.Count}", Brand.Muted));
+            foreach (var quote in quiet.Take(MaxRows)) body.Children.Add(QuoteRow(quote, late: false));
+        }
+
+        if (chase.Count + quiet.Count == 0)
+        {
+            body.Children.Add(s.AllQuotes.Any(q => q.IsOpen)
+                ? Empty("Nothing to chase", "Every quote out there has been chased recently.")
+                : Empty("No quotes out", "Add one on the Quotes page and its chases book themselves."));
+        }
+
+        var open = Teezy.Core.Quotes.QuotePlan.Totals(s.AllQuotes, s.Date).Open;
+        return Card("quotes", "QUOTES",
+            open.Count == 0 ? null : Teezy.Core.Quotes.QuotePlan.Money(open.Value) + " out", body);
+    }
+
+    private Border QuoteRow(Teezy.Core.Quotes.Quote quote, bool late)
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var text = new TextBlock
+        {
+            Text = quote.What.Length > 0 ? $"{quote.Customer} — {quote.What}" : quote.Customer,
+            Foreground = Brand.Ink,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var money = new TextBlock
+        {
+            Text = Teezy.Core.Quotes.QuotePlan.Money(quote.Amount),
+            FontSize = 12,
+            Foreground = late ? Brand.Brush("CautionBorder") : Brand.Muted,
+            Margin = new Thickness(12, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        Grid.SetColumn(money, 1);
+        grid.Children.Add(text);
+        grid.Children.Add(money);
+
+        var row = new Border { Padding = new Thickness(0, 5, 0, 5), Child = grid, Background = System.Windows.Media.Brushes.Transparent };
+        return Clickable(row, () => _actions.OpenPage(Page.Quotes));
     }
 
     private static string HomeTilesDay(DateOnly day, DateOnly today) => (day.DayNumber - today.DayNumber) switch

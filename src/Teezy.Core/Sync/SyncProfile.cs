@@ -23,7 +23,8 @@ public sealed record SyncProfile(
     JsonObject Settings,
     IReadOnlyDictionary<string, string> Secrets,
     string? Dictionary,
-    string? Tasks = null)
+    string? Tasks = null,
+    string? Quotes = null)
 {
     public const string FileName = "TeezyFlow sync.tfsync";
 
@@ -37,6 +38,7 @@ public sealed record SyncProfile(
         ["secrets"] = JsonSerializer.SerializeToNode(Secrets, Json),
         ["dictionary"] = Dictionary,
         ["tasks"] = Tasks,
+        ["quotes"] = Quotes,
     }.ToJsonString(Json);
 
     /// <exception cref="SyncUnlockException">The contents are not a profile.</exception>
@@ -51,7 +53,8 @@ public sealed record SyncProfile(
                 root["settings"]?.AsObject().DeepClone().AsObject() ?? [],
                 root["secrets"]?.Deserialize<Dictionary<string, string>>(Json) ?? [],
                 (string?)root["dictionary"],
-                (string?)root["tasks"]);
+                (string?)root["tasks"],
+                (string?)root["quotes"]);
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or NullReferenceException)

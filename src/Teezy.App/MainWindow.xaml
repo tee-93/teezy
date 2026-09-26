@@ -81,12 +81,13 @@
                         </StackPanel>
                     </RadioButton>
 
-                    <RadioButton x:Name="NavBudget" Style="{StaticResource TopTab}" GroupName="Nav"
+                    <RadioButton x:Name="NavQuotes" Style="{StaticResource TopTab}" GroupName="Nav"
                                  Checked="OnNavChanged">
                         <StackPanel Orientation="Horizontal">
+                            <!-- A document with a line of figures on it. -->
                             <Path Style="{StaticResource TabIcon}"
-                                  Data="M4,8 L18,8 A2,2 0 0 1 20,10 L20,18 A2,2 0 0 1 18,20 L6,20 A2,2 0 0 1 4,18 Z M4,8 L4,6.5 A2,2 0 0 1 6,4.5 L15,4.5 L15,8 M15.5,14 L17,14"/>
-                            <TextBlock Text="Budget" VerticalAlignment="Center"/>
+                                  Data="M6,3 L15,3 L19,7 L19,21 L6,21 Z M15,3 L15,7 L19,7 M9,12 L16,12 M9,16 L13,16"/>
+                            <TextBlock Text="Quotes" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 

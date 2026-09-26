@@ -572,7 +572,27 @@
                         <TextBlock Style="{StaticResource Lede}" Margin="0,0,0,20"
                                    Text="How the task list is organised. Categories and your name travel with Sync, so every computer offers the same list."/>
 
-                        <TextBlock Text="CATEGORIES" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <!-- Quotes book their chases into the task list, so this is where the days live. -->
+                        <TextBlock Text="CHASING QUOTES" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <Border Style="{StaticResource FormRowFirst}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Chase a quote after" Style="{StaticResource FormLabel}"/>
+                                        <TextBlock Style="{StaticResource FormHint}"
+                                                   Text="Days after it goes out. Each chase is an ordinary task, due on that day with a reminder; once the list is used up it is chased monthly. Quotes already out keep the days they were given."/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="CadencePicker" Grid.Column="1" Width="220"
+                                              VerticalAlignment="Center" SelectionChanged="OnCadenceChanged"/>
+                                </Grid>
+                            </Border>
+                        </Border>
+
+                        <TextBlock Text="CATEGORIES" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
                         <Border Style="{StaticResource FormRows}">
                             <StackPanel>
                                 <StackPanel x:Name="CategoryRows"/>

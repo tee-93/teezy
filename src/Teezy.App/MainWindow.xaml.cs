@@ -1,3 +1,4 @@
+using Teezy.Core.Quotes;
 using Teezy.Core.Tasks;
 using System.Linq;
 using Teezy.Cleanup;
@@ -54,7 +55,7 @@ public partial class MainWindow : Window
     private DictionaryView? _dictionaryView;
     private SettingsView? _settingsView;
     private MeetingsView? _meetingsView;
-    private BudgetView? _budgetView;
+    private QuotesView? _quotesView;
 
     public MainWindow(
         HistoryStore history,
@@ -80,6 +81,7 @@ public partial class MainWindow : Window
         Action? restartToUpdate = null,
         SyncService? sync = null,
         TaskStore? tasks = null,
+        QuoteStore? quotes = null,
         IMailAdvisor? advisor = null,
         Action? showBriefing = null,
         Action? showFocus = null)
@@ -109,6 +111,7 @@ public partial class MainWindow : Window
         _restartToUpdate = restartToUpdate;
         _sync = sync;
         _tasks = tasks;
+        _quotes = quotes;
         _advisor = advisor;
         _showBriefing = showBriefing;
         _showFocus = showFocus;
@@ -146,6 +149,7 @@ public partial class MainWindow : Window
     private readonly Action? _restartToUpdate;
     private readonly SyncService? _sync;
     private readonly TaskStore? _tasks;
+    private readonly QuoteStore? _quotes;
     private readonly IMailAdvisor? _advisor;
     private readonly Action? _showBriefing;
     private readonly Action? _showFocus;
@@ -227,7 +231,7 @@ public partial class MainWindow : Window
         else if (sender == NavTasks) ShowTasks();
         else if (sender == NavTranscripts) ShowTranscripts();
         else if (sender == NavMeetings) ShowMeetings();
-        else if (sender == NavBudget) ShowBudget();
+        else if (sender == NavQuotes) ShowQuotes();
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) ShowSettings();
@@ -250,10 +254,12 @@ public partial class MainWindow : Window
         _tasksView?.Select(id);
     }
 
-    private void ShowBudget()
+    private void ShowQuotes()
     {
-        _budgetView ??= new BudgetView();
-        PageHost.Content = _budgetView;
+        if (_tasks is null) return;
+        _quotesView ??= new QuotesView(_quotes!, _tasks, _settings, _saveSettings, ShowTask);
+        _quotesView.Refresh();
+        PageHost.Content = _quotesView;
     }
 
     private void ShowMeetings()
@@ -283,7 +289,8 @@ public partial class MainWindow : Window
             () => _settings().Hotkey.Display,
             _diary,
             _mail,
-            _meetingStore);
+            _meetingStore,
+            _quotes);
         _home.Refresh();
         PageHost.Content = _home;
     }
@@ -311,7 +318,7 @@ public partial class MainWindow : Window
             case Page.Dictionary: NavDictionary.IsChecked = true; break;
             case Page.Settings: NavSettings.IsChecked = true; break;
             case Page.Meetings: NavMeetings.IsChecked = true; break;
-            case Page.Budget: NavBudget.IsChecked = true; break;
+            case Page.Quotes: NavQuotes.IsChecked = true; break;
             case Page.Tasks: NavTasks.IsChecked = true; break;
             default: NavHome.IsChecked = true; break;
         }
@@ -395,6 +402,6 @@ public enum Page
     Dictionary,
     Settings,
     Meetings,
-    Budget,
+    Quotes,
     Tasks,
 }

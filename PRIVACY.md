@@ -51,6 +51,7 @@ These live in `%LOCALAPPDATA%\Teezy` and are never transmitted:
 | `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed, or for as long as you chose to keep them |
 | `settings.json` | Your preferences, and which accounts you have connected |
 | `dictionary.txt` | Words and names you have taught it |
+| `quotes.json` | Your quotes: customer, what it is for, the value, when it went out, how often it has been chased, whether it was won or lost, your notes, and any email you dropped on it |
 | `tasks.json` | Your task list: titles, dates, categories, notes (with who wrote them), any email you dropped or pasted into a task, and the last AI suggestion you kept |
 | `models\` | The speech model, and the natural voices if you downloaded them |
 | `secrets\` | API keys, account tokens, the Gmail app password and calendar links, encrypted (see below) |
@@ -69,7 +70,7 @@ words and nothing else** — never your screen, your clipboard, your files or yo
 
 **3. Calendar, mail and task answers (Anthropic).** Questions like "what's on today" or "what
 tasks do I have today" are answered on your machine and send nothing, and adding or closing a
-task by voice never leaves it. Only an unusual phrasing that TeezyFlow cannot compose an answer
+task — or recording a quote — by voice never leaves it. Only an unusual phrasing that TeezyFlow cannot compose an answer
 to sends the relevant events, message summaries or open tasks (titles, due dates and categories —
 never notes or attached emails) so Claude can answer in a sentence. If the smarter assistant tier
 is on, a request TeezyFlow's own patterns do not recognise — "jot down that I should ring the
@@ -86,7 +87,7 @@ no tools, because a transcript is other people's words.
 
 **6. Sync between your computers (your own folder).** If you turn on Settings ▸ Sync, your API
 keys, the Google client secret, the Gmail app password, calendar links, your preferences, your
-dictionary and your tasks (with their notes and attached emails) are written to one file in a folder you choose —
+dictionary, your tasks and your quotes (both with their notes and attached emails) are written to one file in a folder you choose —
 usually your own Google Drive or OneDrive, so it is stored by Google or Microsoft under your
 account. The file is **encrypted with a passphrase only you know** (PBKDF2-SHA256, 600,000
 iterations, then AES-256-GCM), so the storage provider, and anyone who obtains the file, sees

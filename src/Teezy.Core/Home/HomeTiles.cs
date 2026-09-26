@@ -8,6 +8,7 @@ namespace Teezy.Core.Home;
 
 /// <summary>Everything Home's tiles and header line are worked out from, read once per refresh.</summary>
 /// <param name="Tasks">Every task that is not deleted.</param>
+/// <param name="Quotes">Every quote that is not deleted.</param>
 /// <param name="Meetings">When each recorded meeting started, newest first.</param>
 /// <param name="Today">Today's calendar events, or null when no calendar is connected.</param>
 /// <param name="Mail">Recent mail, or null when no mailbox is connected.</param>
@@ -17,9 +18,13 @@ public sealed record HomeSnapshot(
     UsageStats Usage,
     IReadOnlyList<DateTimeOffset> Meetings,
     IReadOnlyList<CalendarEvent>? Today = null,
-    MailReading? Mail = null)
+    MailReading? Mail = null,
+    IReadOnlyList<Quotes.Quote>? Quotes = null)
 {
     public DateOnly Date => DateOnly.FromDateTime(Now.LocalDateTime);
+
+    /// <summary>The quotes, never null.</summary>
+    public IReadOnlyList<Quotes.Quote> AllQuotes => Quotes ?? [];
 
     /// <summary>Monday of this week: "this week" at work starts on Monday.</summary>
     public DateOnly WeekStart => Date.AddDays(-(((int)Date.DayOfWeek + 6) % 7));
@@ -41,6 +46,7 @@ public enum TileTarget
     Task,
     Insights,
     Meetings,
+    Quotes,
 }
 
 /// <summary>What one tile shows: a big value, a line under it, a colour, and where it leads.</summary>
@@ -54,6 +60,8 @@ public static class HomeTiles
 
     public static TileResult Compute(string key, HomeSnapshot s) => key switch
     {
+        "quotes_open" => QuotesOut(s),
+        "won_month" => WonThisMonth(s),
         "due_today" => DueToday(s),
         "follow_ups" => FollowUps(s),
         "next_reminder" => NextReminder(s),
@@ -67,6 +75,45 @@ public static class HomeTiles
         "unread" => Unread(s),
         _ => new TileResult("—", string.Empty),
     };
+
+    /// <summary>What is out there, and whether any of it wants chasing today.</summary>
+    private static TileResult QuotesOut(HomeSnapshot s)
+    {
+        var totals = Quotes.QuotePlan.Totals(s.AllQuotes, s.Date);
+        if (totals.Open.Count == 0) return new TileResult("—", "No quotes out", TileTone.Neutral, TileTarget.Quotes);
+
+        var chase = Quotes.QuotePlan.DueToChase(s.AllQuotes, s.Date).Count;
+        var quiet = s.AllQuotes.Count(q => Quotes.QuotePlan.IsQuiet(q, s.Date));
+
+        var caption = chase > 0
+            ? chase == 1 ? "1 to chase today" : $"{chase} to chase today"
+            : quiet > 0
+                ? quiet == 1 ? "1 gone quiet" : $"{quiet} gone quiet"
+                : totals.Open.Count == 1 ? "1 quote open" : $"{totals.Open.Count} quotes open";
+
+        return new TileResult(
+            Quotes.QuotePlan.Money(totals.Open.Value),
+            caption,
+            chase > 0 ? TileTone.Warning : TileTone.Neutral,
+            TileTarget.Quotes);
+    }
+
+    /// <summary>The month's wins, which is the figure worth seeing first thing.</summary>
+    private static TileResult WonThisMonth(HomeSnapshot s)
+    {
+        var totals = Quotes.QuotePlan.Totals(s.AllQuotes, s.Date);
+        if (totals.Won.Count == 0 && totals.Lost.Count == 0)
+        {
+            return new TileResult("—", "Nothing decided yet", TileTone.Neutral, TileTarget.Quotes);
+        }
+
+        var caption = totals.WinRate is { } rate
+            ? $"{totals.Won.Count} of {totals.Won.Count + totals.Lost.Count} · {rate:P0}"
+            : $"{totals.Won.Count} quotes";
+
+        return new TileResult(
+            Quotes.QuotePlan.Money(totals.Won.Value), caption, TileTone.Good, TileTarget.Quotes);
+    }
 
     private static TileResult DueToday(HomeSnapshot s)
     {

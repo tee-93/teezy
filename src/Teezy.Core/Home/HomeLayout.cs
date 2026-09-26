@@ -37,6 +37,8 @@ public static class HomeLayout
         new("time_saved", "Time saved", "Time saved dictating instead of typing"),
         new("streak", "Streak", "Days in a row you have dictated"),
         new("meetings_week", "Meetings recorded", "Meetings recorded this week"),
+        new("quotes_open", "Quotes out", "What your open quotes are worth, and what needs chasing"),
+        new("won_month", "Won this month", "Quotes won since the first of the month"),
         new("next_meeting", "Next meeting", "Your next meeting today", NeedsCalendar: true),
         new("unread", "Unread", "Unread email", NeedsMail: true),
     ];
@@ -50,16 +52,17 @@ public static class HomeLayout
     public static readonly IReadOnlyList<HomePart> RightPanels =
     [
         new("coming_up", "Coming up", "Tasks due in the next seven days"),
+        new("quotes", "Quotes to chase", "Quotes due a chase, and the ones that have gone quiet"),
         new("notes", "Recent notes", "The latest notes across your tasks"),
         new("meetings", "Meetings", "Meetings you have recorded, and their notes"),
         new("inbox", "Inbox", "Unread email", NeedsMail: true),
     ];
 
-    public static readonly IReadOnlyList<string> DefaultTiles = ["due_today", "follow_ups", "next_reminder", "done_week", "dictated_week"];
+    public static readonly IReadOnlyList<string> DefaultTiles = ["due_today", "quotes_open", "follow_ups", "next_reminder", "won_month"];
 
     public static readonly IReadOnlyList<string> DefaultLeft = ["today", "week"];
 
-    public static readonly IReadOnlyList<string> DefaultRight = ["coming_up", "notes", "meetings", "inbox"];
+    public static readonly IReadOnlyList<string> DefaultRight = ["quotes", "coming_up", "notes", "meetings", "inbox"];
 
     /// <summary>
     /// What to show: known keys only, each once, only those available here, capped — or the

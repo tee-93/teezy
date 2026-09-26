@@ -10,6 +10,7 @@ using Teezy.Core;
 using Teezy.Core.Abstractions;
 using Teezy.Core.Calendar;
 using Teezy.Core.Sync;
+using Teezy.Core.Quotes;
 using Teezy.Core.Tasks;
 
 namespace Teezy.App;
@@ -60,6 +61,7 @@ public sealed class SyncService : IDisposable
     private readonly string _dictionaryPath;
     private readonly IReadOnlyList<string> _secretNames;
     private readonly TaskStore? _tasks;
+    private readonly QuoteStore? _quotes;
     private readonly Dispatcher _ui;
     private readonly DispatcherTimer _debounce;
     private readonly DispatcherTimer _poll;
@@ -79,7 +81,8 @@ public sealed class SyncService : IDisposable
         ISecretStore secrets,
         string dictionaryPath,
         IReadOnlyList<string> secretNames,
-        TaskStore? tasks = null)
+        TaskStore? tasks = null,
+        QuoteStore? quotes = null)
     {
         _settings = settings;
         _apply = apply;
@@ -87,6 +90,7 @@ public sealed class SyncService : IDisposable
         _dictionaryPath = dictionaryPath;
         _secretNames = secretNames;
         _tasks = tasks;
+        _quotes = quotes;
         _ui = Dispatcher.CurrentDispatcher;
 
         // A burst of edits — typing a key, ticking three switches — becomes one write.
@@ -194,7 +198,7 @@ public sealed class SyncService : IDisposable
             if (_settings().SyncAppliedAt is { } applied && profile.SavedAt <= applied)
             {
                 // Nothing newer to apply, but tasks merge regardless of which file is newest.
-                if (MergeTasks(profile)) LocalChanged();
+                if (MergeTasks(profile) | MergeQuotes(profile)) LocalChanged();
                 return;
             }
 
@@ -212,7 +216,8 @@ public sealed class SyncService : IDisposable
 
     private void Apply(SyncProfile profile)
     {
-        var ahead = MergeTasks(profile);
+        // Both, always: | rather than || so the second merge is not skipped when the first is ahead.
+        var ahead = MergeTasks(profile) | MergeQuotes(profile);
 
         _applying = true;
         try
@@ -259,16 +264,31 @@ public sealed class SyncService : IDisposable
         return _tasks.ToSyncJson() != profile.Tasks;
     }
 
-    /// <summary>
-    /// Just before writing: takes in any tasks another computer wrote since this one last read, so
-    /// the write carries them rather than wiping them.
-    /// </summary>
-    private void MergeTasksFromFile(string path, string passphrase)
+    /// <summary>Folds the file's quotes into this computer's, exactly as the tasks are.</summary>
+    private bool MergeQuotes(SyncProfile profile)
     {
-        if (_tasks is null || !File.Exists(path)) return;
+        if (_quotes is null) return false;
+        if (profile.Quotes is { } json)
+        {
+            try { _quotes.Merge(QuoteStore.FromJson(json)); }
+            catch (System.Text.Json.JsonException) { }
+        }
+
+        return _quotes.ToSyncJson() != profile.Quotes;
+    }
+
+    /// <summary>
+    /// Just before writing: takes in anything another computer wrote since this one last read, so
+    /// the write carries it rather than wiping it.
+    /// </summary>
+    private void MergeFromFile(string path, string passphrase)
+    {
+        if ((_tasks is null && _quotes is null) || !File.Exists(path)) return;
         try
         {
-            MergeTasks(SyncProfile.FromJson(SyncCipher.Open(ReadShared(path), passphrase)));
+            var profile = SyncProfile.FromJson(SyncCipher.Open(ReadShared(path), passphrase));
+            MergeTasks(profile);
+            MergeQuotes(profile);
         }
         catch (Exception e) when (e is SyncUnlockException or IOException or UnauthorizedAccessException)
         {
@@ -282,7 +302,7 @@ public sealed class SyncService : IDisposable
     {
         if (FilePath is not { } path || _secrets.Read(PassphraseName) is not { Length: > 0 } passphrase) return;
 
-        MergeTasksFromFile(path, passphrase);
+        MergeFromFile(path, passphrase);
 
         var now = DateTimeOffset.Now;
         var profile = Snapshot(now);
@@ -319,7 +339,8 @@ public sealed class SyncService : IDisposable
         }
 
         return new SyncProfile(at, Environment.MachineName, _settings().ToPortable(), secrets, ReadDictionary(),
-            _tasks?.ToSyncJson());
+            _tasks?.ToSyncJson(),
+            _quotes?.ToSyncJson());
     }
 
     /// <summary>Everything but the time, for "has anything actually changed".</summary>

@@ -33,14 +33,22 @@ and discarded once it has been transcribed.
 whatever your speakers play. Nothing joins the call, so nobody in it can tell it is happening —
 letting them know is your responsibility, and in some places the law requires their consent. The
 recording is written to `Meetings\` while it is transcribed on this computer after the call, and
-**the audio is deleted as soon as its transcript has been written**.
+**the audio is deleted as soon as its transcript has been written** — unless you switch on
+**Keep the recording** (Settings ▸ Audio ▸ Meetings, off by default), which leaves it on this
+computer for the day, week or month you choose so a transcript can be made again, and deletes it
+when that time is up. Turning the setting back off deletes what is still there.
+
+**Telling the voices apart** — labelling the far end Speaker 1, Speaker 2 and so on — is done on
+this computer by two models you download once from Hugging Face if you switch it on. Like the
+speech model's download, that request carries nothing about you, and no audio ever leaves the
+machine.
 
 These live in `%LOCALAPPDATA%\Teezy` and are never transmitted:
 
 | File | What it holds |
 | --- | --- |
 | `history.jsonl` | Everything you have dictated, so you can find it again |
-| `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed |
+| `Meetings\` | Meeting transcripts and the notes you asked for; recordings only until transcribed, or for as long as you chose to keep them |
 | `settings.json` | Your preferences, and which accounts you have connected |
 | `dictionary.txt` | Words and names you have taught it |
 | `tasks.json` | Your task list: titles, dates, categories, notes (with who wrote them), any email you dropped or pasted into a task, and the last AI suggestion you kept |

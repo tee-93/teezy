@@ -14,6 +14,9 @@ public sealed record ModelDownloadProgress(
         $"{FileName} — {BytesReceived / 1024.0 / 1024.0:F0} of {BytesExpected / 1024.0 / 1024.0:F0} MB";
 }
 
+/// <summary>One file to fetch: where from, what to call it here, and how big it should be.</summary>
+public sealed record ModelFile(string Url, string Name, long Bytes);
+
 /// <summary>Fetches the Parakeet model on first run.</summary>
 /// <remarks>
 /// <para>
@@ -59,19 +62,35 @@ public sealed class ModelDownloader
         _http = http ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
     }
 
-    /// <summary>Downloads every missing file into <paramref name="directory"/>.</summary>
-    public async Task DownloadAsync(
+    /// <summary>Downloads every missing file of the speech model into <paramref name="directory"/>.</summary>
+    public Task DownloadAsync(
         string directory,
+        IProgress<ModelDownloadProgress>? progress = null,
+        CancellationToken ct = default) =>
+        FetchAsync(
+            directory,
+            [.. Files.Select(f => new ModelFile($"{BaseUrl}/{f.Name}", f.Name, f.Bytes))],
+            progress,
+            ct);
+
+    /// <summary>
+    /// Downloads every missing file of any set of models, each from its own address — the
+    /// speaker models are two files from two different repositories.
+    /// </summary>
+    public async Task FetchAsync(
+        string directory,
+        IReadOnlyList<ModelFile> files,
         IProgress<ModelDownloadProgress>? progress = null,
         CancellationToken ct = default)
     {
         Directory.CreateDirectory(directory);
 
+        var totalBytes = files.Sum(f => f.Bytes);
         long completedBytes = 0;
 
-        for (var i = 0; i < Files.Length; i++)
+        for (var i = 0; i < files.Count; i++)
         {
-            var (name, expected) = Files[i];
+            var (url, name, expected) = files[i];
             var final = Path.Combine(directory, name);
 
             // Skip what is already present and the right size, so a retry after a failure
@@ -80,14 +99,14 @@ public sealed class ModelDownloader
             {
                 completedBytes += expected;
                 progress?.Report(new ModelDownloadProgress(
-                    name, i + 1, Files.Length, expected, expected, (double)completedBytes / TotalBytes));
+                    name, i + 1, files.Count, expected, expected, (double)completedBytes / totalBytes));
                 continue;
             }
 
             var part = final + ".part";
             var received = await DownloadFileAsync(
-                $"{BaseUrl}/{name}", part, expected, completedBytes,
-                p => progress?.Report(p with { FileName = name, FileIndex = i + 1, FileCount = Files.Length }),
+                url, part, expected, completedBytes, totalBytes,
+                p => progress?.Report(p with { FileName = name, FileIndex = i + 1, FileCount = files.Count }),
                 ct).ConfigureAwait(false);
 
             if (Math.Abs(received - expected) >= SizeTolerance)
@@ -110,6 +129,7 @@ public sealed class ModelDownloader
         string destination,
         long expected,
         long alreadyDone,
+        long totalBytes,
         Action<ModelDownloadProgress> report,
         CancellationToken ct)
     {
@@ -143,7 +163,7 @@ public sealed class ModelDownloader
 
             report(new ModelDownloadProgress(
                 string.Empty, 0, 0, received, total,
-                Math.Clamp((alreadyDone + received) / (double)TotalBytes, 0, 1)));
+                Math.Clamp((alreadyDone + received) / (double)totalBytes, 0, 1)));
         }
 
         return received;

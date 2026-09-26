@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     private readonly MeetingStore? _meetingStore;
     private readonly MeetingRecorder? _meetingRecorder;
     private readonly IMeetingSummariser? _meetingSummariser;
+    private readonly IDiariser? _diariser;
 
     private HomeView? _home;
     private TranscriptsView? _transcripts;
@@ -74,6 +75,7 @@ public partial class MainWindow : Window
         MeetingStore? meetingStore = null,
         MeetingRecorder? meetingRecorder = null,
         IMeetingSummariser? meetingSummariser = null,
+        IDiariser? diariser = null,
         Updater? updater = null,
         Action? restartToUpdate = null,
         SyncService? sync = null,
@@ -102,6 +104,7 @@ public partial class MainWindow : Window
         _meetingStore = meetingStore;
         _meetingRecorder = meetingRecorder;
         _meetingSummariser = meetingSummariser;
+        _diariser = diariser;
         _updater = updater;
         _restartToUpdate = restartToUpdate;
         _sync = sync;
@@ -257,7 +260,8 @@ public partial class MainWindow : Window
     {
         if (_meetingStore is null || _meetingRecorder is null) return;
 
-        _meetingsView ??= new MeetingsView(_meetingStore, _meetingRecorder, _transcriber, _meetingSummariser);
+        _meetingsView ??= new MeetingsView(
+            _meetingStore, _meetingRecorder, _transcriber, _meetingSummariser, _settings, _diariser);
         _meetingsView.Refresh();
         PageHost.Content = _meetingsView;
     }

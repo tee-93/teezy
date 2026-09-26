@@ -237,7 +237,7 @@ public static class MeetingNotesPdf
         heading.Format.PageBreakBefore = true;
         heading.Format.SpaceBefore = Unit.Zero;
 
-        Quiet(section, "Made automatically on this computer. \"Me\" is the microphone; \"Them\" is everyone else on the call.");
+        Quiet(section, "Made automatically on this computer. \"Me\" is the microphone; everyone else was on the call.");
 
         foreach (var line in transcript)
         {
@@ -252,7 +252,7 @@ public static class MeetingNotesPdf
             paragraph.AddFormattedText(MeetingTranscript.Stamp(line.At)).Color = Muted;
             paragraph.AddTab();
 
-            var who = paragraph.AddFormattedText(line.Side == Side.Me ? "Me" : "Them");
+            var who = paragraph.AddFormattedText(line.Label);
             who.Bold = true;
             who.Color = line.Side == Side.Me ? Accent : Ink;
 

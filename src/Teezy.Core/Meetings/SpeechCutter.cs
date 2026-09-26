@@ -89,11 +89,20 @@ public static class SpeechCutter
     }
 
     /// <summary>The level above which a frame counts as someone talking.</summary>
-    public static float Threshold(IReadOnlyList<float> levels)
+    /// <param name="exclude">
+    /// Frames to leave out of the reckoning, as <see cref="EchoGate"/> marks the ones where the
+    /// microphone is only hearing the speakers. A recording full of echo has a high noise floor,
+    /// and measuring the room from those frames would hide the quiet things actually said.
+    /// </param>
+    public static float Threshold(IReadOnlyList<float> levels, IReadOnlyList<bool>? exclude = null)
     {
         if (levels.Count == 0) return AbsoluteFloor;
 
-        var sorted = levels.ToArray();
+        var sorted = exclude is null
+            ? levels.ToArray()
+            : levels.Where((_, i) => i >= exclude.Count || !exclude[i]).ToArray();
+
+        if (sorted.Length == 0) return AbsoluteFloor;
         Array.Sort(sorted);
 
         // Even a busy meeting is quiet a sixth of the time, so this is the room, not a voice.
@@ -102,17 +111,26 @@ public static class SpeechCutter
     }
 
     /// <summary>The pieces to transcribe, in order, never overlapping.</summary>
-    public static IReadOnlyList<SpeechSpan> Cut(IReadOnlyList<float> levels, long totalSamples)
+    /// <param name="exclude">
+    /// Frames to treat as silence however loud they are — the speakers overheard by the
+    /// microphone. Excluding them here rather than dropping their words later means the model is
+    /// never asked to transcribe the echo in the first place.
+    /// </param>
+    public static IReadOnlyList<SpeechSpan> Cut(
+        IReadOnlyList<float> levels, long totalSamples, IReadOnlyList<bool>? exclude = null)
     {
-        var threshold = Threshold(levels);
+        var threshold = Threshold(levels, exclude);
         var spans = new List<SpeechSpan>();
         var n = levels.Count;
         var previousEnd = 0;
         var i = 0;
 
+        bool Speech(int frame) =>
+            levels[frame] >= threshold && (exclude is null || frame >= exclude.Count || !exclude[frame]);
+
         while (i < n)
         {
-            while (i < n && levels[i] < threshold) i++;
+            while (i < n && !Speech(i)) i++;
             if (i >= n) break;
 
             var start = i;
@@ -130,7 +148,7 @@ public static class SpeechCutter
                     break;
                 }
 
-                if (levels[j] >= threshold)
+                if (Speech(j))
                 {
                     lastSpeech = j;
                     speechFrames++;

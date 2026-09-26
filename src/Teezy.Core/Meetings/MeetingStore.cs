@@ -155,4 +155,33 @@ public sealed class MeetingStore
         File.Delete(record.MePath);
         File.Delete(record.ThemPath);
     }
+
+    /// <summary>
+    /// Deletes the audio of transcribed meetings older than <paramref name="keep"/>, so a
+    /// recording kept for a second attempt goes by itself rather than living on the disk for
+    /// ever. A meeting with no transcript yet is never touched: it still needs its audio.
+    /// </summary>
+    /// <returns>How many meetings were cleared.</returns>
+    public int PruneAudio(TimeSpan keep, DateTimeOffset now)
+    {
+        var cleared = 0;
+
+        foreach (var record in List())
+        {
+            if (!record.HasAudio || !record.HasTranscript) continue;
+            if (record.Info.Started + keep > now) continue;
+
+            try
+            {
+                DeleteAudio(record);
+                cleared++;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // In use or gone; the next sweep will get it.
+            }
+        }
+
+        return cleared;
+    }
 }

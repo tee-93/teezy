@@ -257,6 +257,29 @@ public sealed record TeezySettings
     /// <summary>The day the briefing was last shown on this computer, so it appears once a day.</summary>
     public DateOnly? BriefingShownOn { get; init; }
 
+    /// <summary>
+    /// Which output to record the far end of a meeting from. Null follows whatever Windows is
+    /// playing to.
+    /// </summary>
+    /// <remarks>
+    /// Per computer, like the microphone. It matters more than it looks: a call playing to a
+    /// headset while Windows' default is still the laptop speakers records nothing from the far
+    /// end, and every voice arrives instead as echo on the microphone.
+    /// </remarks>
+    public string? MeetingOutputId { get; init; }
+
+    /// <summary>The name of that output, to show when it is unplugged.</summary>
+    public string? MeetingOutputName { get; init; }
+
+    /// <summary>Tell the far end's voices apart in the transcript. Needs the speaker models.</summary>
+    public bool TellSpeakersApart { get; init; }
+
+    /// <summary>
+    /// Days to keep a meeting's audio after it has been transcribed, so a transcript that came
+    /// out wrong can be made again. Zero deletes it the moment the transcript is written.
+    /// </summary>
+    public int KeepMeetingAudioDays { get; init; }
+
     /// <summary>Where the focus card sits on this screen: left, top, width, height. Null for the default corner.</summary>
     public double[]? FocusBounds { get; init; }
 
@@ -423,6 +446,7 @@ public sealed record TeezySettings
         nameof(InputDeviceId), nameof(InputDeviceName), nameof(NumThreads), nameof(ModelPath),
         "PushToTalkKey", nameof(SyncFolder), nameof(SyncAppliedAt), nameof(CloseAction), nameof(BriefingShownOn),
         nameof(FocusBounds), nameof(FocusOpen),
+        nameof(MeetingOutputId), nameof(MeetingOutputName), nameof(KeepMeetingAudioDays),
     };
 
     /// <summary>Everything that should be the same on every computer, as JSON.</summary>

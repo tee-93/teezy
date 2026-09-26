@@ -267,6 +267,36 @@ plan for the day**: two or three sentences from Claude on how to tackle it, sent
 tasks, their latest notes and today's meeting names — never an attached email — with no tools,
 since meeting names are strangers' writing. The list itself is always made on the computer.
 
+### Meetings
+
+Press **Start recording** on the Meetings page when a call begins. TeezyFlow records **two
+tracks**: your microphone, and whatever your speakers are playing. Nothing joins the call and
+nobody in it can tell — telling them is your job, and in some places the law requires it. When
+you stop, the meeting is transcribed on this computer, and the recording is deleted as soon as
+the transcript is written.
+
+- **It no longer hears the other people twice.** Without a headset your microphone overhears the
+  call coming out of your own speakers, so every voice arrived once from the speakers and again,
+  worse, from the microphone. TeezyFlow now measures the echo — how far behind it arrives and how
+  much of the sound comes back — and leaves those moments out of your side before anything is
+  transcribed. Measured here on a laptop with no headset: 26 seconds of a 37-second call removed
+  as echo, a quarter less audio sent to the model, and no duplicated lines. Talking over someone
+  is kept: your own voice into your own microphone is far louder than the room's return. With a
+  headset there is no echo to find, nothing is removed, and no setting had to be changed.
+- **Who said what.** Turn on *Tell the voices apart* in Settings ▸ Audio ▸ Meetings (a one-off
+  35 MB download) and the far end is labelled Speaker 1, Speaker 2 and so on, worked out on this
+  computer. **Name the voices** on the Meetings page turns them into Priya and Dale, in the
+  transcript itself. Two labels given the same name become one person, which is how to mend a
+  voice that was split in two. Your microphone is always "Me" and needs no working out.
+- **The far end has to be recorded from the right output.** TeezyFlow follows whatever Windows is
+  playing to. If your call goes to a headset while Windows still plays to the speakers, pick the
+  headset under *Record the other people from* — otherwise the other people are only ever heard
+  as echo on your microphone.
+- **Keeping the recording** (off by default) leaves the audio on this computer for a day, a week
+  or a month, so **Transcribe again** can have another go at a transcript that came out wrong.
+- **Summarise** sends that meeting's transcript to Claude on your own key, and writes notes,
+  follow-ups and a PDF. It happens when you press the button and at no other time.
+
 ---
 
 ## The window

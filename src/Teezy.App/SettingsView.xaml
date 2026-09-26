@@ -1007,6 +1007,68 @@
                                 </Border>
                             </StackPanel>
                         </Border>
+
+                        <!-- Meetings. The far end is recorded from whatever Windows is playing to, which
+                             is the right answer until a call is sent somewhere else. -->
+                        <TextBlock Text="MEETINGS" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <StackPanel>
+                                <Border Style="{StaticResource FormRowFirst}">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                                <TextBlock Text="Record the other people from" Style="{StaticResource FormLabel}"/>
+                                                <TextBlock Style="{StaticResource FormHint}"
+                                                           Text="If your call plays to a headset while Windows still plays to the speakers, choose the headset — otherwise the far end is recorded only as echo."/>
+                                            </StackPanel>
+                                            <ComboBox x:Name="OutputPicker" Grid.Column="1" Width="260"
+                                                      VerticalAlignment="Center"
+                                                      SelectionChanged="OnMeetingOutputChanged"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource FormRow}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="Tell the voices apart" Style="{StaticResource FormLabel}"/>
+                                            <TextBlock x:Name="SpeakersStatus" Style="{StaticResource FormHint}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button x:Name="SpeakersDownloadButton" Content="Download" Margin="0,0,8,0"
+                                                    Style="{StaticResource Secondary}" Click="OnDownloadSpeakerModels"/>
+                                            <CheckBox x:Name="SpeakersSwitch" Style="{StaticResource Switch}"
+                                                      Checked="OnTellSpeakersApart" Unchecked="OnTellSpeakersApart"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource FormRow}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="Keep the recording" Style="{StaticResource FormLabel}"/>
+                                            <TextBlock Style="{StaticResource FormHint}"
+                                                       Text="Normally the audio is deleted the moment its transcript is written. Keeping it lets a transcript that came out wrong be made again — and leaves a recording of the meeting on this computer until it expires."/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="KeepAudioPicker" Grid.Column="1" Width="200"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="OnKeepMeetingAudioChanged"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
 
                     <!-- ============================== Sync ============================== -->

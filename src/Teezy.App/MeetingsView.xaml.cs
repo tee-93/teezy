@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Teezy.Core.Abstractions;
+using Teezy.Core;
 using Teezy.Core.Cost;
 using Teezy.Core.Meetings;
 using Teezy.Documents;
@@ -25,8 +26,14 @@ public sealed record MeetingRow(
     bool CanSummarise,
     bool HasNotes,
     bool CanDelete,
+    bool CanRename,
+    bool CanRedo,
     MeetingRecord Record)
 {
+    public Visibility RenameVisibility => Show(CanRename);
+
+    public Visibility RedoVisibility => Show(CanRedo);
+
     public Visibility TranscriptVisibility => Show(HasTranscript);
 
     public Visibility TranscribeVisibility => Show(CanTranscribe);
@@ -65,6 +72,8 @@ public partial class MeetingsView : UserControl
     private readonly MeetingRecorder _recorder;
     private readonly ITranscriber? _transcriber;
     private readonly IMeetingSummariser? _summariser;
+    private readonly Func<TeezySettings>? _settings;
+    private readonly IDiariser? _diariser;
     private readonly DispatcherTimer _tick;
     private readonly Dictionary<string, string> _failures = [];
     private readonly HashSet<string> _summarising = [];
@@ -81,13 +90,17 @@ public partial class MeetingsView : UserControl
         MeetingStore store,
         MeetingRecorder recorder,
         ITranscriber? transcriber,
-        IMeetingSummariser? summariser = null)
+        IMeetingSummariser? summariser = null,
+        Func<TeezySettings>? settings = null,
+        IDiariser? diariser = null)
     {
         InitializeComponent();
         _store = store;
         _recorder = recorder;
         _transcriber = transcriber;
         _summariser = summariser;
+        _settings = settings;
+        _diariser = diariser;
 
         _recorder.LevelChanged += OnLevel;
 
@@ -99,6 +112,17 @@ public partial class MeetingsView : UserControl
 
     public void Refresh()
     {
+        // Recordings this computer was told to keep go by themselves once they are old enough,
+        // and switching the setting back to "delete" clears what is already there.
+        try
+        {
+            _store.PruneAudio(TimeSpan.FromDays(_settings?.Invoke().KeepMeetingAudioDays ?? 0), DateTimeOffset.Now);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Housekeeping: nothing worth telling anyone about, and it retries.
+        }
+
         ShowRecorder();
         ShowWork(null);
         ShowList();
@@ -208,7 +232,7 @@ public partial class MeetingsView : UserControl
 
                 try
                 {
-                    await new MeetingTranscriber(model, _store).TranscribeAsync(
+                    await Transcriber(model).TranscribeAsync(
                         next, new Progress<MeetingProgress>(ShowWork), cancel.Token);
                 }
                 catch (OperationCanceledException)
@@ -230,6 +254,17 @@ public partial class MeetingsView : UserControl
             ShowWork(null);
             ShowList();
         }
+    }
+
+    /// <summary>A transcriber set up the way this computer's settings ask for.</summary>
+    private MeetingTranscriber Transcriber(ITranscriber model)
+    {
+        var settings = _settings?.Invoke();
+        return new MeetingTranscriber(
+            model,
+            _store,
+            diariser: settings?.TellSpeakersApart == true ? _diariser : null,
+            keepAudio: TimeSpan.FromDays(settings?.KeepMeetingAudioDays ?? 0));
     }
 
     private MeetingRecord? NextWaiting() => _store.List()
@@ -258,8 +293,10 @@ public partial class MeetingsView : UserControl
         }
 
         WorkFill.Width = Math.Clamp(progress.Fraction, 0, 1) * WorkTrack.ActualWidth;
-        WorkDetail.Text = $"{MeetingTranscript.Clock(progress.SpeechDone)} of {MeetingTranscript.Clock(progress.SpeechTotal)} of audio"
-                          + $" · {MeetingTranscript.Clock(progress.Elapsed)} so far";
+        WorkDetail.Text = progress.Stage is { Length: > 0 } stage
+            ? $"{stage}… · {MeetingTranscript.Clock(progress.Elapsed)} so far"
+            : $"{MeetingTranscript.Clock(progress.SpeechDone)} of {MeetingTranscript.Clock(progress.SpeechTotal)} of audio"
+              + $" · {MeetingTranscript.Clock(progress.Elapsed)} so far";
     }
 
     private void OnCancelTranscription(object sender, RoutedEventArgs e) => _transcribing?.Cancel();
@@ -268,6 +305,62 @@ public partial class MeetingsView : UserControl
     {
         if ((sender as FrameworkElement)?.Tag is MeetingRow row) _failures.Remove(row.Record.Folder);
         _ = TranscribePendingAsync();
+    }
+
+    /// <summary>
+    /// Makes the transcript again from the kept recording — the point of keeping it. The old
+    /// transcript goes first, which is what puts the meeting back in the queue.
+    /// </summary>
+    private void OnTranscribeAgain(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not MeetingRow row) return;
+
+        try
+        {
+            File.Delete(row.Record.TranscriptPath);
+        }
+        catch (Exception problem) when (problem is IOException or UnauthorizedAccessException)
+        {
+            _failures[row.Record.Folder] = problem.Message;
+            ShowList();
+            return;
+        }
+
+        _failures.Remove(row.Record.Folder);
+        _ = TranscribePendingAsync();
+    }
+
+    /// <summary>Puts names to the voices, in the transcript itself.</summary>
+    private void OnNameVoices(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not MeetingRow row) return;
+
+        var voices = Voices(row.Record);
+        if (voices.Count == 0) return;
+
+        var dialog = new NameVoicesDialog(Window.GetWindow(this)!, voices, When(row.Record.Info.Started));
+        if (dialog.ShowDialog() != true || dialog.Names.Count == 0) return;
+
+        try
+        {
+            var transcript = File.ReadAllText(row.Record.TranscriptPath);
+            foreach (var (was, now) in dialog.Names) transcript = MeetingTranscript.Rename(transcript, was, now);
+            File.WriteAllText(row.Record.TranscriptPath, transcript);
+
+            // The notes PDF is made from the transcript, so it is out of date the moment a
+            // voice is renamed. Rebuilt if it exists; the summary's own words are left alone.
+            if (row.Record.HasNotes && _store.LoadNotes(row.Record) is { } notes && File.Exists(row.Record.PdfPath))
+            {
+                MeetingNotesPdf.Write(
+                    row.Record.PdfPath, row.Record.Info, notes, MeetingTranscript.ParseLines(transcript));
+            }
+        }
+        catch (Exception problem) when (problem is IOException or UnauthorizedAccessException)
+        {
+            _failures[row.Record.Folder] = problem.Message;
+        }
+
+        ShowList();
     }
 
     // ---- summary and follow-ups ----
@@ -368,7 +461,9 @@ public partial class MeetingsView : UserControl
         {
             _ when summarising => $"{length} · Claude is writing the summary and follow-up tasks…",
             (true, { } stats) => string.Create(CultureInfo.CurrentCulture,
-                $"{length} · transcribed in {MeetingTranscript.Clock(stats.Took)}, {stats.TimesRealtime:0.0}× realtime"),
+                    $"{length} · transcribed in {MeetingTranscript.Clock(stats.Took)}, {stats.TimesRealtime:0.0}× realtime")
+                + (stats.Voices > 1 ? $" · {stats.Voices} voices" : string.Empty)
+                + (record.HasAudio ? " · recording kept" : string.Empty),
             (true, null) => length,
             _ when working => $"{length} · transcribing now",
             _ when !record.HasAudio => "No audio and no transcript",
@@ -396,7 +491,28 @@ public partial class MeetingsView : UserControl
             CanSummarise: record.HasTranscript && !record.HasNotes && !summarising,
             HasNotes: record.HasNotes && !summarising,
             CanDelete: !working && !summarising,
+
+            // Renaming needs voices in the transcript to rename; a second attempt needs the
+            // audio, which is only there when this computer is set to keep it.
+            CanRename: record.HasTranscript && !working && Voices(record).Count > 0,
+            CanRedo: record.HasTranscript && record.HasAudio && !working && _transcribing is null
+                     && !_recorder.IsRecording && _transcriber is { IsLoaded: true },
             record);
+    }
+
+    /// <summary>The far end's voices as this meeting's transcript labels them.</summary>
+    private IReadOnlyList<string> Voices(MeetingRecord record)
+    {
+        if (!record.HasTranscript) return [];
+
+        try
+        {
+            return MeetingTranscript.Speakers(File.ReadAllText(record.TranscriptPath));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
     }
 
     /// <summary>What the summary cost, when the price of the model is known.</summary>

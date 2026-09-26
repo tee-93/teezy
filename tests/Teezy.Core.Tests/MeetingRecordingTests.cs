@@ -175,6 +175,98 @@ public sealed class MeetingRecordingTests : IDisposable
         _store.Create(at).Folder.ShouldNotBe(_store.Create(at).Folder);
     }
 
+    [Fact]
+    public async Task The_far_ends_voices_are_labelled_and_numbered_as_they_first_speak()
+    {
+        var recorder = Recorder();
+        var record = recorder.Start();
+
+        // Them, talking twice with a gap; me, silent throughout.
+        _mic.Emit(new float[12 * AudioChunk.SampleRate]);
+        _speakers.Emit(Tone(4));
+        _speakers.Emit(new float[4 * AudioChunk.SampleRate]);
+        _speakers.Emit(Tone(4));
+
+        _now = TimeSpan.FromSeconds(12);
+        record = recorder.Stop();
+
+        // The model happened to call them 5 and 2; the transcript must not.
+        var voices = new ScriptedDiariser(
+            new SpeakerSpan(TimeSpan.Zero, TimeSpan.FromSeconds(5), 5),
+            new SpeakerSpan(TimeSpan.FromSeconds(7), TimeSpan.FromSeconds(12), 2));
+
+        var done = await new MeetingTranscriber(
+                new ScriptedTranscriber("Morning.", "Shall we start?"), _store, diariser: voices)
+            .TranscribeAsync(record);
+
+        var text = await File.ReadAllTextAsync(done.TranscriptPath);
+        text.ShouldContain("Speaker 1: Morning.");
+        text.ShouldContain("Speaker 2: Shall we start?");
+        done.Info.Stats.ShouldNotBeNull().Voices.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Without_the_speaker_models_the_far_end_is_still_just_them()
+    {
+        var recorder = Recorder();
+        var record = recorder.Start();
+        _speakers.Emit(Tone(3));
+        _now = TimeSpan.FromSeconds(3);
+        record = recorder.Stop();
+
+        var done = await new MeetingTranscriber(
+                new ScriptedTranscriber("Morning."), _store, diariser: new ScriptedDiariser { IsAvailable = false })
+            .TranscribeAsync(record);
+
+        (await File.ReadAllTextAsync(done.TranscriptPath)).ShouldContain("Them: Morning.");
+        done.Info.Stats.ShouldNotBeNull().Voices.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_recording_can_be_kept_for_a_while_and_then_goes_by_itself()
+    {
+        var recorder = Recorder();
+        var record = recorder.Start();
+        _mic.Emit(Tone(3));
+        _now = TimeSpan.FromSeconds(3);
+        record = recorder.Stop();
+
+        var done = await new MeetingTranscriber(
+                new ScriptedTranscriber("Morning."), _store, keepAudio: TimeSpan.FromDays(7))
+            .TranscribeAsync(record);
+
+        done.HasAudio.ShouldBeTrue();
+
+        // The meeting was recorded on 13 September; a week later it is still there, and the
+        // sweep the following day clears it.
+        var started = done.Info.Started;
+        _store.PruneAudio(TimeSpan.FromDays(7), started.AddDays(6)).ShouldBe(0);
+        _store.PruneAudio(TimeSpan.FromDays(7), started.AddDays(8)).ShouldBe(1);
+
+        _store.List().ShouldHaveSingleItem().HasAudio.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_meeting_still_waiting_to_be_transcribed_keeps_its_audio_however_old()
+    {
+        var recorder = Recorder();
+        recorder.Start();
+        _mic.Emit(Tone(2));
+        _now = TimeSpan.FromSeconds(2);
+        var record = recorder.Stop();
+
+        _store.PruneAudio(TimeSpan.Zero, record.Info.Started.AddYears(1)).ShouldBe(0);
+        _store.List().ShouldHaveSingleItem().HasAudio.ShouldBeTrue();
+    }
+
+    private sealed class ScriptedDiariser(params SpeakerSpan[] spans) : IDiariser
+    {
+        public bool IsAvailable { get; init; } = true;
+
+        public Task<IReadOnlyList<SpeakerSpan>> SplitAsync(string wavPath, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<SpeakerSpan>>(spans);
+    }
+
     private sealed class ScriptedTranscriber(params string[] lines) : ITranscriber
     {
         public event Action<string>? PartialAvailable { add { } remove { } }

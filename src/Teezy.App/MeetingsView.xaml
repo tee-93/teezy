@@ -152,6 +152,11 @@
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                             <Button Content="Transcribe" Style="{StaticResource Quiet}" Tag="{Binding}"
                                                     Visibility="{Binding TranscribeVisibility}" Click="OnTranscribe"/>
+                                            <Button Content="Transcribe again" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    ToolTip="Make the transcript again from the recording this computer kept"
+                                                    Visibility="{Binding RedoVisibility}" Click="OnTranscribeAgain"/>
+                                            <Button Content="Name the voices" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                                    Visibility="{Binding RenameVisibility}" Click="OnNameVoices"/>
                                             <Button Content="Summarise" Style="{StaticResource Quiet}" Tag="{Binding}"
                                                     Visibility="{Binding SummariseVisibility}" Click="OnSummarise"/>
                                             <Button Content="Notes PDF" Style="{StaticResource Quiet}" Tag="{Binding}"

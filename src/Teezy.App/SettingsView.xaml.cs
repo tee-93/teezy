@@ -184,6 +184,7 @@ public partial class SettingsView : UserControl
         PopulateAssistant(settings);
         PopulateCalendar(settings);
         PopulateMicrophones(settings);
+        PopulateMeetings(settings);
         ThreadPicker.SelectedItem = settings.NumThreads;
         CleanupBox.IsChecked = settings.CleanupEnabled;
         HudBox.IsChecked = settings.ShowHud;

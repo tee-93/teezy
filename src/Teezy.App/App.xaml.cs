@@ -62,6 +62,7 @@ public partial class App : Application
     private MeetingStore? _meetingStore;
     private MeetingRecorder? _meetingRecorder;
     private ClaudeMeetingSummariser? _meetingSummariser;
+    private SpeakerDiariser? _diariser;
     private SwitchingSpeaker? _speaker;
     private VoiceUsage? _voiceUsage;
     private ParakeetTranscriber? _transcriber;
@@ -241,7 +242,15 @@ public partial class App : Application
             {
                 PreferredDeviceId = _settings.InputDeviceId,
             },
-            speakers: () => new WindowsAudioCapture(CaptureSource.Speakers));
+            speakers: () => new WindowsAudioCapture(CaptureSource.Speakers)
+            {
+                // Whatever Windows is playing to, unless a call is known to use another output.
+                PreferredDeviceId = _settings.MeetingOutputId,
+            });
+
+        // Telling the far end's voices apart. Present either way; it declines quietly until
+        // its two models have been downloaded.
+        _diariser = new SpeakerDiariser();
 
         // Asked only when the user presses Summarise on a meeting. The key is read at that moment,
         // not gated on the cleanup or assistant switches: the button press is the decision.
@@ -557,6 +566,7 @@ public partial class App : Application
             meetingStore: _meetingStore,
             meetingRecorder: _meetingRecorder,
             meetingSummariser: _meetingSummariser,
+            diariser: _diariser,
             updater: _updater,
             restartToUpdate: RestartToUpdate,
             sync: _sync,
@@ -797,6 +807,7 @@ public partial class App : Application
         _meetingRecorder?.Dispose();
         _session?.Dispose();
         _speaker?.Dispose();
+        _diariser?.Dispose();
         _updater.Dispose();
         _sync?.Dispose();
         _reminderTimer?.Stop();

@@ -362,6 +362,7 @@ public partial class MainWindow : Window
             restartToUpdate: _restartToUpdate);
         _settingsView.AttachSync(_sync);
         _settingsView.AttachTasks(_tasks);
+        _settingsView.AttachQuotes(_quotes);
         _settingsView.ShowBriefing = _showBriefing;
         _settingsView.Refresh();
         PageHost.Content = _settingsView;

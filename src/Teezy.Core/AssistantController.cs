@@ -317,7 +317,7 @@ public sealed class AssistantController
     private void AddQuote(string heard, Quotes.ParsedQuote said, VoiceCommand? command)
     {
         var today = DateOnly.FromDateTime(_now().LocalDateTime);
-        var quote = _quotes!.Add(said.Customer, said.What, said.AmountCents, said.Sent ?? today,
+        var quote = _quotes!.Add(said.Customer, said.Name, said.AmountCents, said.Sent ?? today,
             _cadence?.Invoke(), said.Reference);
 
         Finished?.Invoke(new AssistantOutcome(

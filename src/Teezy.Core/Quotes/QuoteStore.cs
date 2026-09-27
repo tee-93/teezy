@@ -69,14 +69,15 @@ public sealed class QuoteStore
 
     public Quote Add(
         string customer,
-        string what,
-        long amountCents,
-        DateOnly sent,
+        string name,
+        long? amountCents,
+        DateOnly? sent,
         IReadOnlyList<int>? cadence = null,
         string? reference = null,
-        string? contact = null)
+        string? contact = null,
+        string? type = null)
     {
-        var quote = Quote.New(customer, what, amountCents, sent, _now(), cadence, reference, contact);
+        var quote = Quote.New(customer, name, amountCents, sent, _now(), cadence, reference, contact, type);
         Change(list => list.Add(quote));
         return quote;
     }
@@ -87,9 +88,10 @@ public sealed class QuoteStore
         var stamped = edited with
         {
             Customer = edited.Customer.Trim(),
-            What = edited.What.Trim(),
+            Name = edited.Name.Trim(),
             Reference = Quote.Clean(edited.Reference),
             Contact = Quote.Clean(edited.Contact),
+            Type = Quote.Clean(edited.Type),
             Modified = _now(),
         };
 
@@ -130,7 +132,7 @@ public sealed class QuoteStore
     /// <summary>Won or lost, on a day. <see cref="QuoteChasing"/> then closes what was chasing it.</summary>
     public Quote? Decide(string id, QuoteStatus status, DateOnly on)
     {
-        if (Find(id) is not { } quote || status == QuoteStatus.Open) return null;
+        if (Find(id) is not { } quote || status is not (QuoteStatus.Won or QuoteStatus.Lost)) return null;
         return Update(quote with { Status = status, Decided = on });
     }
 
@@ -138,7 +140,28 @@ public sealed class QuoteStore
     public Quote? Reopen(string id)
     {
         if (Find(id) is not { } quote || quote.IsOpen) return null;
-        return Update(quote with { Status = QuoteStatus.Open, Decided = null });
+        return Update(quote with { Status = QuoteStatus.Quoted, Decided = null });
+    }
+
+    /// <summary>Sent: moves a draft out and starts its chasing, on the day given (today if null).</summary>
+    public Quote? Send(string id, DateOnly on, IReadOnlyList<int>? cadence = null)
+    {
+        if (Find(id) is not { Status: QuoteStatus.InProgress } quote) return null;
+        return Update(quote with
+        {
+            Status = QuoteStatus.Quoted,
+            Sent = on,
+            Cadence = cadence is { Count: > 0 } ? [.. cadence] : quote.Cadence,
+        });
+    }
+
+    /// <summary>Renames a quote type everywhere it is used, for when it is renamed in Settings.</summary>
+    public void Retype(string from, string to)
+    {
+        foreach (var quote in Visible.Where(q => string.Equals(q.Type, from, StringComparison.OrdinalIgnoreCase)))
+        {
+            Update(quote with { Type = to });
+        }
     }
 
     /// <summary>Points the quote at the task now chasing it.</summary>
@@ -196,7 +219,26 @@ public sealed class QuoteStore
     }
 
     public static IReadOnlyList<Quote> FromJson(string json) =>
-        JsonSerializer.Deserialize<List<Quote>>(json, Json) ?? [];
+        JsonSerializer.Deserialize<List<Quote>>(Migrate(json), Json) ?? [];
+
+    /// <summary>
+    /// Quotes written before the quote got a name of its own called the same field "What". Read
+    /// it as <see cref="Quote.Name"/> so quotes already on disk keep their description.
+    /// </summary>
+    internal static string Migrate(string json)
+    {
+        if (!json.Contains("\"What\"", StringComparison.Ordinal)) return json;
+
+        if (System.Text.Json.Nodes.JsonNode.Parse(json) is not System.Text.Json.Nodes.JsonArray array) return json;
+
+        foreach (var item in array)
+        {
+            if (item is not System.Text.Json.Nodes.JsonObject quote) continue;
+            if (quote.Remove("What", out var what) && quote["Name"] is null) quote["Name"] = what?.DeepClone();
+        }
+
+        return array.ToJsonString();
+    }
 
     private void Change(Action<List<Quote>> edit, bool raise = true)
     {

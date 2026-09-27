@@ -19,7 +19,7 @@ public class QuoteInputTests
 
         quote.Customer.ShouldBe("Hunter Builders");
         quote.AmountCents.ShouldBe(420_000);
-        quote.What.ShouldBe("door hardware");
+        quote.Name.ShouldBe("door hardware");
         quote.IsUsable.ShouldBeTrue();
     }
 
@@ -47,7 +47,7 @@ public class QuoteInputTests
         var quote = Parse("Hunter Builders $4,200 door hardware sent friday");
 
         quote.Sent.ShouldBe(new DateOnly(2026, 9, 18));
-        quote.What.ShouldBe("door hardware");
+        quote.Name.ShouldBe("door hardware");
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class QuoteInputTests
 
         quote.Customer.ShouldBe("Hunter Builders");
         quote.AmountCents.ShouldBe(420_000);
-        quote.What.ShouldBe("door hardware");
+        quote.Name.ShouldBe("door hardware");
     }
 
     [Theory]

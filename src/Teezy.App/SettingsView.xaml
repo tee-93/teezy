@@ -620,6 +620,34 @@
                         <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
                                    Text="The order here is the order in the task list's filter and picker. Renaming a category renames it on every task that has it; removing one leaves those tasks as they are."/>
 
+                        <TextBlock Text="QUOTE TYPES" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <StackPanel>
+                                <StackPanel x:Name="QuoteTypeRows"/>
+                                <Border x:Name="QuoteTypeAddRow" Style="{StaticResource FormRow}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource FieldBox}">
+                                            <Grid>
+                                                <TextBlock x:Name="NewQuoteTypePlaceholder" Style="{StaticResource Hint}" Margin="0"
+                                                           VerticalAlignment="Center" IsHitTestVisible="False"
+                                                           Text="A new type, e.g. Supply only, Supply &amp; Install, Service"/>
+                                                <TextBox x:Name="NewQuoteTypeBox" Style="{StaticResource BareText}"
+                                                         TextChanged="OnNewQuoteTypeTyped" KeyDown="OnNewQuoteTypeKey"/>
+                                            </Grid>
+                                        </Border>
+                                        <Button x:Name="AddQuoteTypeButton" Grid.Column="1" Content="Add" Style="{StaticResource Primary}"
+                                                Margin="8,0,0,0" IsEnabled="False" Click="OnAddQuoteType"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
+                                   Text="Shown as the TYPE picker on a quote. Renaming one renames it on every quote that has it; removing one leaves those quotes as they are."/>
+
                         <TextBlock Text="MORNING BRIEFING" Style="{StaticResource SectionLabel}" Margin="0,24,0,6"/>
                         <Border Style="{StaticResource FormRows}">
                             <StackPanel>

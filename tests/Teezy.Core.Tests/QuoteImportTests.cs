@@ -44,10 +44,10 @@ public sealed class QuoteImportTests : IDisposable
         var quotes = QuoteImport.Read(Export, Today).Quotes;
 
         quotes[0].Customer.ShouldBe("Hunter Builders");
-        quotes[0].What.ShouldBe("Door hardware, stage 2");
+        quotes[0].Name.ShouldBe("Door hardware, stage 2");
         quotes[0].AmountCents.ShouldBe(420_000);
         quotes[0].Sent.ShouldBe(new DateOnly(2026, 9, 18));
-        quotes[0].Status.ShouldBe(QuoteStatus.Open);
+        quotes[0].Status.ShouldBe(QuoteStatus.Quoted);
 
         quotes[1].AmountCents.ShouldBe(900_000);
         quotes[1].Status.ShouldBe(QuoteStatus.Won);
@@ -144,5 +144,30 @@ public sealed class QuoteImportTests : IDisposable
         _now = _now.AddHours(1);
         QuoteImport.Apply(store, QuoteImport.Read(file, Today), Today).Added.ShouldBe(0);
         store.Visible.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AQuoteTypeColumnIsReadAndCarriedIn()
+    {
+        var store = Store();
+        const string file = """
+            Client,Description,Value,Type
+            Hunter Builders,Door hardware,4200,Supply & Install
+            """;
+
+        var plan = QuoteImport.Read(file, Today);
+        plan.Columns["Type"].ShouldBe("Type");
+
+        QuoteImport.Apply(store, plan, Today);
+        store.Visible.ShouldHaveSingleItem().Type.ShouldBe("Supply & Install");
+    }
+
+    [Fact]
+    public void TheTemplateReadsBackAsOneQuote()
+    {
+        var plan = QuoteImport.Read(QuoteImport.Template(), Today);
+
+        plan.Quotes.ShouldHaveSingleItem();
+        plan.Skipped.ShouldBeEmpty();
     }
 }

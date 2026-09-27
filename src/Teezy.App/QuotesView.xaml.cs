@@ -21,8 +21,14 @@ namespace Teezy.App;
 /// <see cref="QuoteChasing"/> book the chases into the task list, where all of that already works.
 /// </para>
 /// <para>
-/// Four ways in, because a quote is made in four different situations: typed at the desk,
-/// dragged in as the email that sent it, spoken in the car, or imported from the CRM in bulk.
+/// A quote can be put together before it goes anywhere: a draft has a name, a type, a customer
+/// and a contact, and can carry its own tasks — a proposal to write, a meeting to book — with
+/// nothing chasing it until it is marked sent. Sending it is what starts the cadence.
+/// </para>
+/// <para>
+/// Four ways in for a quote already sent, because that is made in four different situations:
+/// typed at the desk, dragged in as the email that sent it, spoken in the car, or imported from
+/// the CRM in bulk.
 /// </para>
 /// </remarks>
 public partial class QuotesView : UserControl
@@ -64,6 +70,7 @@ public partial class QuotesView : UserControl
         };
 
         _store.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded) Refresh(); });
+        _tasks.Changed += () => Dispatcher.BeginInvoke(() => { if (IsLoaded && Chosen() is not null) ShowQuoteTasks(Chosen()!); });
         Unloaded += (_, _) => SavePendingNote();
         Refresh();
     }
@@ -92,11 +99,15 @@ public partial class QuotesView : UserControl
             : $"{totals.Won.Count} won, {totals.Lost.Count} lost";
 
         var due = QuotePlan.DueToChase(quotes, Today).Count;
+        var clauses = new List<string>();
+        if (due == 1) clauses.Add("1 quote to chase today");
+        else if (due > 1) clauses.Add($"{due} quotes to chase today");
+        if (totals.Drafting == 1) clauses.Add("1 still being drafted");
+        else if (totals.Drafting > 1) clauses.Add($"{totals.Drafting} still being drafted");
+
         Lede.Text = quotes.Count == 0
             ? "Every quote you send, and the chasing that follows it."
-            : due == 0
-                ? "Nothing to chase today."
-                : due == 1 ? "1 quote to chase today." : $"{due} quotes to chase today.";
+            : clauses.Count == 0 ? "Nothing to chase today." : string.Join(", ", clauses) + ".";
 
         ShowGroups(quotes);
         ShowDetail();
@@ -137,16 +148,20 @@ public partial class QuotesView : UserControl
                 },
             };
 
-            var value = new TextBlock
-            {
-                Text = QuotePlan.Money(rows.Sum(q => q.Amount)),
-                FontSize = 12,
-                Foreground = Brand.Muted,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            Grid.SetColumn(value, 1);
             header.Children.Add(title);
-            header.Children.Add(value);
+
+            if (bucket != QuoteBucket.Drafting)
+            {
+                var value = new TextBlock
+                {
+                    Text = QuotePlan.Money(rows.Sum(q => q.Amount)),
+                    FontSize = 12,
+                    Foreground = Brand.Muted,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                Grid.SetColumn(value, 1);
+                header.Children.Add(value);
+            }
 
             Groups.Children.Add(new StackPanel
             {
@@ -162,6 +177,7 @@ public partial class QuotesView : UserControl
 
     private static string Title(QuoteBucket bucket) => bucket switch
     {
+        QuoteBucket.Drafting => "Drafting",
         QuoteBucket.ToChase => "Chase today",
         QuoteBucket.Quiet => "Gone quiet",
         QuoteBucket.Open => "Out there",
@@ -180,8 +196,9 @@ public partial class QuotesView : UserControl
             Foreground = quote.IsOpen ? Brand.Ink : Brand.Muted,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
-        head.Inlines.Add(new System.Windows.Documents.Run(quote.Customer) { FontWeight = FontWeights.SemiBold });
-        if (quote.What.Length > 0) head.Inlines.Add(new System.Windows.Documents.Run($" — {quote.What}"));
+        head.Inlines.Add(new System.Windows.Documents.Run(quote.Customer.Length > 0 ? quote.Customer : "New quote")
+            { FontWeight = FontWeights.SemiBold });
+        if (quote.Name.Length > 0) head.Inlines.Add(new System.Windows.Documents.Run($" — {quote.Name}"));
 
         var meta = new TextBlock
         {
@@ -200,7 +217,7 @@ public partial class QuotesView : UserControl
 
         var money = new TextBlock
         {
-            Text = QuotePlan.Money(quote.Amount),
+            Text = quote.AmountCents is { } cents && cents > 0 ? QuotePlan.Money(quote.Amount) : "—",
             Foreground = quote.Status == QuoteStatus.Won ? Brand.Brush("AccentInk") : Brand.Ink,
             FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
@@ -209,7 +226,7 @@ public partial class QuotesView : UserControl
         System.Windows.Documents.Typography.SetNumeralAlignment(money, FontNumeralAlignment.Tabular);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        if (quote.IsOpen)
+        if (quote.Status == QuoteStatus.Quoted)
         {
             var won = new Button { Content = "Won", Style = (Style)FindResource("Quiet"), Tag = quote.Id, ToolTip = "Won today" };
             won.Click += (_, _) => Decide(quote.Id, QuoteStatus.Won);
@@ -256,9 +273,15 @@ public partial class QuotesView : UserControl
     /// <summary>The grey line under a quote: how long it has been out, and what happens next.</summary>
     private string Meta(Quote quote)
     {
-        var parts = new List<string> { $"sent {TasksView.Day(quote.Sent)}" };
+        if (quote.Status == QuoteStatus.InProgress)
+        {
+            return quote.Type is { Length: > 0 } type ? $"drafting · {type}" : "drafting";
+        }
 
-        if (quote.Status != QuoteStatus.Open)
+        var parts = new List<string>();
+        if (quote.Sent is { } sent) parts.Add($"sent {TasksView.Day(sent)}");
+
+        if (quote.Status != QuoteStatus.Quoted)
         {
             parts.Add(quote.Status == QuoteStatus.Won ? "won" : "lost");
             if (quote.Decided is { } decided) parts[^1] += $" {TasksView.Day(decided)}";
@@ -277,9 +300,9 @@ public partial class QuotesView : UserControl
             parts.Add(next <= Today ? "chase due" : $"next chase {TasksView.Day(next)}");
         }
 
-        if (QuotePlan.IsQuiet(quote, Today))
+        if (QuotePlan.IsQuiet(quote, Today) && quote.LastMoved is { } moved)
         {
-            parts.Add($"quiet for {Today.DayNumber - quote.LastMoved.DayNumber} days");
+            parts.Add($"quiet for {Today.DayNumber - moved.DayNumber} days");
         }
 
         if (quote.Reference is { Length: > 0 } reference) parts.Add(reference);

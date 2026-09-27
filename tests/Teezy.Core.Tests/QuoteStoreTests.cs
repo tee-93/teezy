@@ -32,11 +32,11 @@ public sealed class QuoteStoreTests : IDisposable
         var again = Quotes().Find(added.Id)!;
 
         again.Customer.ShouldBe("Hunter Builders");
-        again.What.ShouldBe("door hardware");
+        again.Name.ShouldBe("door hardware");
         again.AmountCents.ShouldBe(420_735);
         again.Amount.ShouldBe(4207.35m);
         again.Reference.ShouldBe("Q-1042");
-        again.Status.ShouldBe(QuoteStatus.Open);
+        again.Status.ShouldBe(QuoteStatus.Quoted);
     }
 
     [Fact]
@@ -225,5 +225,89 @@ public sealed class QuoteStoreTests : IDisposable
         chasing.Follow().ShouldBe(1);
 
         tasks.Visible.ShouldHaveSingleItem().QuoteId.ShouldBe(quote.Id);
+    }
+
+    // ---- drafts ----
+
+    [Fact]
+    public void AQuoteWithNoSentDateIsADraftThatIsNeverChased()
+    {
+        var quotes = Quotes();
+        var tasks = Tasks();
+        var chasing = new QuoteChasing(quotes, tasks, () => _now);
+
+        var draft = quotes.Add("Hunter Builders", "door hardware", null, sent: null);
+
+        draft.Status.ShouldBe(QuoteStatus.InProgress);
+        draft.Sent.ShouldBeNull();
+        draft.AmountCents.ShouldBeNull();
+        draft.Amount.ShouldBe(0m);
+        draft.IsOpen.ShouldBeTrue();
+
+        chasing.Follow().ShouldBe(0);
+        tasks.Visible.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void SendingADraftStartsTheChasingFromToday()
+    {
+        var quotes = Quotes();
+        var tasks = Tasks();
+        var chasing = new QuoteChasing(quotes, tasks, () => _now);
+
+        var draft = quotes.Add("Hunter Builders", "door hardware", null, sent: null);
+        chasing.Follow();
+        tasks.Visible.ShouldBeEmpty();
+
+        var sent = quotes.Send(draft.Id, Today)!;
+        sent.Status.ShouldBe(QuoteStatus.Quoted);
+        sent.Sent.ShouldBe(Today);
+
+        chasing.Follow().ShouldBe(1);
+        tasks.Visible.ShouldHaveSingleItem().Due.ShouldBe(TaskPlan.Workday(Today.AddDays(3)));
+    }
+
+    [Fact]
+    public void SendingAQuoteThatIsAlreadySentDoesNothing()
+    {
+        var quotes = Quotes();
+        var quote = quotes.Add("Orikan", "readers", 900_000, Today);
+
+        quotes.Send(quote.Id, Today.AddDays(1)).ShouldBeNull();
+    }
+
+    [Fact]
+    public void RenamingAQuoteTypeRenamesItOnEveryQuoteThatHasIt()
+    {
+        var quotes = Quotes();
+        var a = quotes.Add("Hunter Builders", "door hardware", 420_000, Today, type: "Supply only");
+        var b = quotes.Add("Orikan", "readers", 900_000, Today, type: "Supply only");
+        var c = quotes.Add("Cessnock Hospital", "closers", 125_000, Today, type: "Service");
+
+        quotes.Retype("Supply only", "Supply & Install");
+
+        quotes.Find(a.Id)!.Type.ShouldBe("Supply & Install");
+        quotes.Find(b.Id)!.Type.ShouldBe("Supply & Install");
+        quotes.Find(c.Id)!.Type.ShouldBe("Service");
+    }
+
+    // ---- reading what is already on disk ----
+
+    [Fact]
+    public void AQuoteWrittenBeforeItHadANameStillReadsBackWithOne()
+    {
+        // The exact shape 1.21.0 wrote: "What" for the description, and an int for Status,
+        // where 0 always meant a quote already sent — precisely what Quoted means now.
+        const string old = """
+            [{"Id":"abc123","Customer":"Hunter Builders","What":"door hardware","AmountCents":420000,
+            "Sent":"2026-09-18","Cadence":[3,7,14],"Chased":0,"Status":0,"Notes":[],
+            "Modified":"2026-09-18T09:00:00+10:00"}]
+            """;
+
+        var quote = QuoteStore.FromJson(old).ShouldHaveSingleItem();
+
+        quote.Name.ShouldBe("door hardware");
+        quote.Status.ShouldBe(QuoteStatus.Quoted);
+        quote.AmountCents.ShouldBe(420_000);
     }
 }

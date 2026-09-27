@@ -296,6 +296,10 @@ public sealed record TeezySettings
     /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
     public IReadOnlyList<string> TaskCategories { get; init; } = [];
 
+    /// <summary>The types a quote can have, e.g. "Supply only", in the order the picker shows them.</summary>
+    /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
+    public IReadOnlyList<string> QuoteTypes { get; init; } = [];
+
     /// <summary>The name on notes written here. Null uses the first part of the Windows account name.</summary>
     public string? TaskAuthor { get; init; }
 

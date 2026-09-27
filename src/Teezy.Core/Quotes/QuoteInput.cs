@@ -6,12 +6,12 @@ namespace Teezy.Core.Quotes;
 
 /// <summary>What a typed or spoken quote line said.</summary>
 /// <param name="Customer">Who it is for; empty when the line could not be read.</param>
-/// <param name="What">What it is for; empty when the line said nothing but a customer and a figure.</param>
+/// <param name="Name">What it is for; empty when the line said nothing but a customer and a figure.</param>
 /// <param name="AmountCents">The value in cents; zero when no figure was found.</param>
 /// <param name="Sent">The day it went out, when the line said; otherwise null, meaning today.</param>
 /// <param name="Reference">A quote number, if one was written as <c>#1234</c> or "ref 1234".</param>
 public sealed record ParsedQuote(
-    string Customer, string What, long AmountCents, DateOnly? Sent, string? Reference)
+    string Customer, string Name, long AmountCents, DateOnly? Sent, string? Reference)
 {
     public bool IsUsable => Customer.Length > 0 && AmountCents > 0;
 }

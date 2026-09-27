@@ -235,18 +235,26 @@ first.
 
 ### Quotes
 
-The **Quotes** tab is the pipeline: every quote you send, what it is worth, and the chasing that
-follows it. Three figures across the top — what is out there, what you have won this month, and
-your win rate — then the list, grouped by what needs doing: **chase today**, **gone quiet**,
-**out there**, **decided**.
+The **Quotes** tab is a small management tool for the pipeline, not just a follow-up tracker:
+every quote from the first draft to the day it is won or lost, what it is worth, and the chasing
+in between. Three figures across the top — what is out there, what you have won this month, and
+your win rate — then the list, grouped by what needs doing: **drafting**, **chase today**,
+**gone quiet**, **out there**, **decided**.
 
-**A quote is the job; a chase is a task.** Adding a quote books its first chase in your ordinary
+**A quote can be put together before it goes anywhere.** Press **New quote** to start a draft
+with a name, a type (configured in Settings ▸ Tasks ▸ Quote types — "Supply only", "Service",
+whatever fits your business), a customer and a contact — nothing is chased until you mark it
+**sent**, which is what starts the cadence below. A draft can carry its own tasks in the meantime:
+a TASKS section on the quote lists proposal work, meetings to book, or reminders you add there
+directly, alongside the chase task once one is booked, each with a tick to close it.
+
+**A quote is the job; a chase is a task.** Once sent, it books its first chase in your ordinary
 task list, in the Quotes category, due on the day with a reminder. Tick that task off and the
 quote counts one more chase and books the next. Mark the quote won or lost and the chasing
 stops. Nothing new to keep on top of: reminders, the focus list, Home and the morning briefing
 already work on tasks.
 
-Four ways in, because quotes are sent from four different situations:
+Four ways to add one already sent, because quotes are sent from four different situations:
 
 - **Typed:** `Hunter Builders $4,200 door hardware sent friday`. The customer comes before the
   figure, the job after it, and a day at the end means the day just gone — a quote is sent
@@ -257,7 +265,8 @@ Four ways in, because quotes are sent from four different situations:
 - **By voice:** hold the assistant key and say *"quoted Hunter Builders four thousand two hundred
   for door hardware"*. Understood on this computer, free, with no key and no signal — and it
   tells you when it will be chased.
-- **From the CRM:** **Import a CRM export** takes a spreadsheet saved as CSV. Columns are matched
+- **From the CRM:** **Import a CRM export** takes a spreadsheet saved as CSV. **CSV template**
+  downloads a blank one shaped the way TeezyFlow reads it, ready to fill in. Columns are matched
   by what they mean, and it says which column it read each field from before importing anything.
   Re-importing the same file updates rather than duplicates, matching on your quote reference, so
   a fresh export brings the outcomes with it.

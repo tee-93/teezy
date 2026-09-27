@@ -35,9 +35,9 @@ public class QuotePlanTests
     {
         var quote = Sent(daysAgo: 20);
 
-        QuotePlan.NextChase(quote with { Chased = 0 }).ShouldBe(TaskPlan.Workday(quote.Sent.AddDays(3)));
-        QuotePlan.NextChase(quote with { Chased = 1 }).ShouldBe(TaskPlan.Workday(quote.Sent.AddDays(7)));
-        QuotePlan.NextChase(quote with { Chased = 2 }).ShouldBe(TaskPlan.Workday(quote.Sent.AddDays(14)));
+        QuotePlan.NextChase(quote with { Chased = 0 }).ShouldBe(TaskPlan.Workday(quote.Sent!.Value.AddDays(3)));
+        QuotePlan.NextChase(quote with { Chased = 1 }).ShouldBe(TaskPlan.Workday(quote.Sent!.Value.AddDays(7)));
+        QuotePlan.NextChase(quote with { Chased = 2 }).ShouldBe(TaskPlan.Workday(quote.Sent!.Value.AddDays(14)));
     }
 
     [Fact]
@@ -114,5 +114,30 @@ public class QuotePlanTests
 
         quote.Amount.ShouldBe(4207.35m);
         (quote.Amount * 3).ShouldBe(12622.05m);
+    }
+
+    // ---- drafts, not sent yet ----
+
+    [Fact]
+    public void ADraftHasNoNextChaseUntilItIsSent()
+    {
+        var draft = Quote.New("Hunter Builders", "door hardware", null, sent: null, Now);
+
+        draft.Status.ShouldBe(QuoteStatus.InProgress);
+        QuotePlan.NextChase(draft).ShouldBeNull();
+        QuotePlan.IsQuiet(draft, Today).ShouldBeFalse();
+        QuotePlan.BucketOf(draft, Today).ShouldBe(QuoteBucket.Drafting);
+    }
+
+    [Fact]
+    public void DraftsAreCountedApartFromWhatIsOutAndDecided()
+    {
+        var draft = Quote.New("Hunter Builders", "door hardware", null, sent: null, Now);
+        var out_ = Sent(daysAgo: 4);
+
+        var totals = QuotePlan.Totals([draft, out_], Today);
+
+        totals.Drafting.ShouldBe(1);
+        totals.Open.ShouldBe((1, 4200m));
     }
 }

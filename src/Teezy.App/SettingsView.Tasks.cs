@@ -14,11 +14,19 @@ namespace Teezy.App;
 public partial class SettingsView
 {
     private TaskStore? _taskStore;
+    private QuoteStore? _quoteStore;
 
     /// <summary>Hooked up by the window, so renaming a category can rename it on the tasks too.</summary>
     internal void AttachTasks(TaskStore? tasks)
     {
         _taskStore ??= tasks;
+        ShowTaskSettings();
+    }
+
+    /// <summary>Hooked up by the window, so renaming a quote type can rename it on the quotes too.</summary>
+    internal void AttachQuotes(QuoteStore? quotes)
+    {
+        _quoteStore ??= quotes;
         ShowTaskSettings();
     }
 
@@ -63,6 +71,11 @@ public partial class SettingsView
         var list = settings.TaskCategories;
         for (var i = 0; i < list.Count; i++) CategoryRows.Children.Add(CategoryRow(list, i));
         CategoryAddRow.Style = (Style)FindResource(list.Count == 0 ? "FormRowFirst" : "FormRow");
+
+        QuoteTypeRows.Children.Clear();
+        var types = settings.QuoteTypes;
+        for (var i = 0; i < types.Count; i++) QuoteTypeRows.Children.Add(QuoteTypeRow(types, i));
+        QuoteTypeAddRow.Style = (Style)FindResource(types.Count == 0 ? "FormRowFirst" : "FormRow");
 
         ShowBriefingSettings(settings);
 
@@ -200,6 +213,134 @@ public partial class SettingsView
 
         _write(settings with { TaskCategories = [.. settings.TaskCategories, name] });
         NewCategoryBox.Clear();
+        ShowTaskSettings();
+    }
+
+    // ---- quote types ----
+
+    private Border QuoteTypeRow(IReadOnlyList<string> list, int index)
+    {
+        var name = list[index];
+        var count = _quoteStore?.Visible.Count(q => q.IsOpen && string.Equals(q.Type, name, StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+        var label = new TextBlock { Text = name, Style = (Style)FindResource("FormLabel"), VerticalAlignment = VerticalAlignment.Center };
+        var detail = new TextBlock
+        {
+            Text = count == 0 ? "No open quotes" : count == 1 ? "1 open quote" : $"{count} open quotes",
+            Style = (Style)FindResource("FormHint"),
+        };
+        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(label);
+        text.Children.Add(detail);
+
+        // Renaming happens in place: the name becomes a box.
+        var edit = new TextBox { Style = (Style)FindResource("BareText"), Text = name };
+        var editBox = new Border { Style = (Style)FindResource("FieldBox"), Child = edit, Visibility = Visibility.Collapsed };
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        Button Small(string content, string tip, Action run, bool enabled = true)
+        {
+            var button = new Button { Content = content, Style = (Style)FindResource("Quiet"), ToolTip = tip, IsEnabled = enabled, Margin = new Thickness(2, 0, 0, 0) };
+            button.Click += (_, _) => run();
+            buttons.Children.Add(button);
+            return button;
+        }
+
+        Small("↑", "Move up", () => MoveType(index, -1), index > 0);
+        Small("↓", "Move down", () => MoveType(index, 1), index < list.Count - 1);
+        Small("Rename", "Rename", () =>
+        {
+            text.Visibility = Visibility.Collapsed;
+            editBox.Visibility = Visibility.Visible;
+            edit.Focus();
+            edit.SelectAll();
+        });
+        Button? remove = null;
+        remove = Small("Remove", "Remove from the list", () =>
+        {
+            if (remove!.Tag is not "armed") { remove.Tag = "armed"; remove.Content = "Remove?"; return; }
+            var settings = _read();
+            _write(settings with { QuoteTypes = [.. settings.QuoteTypes.Where((_, i) => i != index)] });
+            ShowTaskSettings();
+        });
+
+        void Commit()
+        {
+            var renamed = edit.Text.Trim();
+            if (renamed.Length > 0 && renamed != name) RenameType(name, renamed);
+            else ShowTaskSettings();
+        }
+
+        edit.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { e.Handled = true; Commit(); }
+            else if (e.Key == Key.Escape) { e.Handled = true; ShowTaskSettings(); }
+        };
+        edit.LostKeyboardFocus += (_, _) => { if (editBox.Visibility == Visibility.Visible) Commit(); };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(buttons, 1);
+        grid.Children.Add(text);
+        grid.Children.Add(editBox);
+        grid.Children.Add(buttons);
+
+        return new Border { Style = (Style)FindResource(index == 0 ? "FormRowFirst" : "FormRow"), Padding = new Thickness(12, 8, 8, 8), Child = grid };
+    }
+
+    private void MoveType(int index, int by)
+    {
+        var list = _read().QuoteTypes.ToList();
+        var to = index + by;
+        if (to < 0 || to >= list.Count) return;
+        (list[index], list[to]) = (list[to], list[index]);
+        _write(_read() with { QuoteTypes = list });
+        ShowTaskSettings();
+    }
+
+    /// <summary>Renames a quote type in the list and on every quote that has it.</summary>
+    private void RenameType(string from, string to)
+    {
+        var settings = _read();
+        if (settings.QuoteTypes.Any(t => t.Equals(to, StringComparison.OrdinalIgnoreCase) && !t.Equals(from, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Already there under that name: renaming merges the two.
+            _write(settings with { QuoteTypes = [.. settings.QuoteTypes.Where(t => t != from)] });
+        }
+        else
+        {
+            _write(settings with { QuoteTypes = [.. settings.QuoteTypes.Select(t => t == from ? to : t)] });
+        }
+
+        _quoteStore?.Retype(from, to);
+        ShowTaskSettings();
+    }
+
+    private void OnNewQuoteTypeTyped(object sender, TextChangedEventArgs e)
+    {
+        NewQuoteTypePlaceholder.Visibility = NewQuoteTypeBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        var name = NewQuoteTypeBox.Text.Trim();
+        AddQuoteTypeButton.IsEnabled = name.Length > 0
+            && !_read().QuoteTypes.Any(t => t.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnNewQuoteTypeKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        e.Handled = true;
+        if (AddQuoteTypeButton.IsEnabled) OnAddQuoteType(sender, e);
+    }
+
+    private void OnAddQuoteType(object sender, RoutedEventArgs e)
+    {
+        var name = NewQuoteTypeBox.Text.Trim();
+        if (name.Length == 0) return;
+        var settings = _read();
+        if (settings.QuoteTypes.Any(t => t.Equals(name, StringComparison.OrdinalIgnoreCase))) return;
+
+        _write(settings with { QuoteTypes = [.. settings.QuoteTypes, name] });
+        NewQuoteTypeBox.Clear();
         ShowTaskSettings();
     }
 

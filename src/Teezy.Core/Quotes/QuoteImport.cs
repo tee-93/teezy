@@ -5,11 +5,12 @@ namespace Teezy.Core.Quotes;
 /// <summary>One line of a spreadsheet, read as a quote.</summary>
 public sealed record ImportedQuote(
     string Customer,
-    string What,
+    string Name,
     long AmountCents,
     DateOnly Sent,
     string? Reference,
     string? Contact,
+    string? Type,
     QuoteStatus Status,
     DateOnly? Decided);
 
@@ -57,6 +58,8 @@ public static class QuoteImport
 
     private static readonly string[] ContactNames = ["contact", "attention", "attn", "person"];
 
+    private static readonly string[] TypeNames = ["type", "quote type", "category"];
+
     private static readonly string[] StatusNames = ["status", "outcome", "stage", "result", "state"];
 
     private static readonly string[] DecidedNames = ["decided", "closed", "won date", "outcome date"];
@@ -81,10 +84,11 @@ public static class QuoteImport
                 new Dictionary<string, string>());
         }
 
-        var what = Column(headings, WhatNames);
+        var name = Column(headings, WhatNames);
         var sent = Column(headings, SentNames);
         var reference = Column(headings, ReferenceNames, except: amount);
         var contact = Column(headings, ContactNames);
+        var type = Column(headings, TypeNames);
         var status = Column(headings, StatusNames);
         var decided = Column(headings, DecidedNames);
 
@@ -95,11 +99,12 @@ public static class QuoteImport
         }
 
         Note("Customer", customer);
-        Note("What", what);
+        Note("Name", name);
         Note("Value", amount);
         Note("Sent", sent);
         Note("Reference", reference);
         Note("Contact", contact);
+        Note("Type", type);
         Note("Status", status);
 
         var quotes = new List<ImportedQuote>();
@@ -125,11 +130,12 @@ public static class QuoteImport
 
             quotes.Add(new ImportedQuote(
                 who,
-                Value(row, what),
+                Value(row, name),
                 cents,
                 Day(Value(row, sent), today) ?? today,
                 Text(row, reference),
                 Text(row, contact),
+                Text(row, type),
                 Outcome(Value(row, status)),
                 Day(Value(row, decided), today)));
         }
@@ -152,10 +158,11 @@ public static class QuoteImport
 
             if (match is null)
             {
-                var quote = store.Add(row.Customer, row.What, row.AmountCents, row.Sent,
-                    reference: row.Reference, contact: row.Contact);
+                // A line in a CRM export is always a quote that has already gone out.
+                var quote = store.Add(row.Customer, row.Name, row.AmountCents, row.Sent,
+                    reference: row.Reference, contact: row.Contact, type: row.Type);
 
-                if (row.Status != QuoteStatus.Open)
+                if (row.Status != QuoteStatus.Quoted)
                 {
                     store.Decide(quote.Id, row.Status, row.Decided ?? today);
                 }
@@ -167,13 +174,14 @@ public static class QuoteImport
             var edited = match with
             {
                 Customer = row.Customer,
-                What = row.What.Length > 0 ? row.What : match.What,
+                Name = row.Name.Length > 0 ? row.Name : match.Name,
                 AmountCents = row.AmountCents,
                 Sent = row.Sent,
                 Reference = row.Reference ?? match.Reference,
                 Contact = row.Contact ?? match.Contact,
+                Type = row.Type ?? match.Type,
                 Status = row.Status,
-                Decided = row.Status == QuoteStatus.Open ? null : row.Decided ?? match.Decided ?? today,
+                Decided = row.Status == QuoteStatus.Quoted ? null : row.Decided ?? match.Decided ?? today,
             };
 
             // Left alone when nothing in the file differs, so a re-import does not stamp every
@@ -197,9 +205,10 @@ public static class QuoteImport
                 && string.Equals(q.Customer, row.Customer, StringComparison.OrdinalIgnoreCase));
 
     private static bool Same(Quote edited, Quote was) =>
-        edited.Customer == was.Customer && edited.What == was.What
+        edited.Customer == was.Customer && edited.Name == was.Name
         && edited.AmountCents == was.AmountCents && edited.Sent == was.Sent
         && edited.Reference == was.Reference && edited.Contact == was.Contact
+        && edited.Type == was.Type
         && edited.Status == was.Status && edited.Decided == was.Decided;
 
     /// <summary>The column whose heading means this, or -1.</summary>
@@ -259,7 +268,7 @@ public static class QuoteImport
     {
         var word = text.Trim().ToLowerInvariant();
 
-        if (word.Length == 0) return QuoteStatus.Open;
+        if (word.Length == 0) return QuoteStatus.Quoted;
         if (word.Contains("won", StringComparison.Ordinal) || word.Contains("accept", StringComparison.Ordinal)
             || word.Contains("order", StringComparison.Ordinal) || word.Contains("success", StringComparison.Ordinal))
         {
@@ -272,8 +281,13 @@ public static class QuoteImport
             return QuoteStatus.Lost;
         }
 
-        return QuoteStatus.Open;
+        return QuoteStatus.Quoted;
     }
+
+    /// <summary>A blank CSV a CRM export can be shaped to fit, with one worked example.</summary>
+    public static string Template() =>
+        "Customer,Name,Type,Value,Sent,Reference,Contact,Status\r\n"
+        + "Hunter Builders,Door hardware,Supply & Install,4200,15/08/2026,Q-1042,Priya Nair,Open\r\n";
 }
 
 /// <summary>A comma-separated file, read the way the standard says.</summary>

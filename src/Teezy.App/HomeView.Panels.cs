@@ -274,7 +274,7 @@ public partial class HomeView
 
         if (chase.Count + quiet.Count == 0)
         {
-            body.Children.Add(s.AllQuotes.Any(q => q.IsOpen)
+            body.Children.Add(s.AllQuotes.Any(q => q.Status == Teezy.Core.Quotes.QuoteStatus.Quoted)
                 ? Empty("Nothing to chase", "Every quote out there has been chased recently.")
                 : Empty("No quotes out", "Add one on the Quotes page and its chases book themselves."));
         }
@@ -292,7 +292,7 @@ public partial class HomeView
 
         var text = new TextBlock
         {
-            Text = quote.What.Length > 0 ? $"{quote.Customer} — {quote.What}" : quote.Customer,
+            Text = quote.Name.Length > 0 ? $"{quote.Customer} — {quote.Name}" : quote.Customer,
             Foreground = Brand.Ink,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,

@@ -18,7 +18,7 @@ public class QuoteVoiceTests
 
         quote.Customer.ShouldBe("Hunter Builders");
         quote.AmountCents.ShouldBe(420_000);
-        quote.What.ShouldBe("door hardware");
+        quote.Name.ShouldBe("door hardware");
     }
 
     [Theory]
@@ -39,7 +39,7 @@ public class QuoteVoiceTests
         var quote = Heard("quoted Cessnock Hospital twelve thousand dollars plus GST for closers").ShouldNotBeNull();
 
         quote.AmountCents.ShouldBe(1_200_000);
-        quote.What.ShouldBe("closers");
+        quote.Name.ShouldBe("closers");
     }
 
     [Fact]

@@ -104,7 +104,7 @@ public static class MorningBriefing
                 .. chase.Select(q => new BriefingItem(
                     Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · chase", Late: true)),
                 .. quiet.Select(q => new BriefingItem(
-                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · quiet {today.DayNumber - q.LastMoved.DayNumber} days")),
+                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · quiet {today.DayNumber - q.LastMoved!.Value.DayNumber} days")),
             ]));
         }
 
@@ -185,17 +185,17 @@ public static class MorningBriefing
             }
         }
 
-        if (s.AllQuotes.Any(q => q.IsOpen))
+        if (s.AllQuotes.Any(q => q.Status == Quotes.QuoteStatus.Quoted))
         {
             text.AppendLine();
             text.AppendLine("Open quotes (the user's own words, values in dollars):");
-            foreach (var quote in s.AllQuotes.Where(q => q.IsOpen)
+            foreach (var quote in s.AllQuotes.Where(q => q.Status == Quotes.QuoteStatus.Quoted)
                          .OrderBy(q => Quotes.QuotePlan.NextChase(q) ?? q.Sent).Take(20))
             {
                 text.Append("- ").Append(quote.Customer);
-                if (quote.What.Length > 0) text.Append(" | ").Append(quote.What);
+                if (quote.Name.Length > 0) text.Append(" | ").Append(quote.Name);
                 text.Append(" | ").Append(Quotes.QuotePlan.Money(quote.Amount));
-                text.Append(" | sent ").Append(quote.Sent.ToString("d MMMM", Display));
+                text.Append(" | sent ").Append(quote.Sent!.Value.ToString("d MMMM", Display));
                 if (Quotes.QuotePlan.NextChase(quote) is { } next)
                 {
                     text.Append(" | chase ").Append(next.ToString("dddd d MMMM", Display));
@@ -211,7 +211,7 @@ public static class MorningBriefing
 
     /// <summary>A quote in one line, as the briefing lists it.</summary>
     private static string Quote(Quotes.Quote quote) =>
-        quote.What.Length > 0 ? $"{quote.Customer} — {quote.What}" : quote.Customer;
+        quote.Name.Length > 0 ? $"{quote.Customer} — {quote.Name}" : quote.Customer;
 
     private static bool RemindsToday(TaskItem task, DateOnly today) =>
         task.Remind is { } at && DateOnly.FromDateTime(at.LocalDateTime) == today;

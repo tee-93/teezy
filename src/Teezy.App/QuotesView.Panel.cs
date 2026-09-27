@@ -37,6 +37,7 @@ public partial class QuotesView
         if (changed)
         {
             NoteBox.Clear();
+            QuoteTaskBox.Clear();
             DetailScroll.ScrollToTop();
             DeleteButton.Tag = null;
             DeleteButton.Content = "Delete quote";
@@ -45,16 +46,24 @@ public partial class QuotesView
         if (changed || !Detail.IsKeyboardFocusWithin)
         {
             CustomerBox.Text = quote.Customer;
-            WhatBox.Text = quote.What;
-            ValueBox.Text = quote.Amount.ToString("0.##", CultureInfo.CurrentCulture);
+            NameBox.Text = quote.Name;
+            ValueBox.Text = quote.AmountCents is { } cents && cents > 0
+                ? quote.Amount.ToString("0.##", CultureInfo.CurrentCulture)
+                : string.Empty;
             ReferenceBox.Text = quote.Reference ?? string.Empty;
             ContactBox.Text = quote.Contact ?? string.Empty;
         }
 
-        SentField.Set(quote.Sent, null);
+        ShowTypePicker(quote);
+
+        var isDraft = quote.Status == QuoteStatus.InProgress;
+        SentColumn.Visibility = isDraft ? Visibility.Collapsed : Visibility.Visible;
+        DraftColumn.Visibility = isDraft ? Visibility.Visible : Visibility.Collapsed;
+        if (!isDraft) SentField.Set(quote.Sent, null);
 
         DetailState.Text = quote.Status switch
         {
+            QuoteStatus.InProgress => "DRAFT",
             QuoteStatus.Won => "WON",
             QuoteStatus.Lost => "LOST",
             _ => QuotePlan.BucketOf(quote, Today) switch
@@ -66,14 +75,33 @@ public partial class QuotesView
         };
 
         ShowChaseState(quote);
+        ShowQuoteTasks(quote);
         ShowNotes(quote);
         ShowEmails(quote);
 
-        WonButton.Visibility = quote.IsOpen ? Visibility.Visible : Visibility.Collapsed;
-        LostButton.Visibility = quote.IsOpen ? Visibility.Visible : Visibility.Collapsed;
-        ReopenButton.Visibility = quote.IsOpen ? Visibility.Collapsed : Visibility.Visible;
+        WonButton.Visibility = quote.Status == QuoteStatus.Quoted ? Visibility.Visible : Visibility.Collapsed;
+        LostButton.Visibility = quote.Status == QuoteStatus.Quoted ? Visibility.Visible : Visibility.Collapsed;
+        ReopenButton.Visibility = quote.Status is QuoteStatus.Won or QuoteStatus.Lost ? Visibility.Visible : Visibility.Collapsed;
 
         _filling = false;
+    }
+
+    private void ShowTypePicker(Quote quote)
+    {
+        TypeBox.Items.Clear();
+        TypeBox.Items.Add(new ComboBoxItem { Content = "No type", Tag = null });
+        foreach (var type in _settings().QuoteTypes) TypeBox.Items.Add(new ComboBoxItem { Content = type, Tag = type });
+
+        TypeBox.SelectedIndex = Math.Max(0, TypeBox.Items.Cast<ComboBoxItem>().ToList()
+            .FindIndex(i => string.Equals(i.Tag as string, quote.Type, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private void OnTypeChosen(object sender, SelectionChangedEventArgs e)
+    {
+        if (_filling || Chosen() is not { } quote || TypeBox.SelectedItem is not ComboBoxItem item) return;
+
+        var type = item.Tag as string;
+        if (!string.Equals(type, quote.Type, StringComparison.Ordinal)) _store.Update(quote with { Type = type });
     }
 
     private void ShowChaseState(Quote quote)
@@ -82,6 +110,7 @@ public partial class QuotesView
 
         ChaseState.Text = quote switch
         {
+            { Status: QuoteStatus.InProgress } => "Not sent yet — nothing is being chased.",
             { Status: QuoteStatus.Won } => "Won — nothing is chasing it now.",
             { Status: QuoteStatus.Lost } => "Lost — nothing is chasing it now.",
             _ when chase is { IsOpen: true } => $"{Chases(quote)} The next one is booked in your tasks for {TasksView.Day(chase.Due ?? Today)}.",
@@ -174,13 +203,13 @@ public partial class QuotesView
         var edited = quote with
         {
             Customer = customer,
-            What = WhatBox.Text.Trim(),
+            Name = NameBox.Text.Trim(),
             AmountCents = cents,
             Reference = ReferenceBox.Text,
             Contact = ContactBox.Text,
         };
 
-        if (edited.Customer == quote.Customer && edited.What == quote.What
+        if (edited.Customer == quote.Customer && edited.Name == quote.Name
             && edited.AmountCents == quote.AmountCents
             && (edited.Reference ?? string.Empty).Trim() == (quote.Reference ?? string.Empty)
             && (edited.Contact ?? string.Empty).Trim() == (quote.Contact ?? string.Empty))
@@ -193,10 +222,13 @@ public partial class QuotesView
     }
 
     /// <summary>What a typed value means, in cents: "4200", "$4,200", "4.2k".</summary>
-    private static long? Money(string text) =>
-        QuoteInput.Parse($"x ${text.Trim().TrimStart('$')} y", Today) is { AmountCents: > 0 } parsed
+    private static long? Money(string text)
+    {
+        if (text.Trim().Length == 0) return null;
+        return QuoteInput.Parse($"x ${text.Trim().TrimStart('$')} y", Today) is { AmountCents: > 0 } parsed
             ? parsed.AmountCents
             : null;
+    }
 
     private void OnWon(object sender, RoutedEventArgs e) => Decide(_selected, QuoteStatus.Won);
 
@@ -220,6 +252,16 @@ public partial class QuotesView
         if (_selected is not { } id) return;
         _store.Reopen(id);
         _store.AddNote(id, "Open again.", TaskNote.App);
+        Refresh();
+    }
+
+    private void OnSend(object sender, RoutedEventArgs e)
+    {
+        if (_selected is not { } id) return;
+        if (_store.Send(id, Today, _settings().QuoteCadence) is not { } quote) return;
+
+        _store.AddNote(id, "Sent.", TaskNote.App);
+        _selected = quote.Id;
         Refresh();
     }
 
@@ -275,7 +317,123 @@ public partial class QuotesView
         NoteBox.Clear();
     }
 
+    // ---- tasks riding on the quote ----
+
+    /// <summary>Proposal work, meetings, general reminders — and the auto-booked chase too.</summary>
+    private void ShowQuoteTasks(Quote quote)
+    {
+        var tasks = _tasks.Visible
+            .Where(t => t.QuoteId == quote.Id)
+            .OrderBy(t => t.IsOpen ? 0 : 1)
+            .ThenBy(t => t.Due ?? DateOnly.MaxValue)
+            .ThenByDescending(t => t.Created)
+            .ToList();
+
+        QuoteTaskList.Children.Clear();
+        foreach (var task in tasks) QuoteTaskList.Children.Add(QuoteTaskRow(task));
+        QuoteTaskEmpty.Visibility = tasks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private FrameworkElement QuoteTaskRow(TaskItem task)
+    {
+        var tick = new CheckBox
+        {
+            Style = (Style)FindResource("Tick"),
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 2, 10, 0),
+            ToolTip = "Close",
+            IsChecked = !task.IsOpen,
+        };
+        tick.Checked += (_, _) => { if (task.IsOpen) _tasks.Close(task.Id); };
+        tick.Unchecked += (_, _) => { if (!task.IsOpen) _tasks.Reopen(task.Id); };
+
+        var title = new TextBlock
+        {
+            Text = task.Title,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 13,
+            Foreground = task.IsOpen ? Brand.Ink : Brand.Muted,
+            TextDecorations = task.IsOpen ? null : TextDecorations.Strikethrough,
+        };
+
+        var metaParts = new List<string>();
+        if (task.Category is { Length: > 0 } category) metaParts.Add(category);
+        if (task.Due is { } due) metaParts.Add(task.IsOpen && due < Today ? $"was due {TasksView.Day(due)}" : $"due {TasksView.Day(due)}");
+
+        var body = new StackPanel();
+        body.Children.Add(title);
+        if (metaParts.Count > 0)
+        {
+            body.Children.Add(new TextBlock
+            {
+                Text = string.Join(" · ", metaParts),
+                FontSize = 11,
+                Foreground = Brand.Faint,
+                Margin = new Thickness(0, 2, 0, 0),
+            });
+        }
+
+        var line = new Grid();
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(body, 1);
+        line.Children.Add(tick);
+        line.Children.Add(body);
+
+        var row = new Border { Padding = new Thickness(0, 6, 0, 6), Cursor = Cursors.Hand, Child = line };
+        row.MouseLeftButtonUp += (_, e) =>
+        {
+            if (e.OriginalSource is DependencyObject source && Within<CheckBox>(source)) return;
+            _openTask?.Invoke(task.Id);
+        };
+
+        return row;
+    }
+
+    private void OnQuoteTaskTyped(object sender, TextChangedEventArgs e) =>
+        QuoteTaskPlaceholder.Visibility = QuoteTaskBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private void OnQuoteTaskKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || Chosen() is not { } quote) return;
+        e.Handled = true;
+
+        var parsed = TaskInput.Parse(QuoteTaskBox.Text, Today);
+        if (parsed.Title.Length == 0) return;
+
+        var due = parsed.Due ?? (parsed.DueTime is not null ? Today : null);
+        var remind = due is { } day && parsed.DueTime is { } time ? TaskPlan.At(day, time) : (DateTimeOffset?)null;
+        var task = _tasks.Add(parsed.Title, TaskCategory(parsed.Category), due: due, dueTime: parsed.DueTime, remind: remind);
+        _tasks.Update(task with { QuoteId = quote.Id });
+
+        QuoteTaskBox.Clear();
+        ShowQuoteTasks(quote);
+    }
+
+    /// <summary>An existing category by that name, or a new one added to Settings ▸ Tasks.</summary>
+    private string? TaskCategory(string? typed)
+    {
+        if (typed is not { Length: > 0 }) return null;
+
+        var settings = _settings();
+        var match = settings.TaskCategories.FirstOrDefault(c => c.Equals(typed, StringComparison.OrdinalIgnoreCase));
+        if (match is not null) return match;
+
+        _saveSettings(settings with { TaskCategories = [.. settings.TaskCategories, typed] });
+        return typed;
+    }
+
     // ---- adding one ----
+
+    private void OnNewQuote(object sender, RoutedEventArgs e)
+    {
+        SavePendingNote();
+        var quote = _store.Add(string.Empty, string.Empty, amountCents: null, sent: null, _settings().QuoteCadence);
+        _selected = quote.Id;
+        Refresh();
+        CustomerBox.Focus();
+        CustomerBox.SelectAll();
+    }
 
     private void OnAddTyped(object sender, TextChangedEventArgs e)
     {
@@ -292,7 +450,7 @@ public partial class QuotesView
         AddPreview.Visibility = Visibility.Visible;
         AddPreview.Text = parsed.IsUsable
             ? $"{parsed.Customer} · {QuotePlan.Money(parsed.AmountCents / 100m)}"
-              + (parsed.What.Length > 0 ? $" · {parsed.What}" : string.Empty)
+              + (parsed.Name.Length > 0 ? $" · {parsed.Name}" : string.Empty)
               + $" · sent {TasksView.Day(parsed.Sent ?? Today)}  —  Enter to add"
             : parsed.Customer.Length == 0
                 ? "Start with the customer"
@@ -314,12 +472,12 @@ public partial class QuotesView
         Refresh();
     }
 
-    /// <summary>Makes the quote, with any dropped email attached to it.</summary>
+    /// <summary>Makes the quote, already sent, with any dropped email attached to it.</summary>
     private Quote Add(ParsedQuote parsed)
     {
         var quote = _store.Add(
             parsed.Customer,
-            parsed.What,
+            parsed.Name,
             parsed.AmountCents,
             parsed.Sent ?? Today,
             _settings().QuoteCadence,
@@ -448,6 +606,27 @@ public partial class QuotesView
         Notice($"Imported {added} new {(added == 1 ? "quote" : "quotes")}"
                + (updated > 0 ? $" and updated {updated}." : "."), null, null);
         Refresh();
+    }
+
+    private void OnDownloadTemplate(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Save the CSV template",
+            FileName = "TeezyFlow quotes template.csv",
+            Filter = "Spreadsheet (*.csv)|*.csv",
+        };
+
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        try
+        {
+            File.WriteAllText(dialog.FileName, QuoteImport.Template());
+        }
+        catch (Exception problem) when (problem is IOException or UnauthorizedAccessException)
+        {
+            Notice($"That couldn’t be saved: {problem.Message}", null, null);
+        }
     }
 
     // ---- the notice bar ----

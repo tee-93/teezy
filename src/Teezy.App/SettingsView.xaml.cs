@@ -72,6 +72,7 @@ public partial class SettingsView : UserControl
     private readonly ConnectedAccounts? _calendars;
     private readonly Updater? _updater;
     private readonly Action? _restartToUpdate;
+    private readonly Action? _restartApp;
 
     /// <summary>The capture opened by the level test, or null when no test is running.</summary>
     private IAudioCapture? _preview;
@@ -99,12 +100,14 @@ public partial class SettingsView : UserControl
         Func<IAudioCapture>? microphone = null,
         ConnectedAccounts? calendars = null,
         Updater? updater = null,
-        Action? restartToUpdate = null)
+        Action? restartToUpdate = null,
+        Action? restartApp = null)
     {
         InitializeComponent();
 
         _updater = updater;
         _restartToUpdate = restartToUpdate;
+        _restartApp = restartApp;
 
         _read = read;
         _write = write;
@@ -195,6 +198,7 @@ public partial class SettingsView : UserControl
         ShowSpeechOptions(settings);
         ShowLlmState();
         ShowAppRules(settings);
+        ShowAppearanceSettings(settings);
 
         _loading = wasLoading;
     }

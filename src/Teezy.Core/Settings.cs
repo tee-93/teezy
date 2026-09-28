@@ -6,9 +6,25 @@ using Teezy.Core.Abstractions;
 
 namespace Teezy.Core;
 
+/// <summary>Light, dark, or follow Windows' own setting — Settings ▸ Appearance.</summary>
+public enum AppTheme
+{
+    Dark,
+    Light,
+    System,
+}
+
 /// <summary>User settings, persisted as JSON next to the model and dictionary.</summary>
 public sealed record TeezySettings
 {
+    /// <summary>
+    /// How the app looks. Defaults to <see cref="AppTheme.Dark"/> rather than System: TeezyFlow
+    /// has only ever been dark, and an install that silently turned light because Windows is set
+    /// to light would look like a bug, not a feature. A change here takes effect the next time
+    /// TeezyFlow starts, not immediately — the palette is chosen once, before any window opens.
+    /// </summary>
+    public AppTheme Theme { get; init; } = AppTheme.Dark;
+
     /// <summary>The push-to-talk combination. Every key must be held together.</summary>
     public Hotkey Hotkey { get; init; } = Hotkey.Default;
 

@@ -672,8 +672,16 @@ visuals reads them through `Brand`, which looks them up in the theme rather than
 second copy. A second copy is exactly what went wrong before: `Brand.cs` was still the old
 light palette months after the window went dark.
 
-Dark only, for now. Every lookup is `StaticResource`; a light theme following Windows, as
-Fivebar does, means moving the views to `DynamicResource` first.
+**Settings ▸ Appearance** has Light, Dark and Match Windows, like Fivebar's own Appearance
+section. It is a simpler version of Fivebar's: every lookup here is `StaticResource`, resolved
+once when a window's XAML is parsed, so the chosen palette is merged in before any window is
+built rather than swapped live — a change takes effect the next time TeezyFlow starts (Settings
+offers to restart it there and then), not the moment it is picked. Following Fivebar exactly
+would mean moving every view to `DynamicResource` and rebuilding whatever is already on screen
+when the theme changes; that is future work, not done here. `Theme.Dark.xaml` and
+`Theme.Light.xaml` hold the half of the palette that differs; `Theme.xaml` keeps the accent
+(the same teal either way) and every style and template, which resolve against whichever of the
+two is merged ahead of it — see `Appearance.cs`.
 
 **The mark is four rounded bars at different heights — a voice level.** It is built the way
 Fivebar's is: flat bars, the same bar-to-gap ratio and corner, no tile, no gradient. Fivebar's

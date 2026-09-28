@@ -108,6 +108,17 @@
                 </RadioButton>
 
                 <RadioButton Style="{StaticResource SettingsTab}" Padding="10,8" GroupName="SettingsTabs"
+                             Tag="TabAppearance" Checked="OnTabChosen">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.6"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                              Data="M12,17 A5,5 0 1 0 12,7 A5,5 0 1 0 12,17 Z M12,1 L12,3 M12,21 L12,23 M4.22,4.22 L5.64,5.64 M18.36,18.36 L19.78,19.78 M1,12 L3,12 M21,12 L23,12 M4.22,19.78 L5.64,18.36 M18.36,5.64 L19.78,4.22"/>
+                        <TextBlock Text="Appearance" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </RadioButton>
+
+                <RadioButton Style="{StaticResource SettingsTab}" Padding="10,8" GroupName="SettingsTabs"
                              Tag="TabAbout" Checked="OnTabChosen">
                     <StackPanel Orientation="Horizontal">
                         <Path Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.6"
@@ -1453,6 +1464,41 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ============================== Appearance ============================== -->
+
+                    <!-- Fivebar's Appearance, three ways to look: light, dark, or match Windows. -->
+                    <StackPanel x:Name="TabAppearance" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource Lede}" Margin="0,0,0,20"
+                                   Text="How TeezyFlow looks. A change here takes effect the next time TeezyFlow starts, not immediately."/>
+
+                        <TextBlock Text="THEME" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource SegmentGroup}" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="ThemeDark" Content="Dark" GroupName="Theme"
+                                             Style="{StaticResource Segment}" Checked="OnThemeChosen"/>
+                                <RadioButton x:Name="ThemeLight" Content="Light" GroupName="Theme"
+                                             Style="{StaticResource Segment}" Checked="OnThemeChosen"/>
+                                <RadioButton x:Name="ThemeSystem" Content="Match Windows" GroupName="Theme"
+                                             Style="{StaticResource Segment}" Checked="OnThemeChosen"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock x:Name="ThemeHint" Style="{StaticResource FormHint}" Margin="2,10,0,0"/>
+
+                        <Border x:Name="RestartNotice" Style="{StaticResource CautionPanel}" Margin="0,16,0,0"
+                                Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Restart TeezyFlow to see the new theme." VerticalAlignment="Center"
+                                           Foreground="{StaticResource CautionInk}" TextWrapping="Wrap"/>
+                                <Button Grid.Column="1" x:Name="RestartNowButton" Content="Restart now"
+                                        Style="{StaticResource Quiet}" Click="OnRestartForTheme"/>
+                            </Grid>
                         </Border>
                     </StackPanel>
 

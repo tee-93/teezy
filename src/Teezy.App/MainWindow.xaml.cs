@@ -79,6 +79,7 @@ public partial class MainWindow : Window
         IDiariser? diariser = null,
         Updater? updater = null,
         Action? restartToUpdate = null,
+        Action? restartApp = null,
         SyncService? sync = null,
         TaskStore? tasks = null,
         QuoteStore? quotes = null,
@@ -109,6 +110,7 @@ public partial class MainWindow : Window
         _diariser = diariser;
         _updater = updater;
         _restartToUpdate = restartToUpdate;
+        _restartApp = restartApp;
         _sync = sync;
         _tasks = tasks;
         _quotes = quotes;
@@ -147,6 +149,7 @@ public partial class MainWindow : Window
     private readonly System.Windows.Threading.DispatcherTimer _statusTimer;
     private readonly Updater? _updater;
     private readonly Action? _restartToUpdate;
+    private readonly Action? _restartApp;
     private readonly SyncService? _sync;
     private readonly TaskStore? _tasks;
     private readonly QuoteStore? _quotes;
@@ -359,7 +362,8 @@ public partial class MainWindow : Window
             usage: _usage,
             calendars: _calendars,
             updater: _updater,
-            restartToUpdate: _restartToUpdate);
+            restartToUpdate: _restartToUpdate,
+            restartApp: _restartApp);
         _settingsView.AttachSync(_sync);
         _settingsView.AttachTasks(_tasks);
         _settingsView.AttachQuotes(_quotes);

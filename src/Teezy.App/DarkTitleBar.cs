@@ -5,12 +5,13 @@ using System.Windows.Interop;
 
 namespace Teezy.App;
 
-/// <summary>Asks Windows to draw this window's chrome dark.</summary>
+/// <summary>Asks Windows to draw this window's chrome in step with <see cref="Appearance.IsDark"/>.</summary>
 /// <remarks>
 /// <para>
 /// WPF does not follow an application's own palette into the title bar — that strip is drawn by
-/// the desktop window manager, and without this a dark window wears a white cap. It is the one
-/// piece of the redesign that cannot be done in <c>Theme.xaml</c>.
+/// the desktop window manager, and without this a dark window wears a white cap, or (now that
+/// there is a light theme too) a light window wears a black one. It is the one piece of the
+/// redesign that cannot be done in <c>Theme.xaml</c>.
 /// </para>
 /// <para>
 /// The attribute number changed during Windows 10's life: 19 on builds before 18985, 20 after.
@@ -53,7 +54,7 @@ internal static class DarkTitleBar
     {
         if (handle == IntPtr.Zero) return;
 
-        var on = 1;
+        var on = Appearance.IsDark ? 1 : 0;
 
         try
         {

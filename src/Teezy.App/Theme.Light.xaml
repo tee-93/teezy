@@ -1,0 +1,69 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      The light palette — Settings ▸ Appearance ▸ Light, or Match Windows when Windows itself is
+      set to light. Merged before Theme.xaml instead of Theme.Dark.xaml; see Appearance.cs.
+
+      Surfaces, text and the semantic colours are Fivebar's own light values
+      (src\renderer\src\styles.css, [data-theme='light']) where a role maps directly onto one of
+      Fivebar's CSS variables — TeezyFlow's Danger/AssistantGood/Info dark values are themselves
+      copied from Fivebar's own danger/ok/info variables, so their light counterparts carry over
+      exactly too.
+      Keys Fivebar has no equivalent for (Body, Faint, AccentInk, the caution and pill colours,
+      the scrollbar) are worked out from the same role each plays in the dark palette, not
+      guessed independently — swap Ink for Muted, lighten what was dark, darken what was light.
+
+      Never seen rendered — built and reasoned through, not checked on screen. Worth a proper
+      look before trusting it for anything that matters.
+    -->
+
+    <!-- ============================== Surfaces ============================== -->
+
+    <SolidColorBrush x:Key="Chrome"   Color="#DFE3E8"/>
+    <SolidColorBrush x:Key="Rail"     Color="#DFE3E8"/>
+    <SolidColorBrush x:Key="Paper"    Color="#EEF0F3"/>
+    <SolidColorBrush x:Key="Sunken"   Color="#EEF0F3"/>
+    <SolidColorBrush x:Key="Card"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Raised"   Color="#F6F7F9"/>
+    <SolidColorBrush x:Key="Hover"    Color="#F6F7F9"/>
+    <SolidColorBrush x:Key="Selected" Color="#E6E9ED"/>
+    <SolidColorBrush x:Key="Hairline" Color="#D3D8DE"/>
+
+    <!-- ============================== Text ============================== -->
+
+    <SolidColorBrush x:Key="Ink"   Color="#1D2127"/>
+    <SolidColorBrush x:Key="Body"  Color="#3C424B"/>
+    <SolidColorBrush x:Key="Muted" Color="#5F6772"/>
+    <SolidColorBrush x:Key="Faint" Color="#8A9199"/>
+
+    <!-- ============================== Accent, on-surface ============================== -->
+
+    <!-- The base teal is unchanged (Theme.xaml) — white on it is still readable. Text set IN
+         the teal, rather than on it, needs a deeper shade to read against a light page. -->
+    <SolidColorBrush x:Key="AccentInk" Color="#0F7A6C"/>
+
+    <!-- ============================== Semantic ============================== -->
+
+    <SolidColorBrush x:Key="Record"        Color="#C23A3E"/>
+    <SolidColorBrush x:Key="Danger"        Color="#C93434"/>
+    <SolidColorBrush x:Key="AssistantGood" Color="#18895A"/>
+    <SolidColorBrush x:Key="Info"          Color="#2360C4"/>
+
+    <SolidColorBrush x:Key="CautionBg"     Color="#E6E9ED"/>
+    <SolidColorBrush x:Key="CautionBorder" Color="#B3791F"/>
+    <SolidColorBrush x:Key="CautionInk"    Color="#3C424B"/>
+
+    <!-- ============================== Floating pills ============================== -->
+
+    <SolidColorBrush x:Key="PillGlass" Color="#F7FFFFFF"/>
+    <SolidColorBrush x:Key="PillEdge"  Color="#D3D8DE"/>
+    <SolidColorBrush x:Key="HudText"   Color="#1D2127"/>
+    <SolidColorBrush x:Key="HudMeter"  Color="#1D2127"/>
+
+    <!-- ============================== Chrome ============================== -->
+
+    <SolidColorBrush x:Key="ScrollThumb"      Color="#C7CCD2"/>
+    <SolidColorBrush x:Key="ScrollThumbHover" Color="#ADB3BB"/>
+
+</ResourceDictionary>

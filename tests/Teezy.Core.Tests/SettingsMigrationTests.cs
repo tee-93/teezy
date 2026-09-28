@@ -34,6 +34,12 @@ public class SettingsMigrationTests
     }
 
     [Fact]
+    public void ASettingsFileFromBeforeAppearanceExistedStaysDark() =>
+        // TeezyFlow has only ever been dark; an old file with no Theme key must not read as
+        // System and silently turn light because of whatever Windows happens to be set to.
+        Load("""{ "NumThreads": 4 }""").Theme.ShouldBe(AppTheme.Dark);
+
+    [Fact]
     public void ConvertsTheOldSingleKeyFormat() =>
         // Silently resetting someone's hotkey to the default would be worse than any amount
         // of migration code.

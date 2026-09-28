@@ -120,6 +120,10 @@ public partial class App : Application
 
         _settings = TeezySettings.Load();
 
+        // Before any window is constructed: its XAML resolves colours against whatever is
+        // merged so far, so the palette has to be in place first.
+        Appearance.Apply(this, _settings.Theme);
+
         // What 1.13's Outlook-window reading left behind. That route is gone.
         try { File.Delete(Path.Combine(Path.GetDirectoryName(TeezySettings.DefaultPath)!, "outlook-calendar.json")); }
         catch (Exception problem) when (problem is IOException or UnauthorizedAccessException) { }
@@ -542,6 +546,19 @@ public partial class App : Application
         if (_updater.Install(relaunch: true)) Shutdown();
     }
 
+    /// <summary>Quits and relaunches, unconditionally — for a setting, like the theme, that only
+    /// takes effect on the next start rather than an update waiting to install.</summary>
+    private void RestartApp()
+    {
+        _focus?.Quitting();
+        if (Process.GetCurrentProcess().MainModule?.FileName is { Length: > 0 } exe)
+        {
+            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+        }
+
+        Shutdown();
+    }
+
     /// <summary>Quit, installing a ready update on the way out, as Fivebar does.</summary>
     internal void Quit()
     {
@@ -584,6 +601,7 @@ public partial class App : Application
             diariser: _diariser,
             updater: _updater,
             restartToUpdate: RestartToUpdate,
+            restartApp: RestartApp,
             sync: _sync,
             tasks: _tasks,
             quotes: _quotes,

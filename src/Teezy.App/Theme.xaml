@@ -16,45 +16,21 @@
       THE ACCENT IS TEAL, not Fivebar's orange: the family shares everything but its colour,
       the way Word and Excel do. RED IS RESERVED. It means recording and appears nowhere else.
 
-      Dark only for now. Every lookup in the app is StaticResource, so a light theme means
-      moving to DynamicResource first — see the README.
+      Light, dark, or match Windows (Settings ▸ Appearance): Theme.Dark.xaml or Theme.Light.xaml
+      is merged in ahead of this file, by Appearance.cs, before any window is constructed — so
+      every StaticResource below resolves against whichever one was chosen. Everything that
+      differs between light and dark lives in those two files; what stays here is either the
+      accent (the same teal either way, see below) or has no colour to vary in the first place.
+      Changing the setting takes effect on the next launch, not immediately.
     -->
-
-    <!-- ============================== Surfaces ============================== -->
-
-    <!-- The outermost layer: the top strip. Fivebar's document-tab strip. -->
-    <SolidColorBrush x:Key="Chrome"   Color="#141619"/>
-    <SolidColorBrush x:Key="Rail"     Color="#141619"/>
-
-    <!-- The page itself, and the well an input sits in. -->
-    <SolidColorBrush x:Key="Paper"    Color="#1B1D21"/>
-    <SolidColorBrush x:Key="Sunken"   Color="#1B1D21"/>
-
-    <!-- Cards, panels, the status bar, dialogs. -->
-    <SolidColorBrush x:Key="Card"     Color="#25282D"/>
-
-    <!-- One step up: default button fill, row hover, menus. -->
-    <SolidColorBrush x:Key="Raised"   Color="#2E3238"/>
-    <SolidColorBrush x:Key="Hover"    Color="#2E3238"/>
-
-    <!-- Two steps up: pressed or selected rows, notices. -->
-    <SolidColorBrush x:Key="Selected" Color="#363B42"/>
-
-    <!-- Every line in the app is this, one pixel wide. -->
-    <SolidColorBrush x:Key="Hairline" Color="#3A3F46"/>
-
-    <!-- ============================== Text ============================== -->
-
-    <SolidColorBrush x:Key="Ink"   Color="#E6E8EB"/>
-    <SolidColorBrush x:Key="Body"  Color="#C5CAD1"/>
-    <SolidColorBrush x:Key="Muted" Color="#9AA1AB"/>
-    <SolidColorBrush x:Key="Faint" Color="#767D87"/>
 
     <!-- ============================== Accent ============================== -->
 
     <!--
       Teal. Fills, focus borders and selection bars. Text on it is dark, as on Fivebar's
-      orange: white on this teal is only about 2.6:1, dark ink is over 7:1.
+      orange: white on this teal is only about 2.6:1, dark ink is over 7:1. The same in both
+      themes — Fivebar's own orange does not change between its light and dark either; see
+      Theme.Dark.xaml / Theme.Light.xaml for AccentInk, the one accent colour that does.
     -->
     <Color x:Key="AccentColor">#2BB3A3</Color>
     <SolidColorBrush x:Key="Accent"      Color="#2BB3A3"/>
@@ -64,27 +40,11 @@
     <!-- The accent at 16% over whatever is beneath: active toggles, selected rows, tags. -->
     <SolidColorBrush x:Key="AccentSoft"  Color="#292BB3A3"/>
 
-    <!-- The accent as text or a link, a step lighter so it reads on every surface. -->
-    <SolidColorBrush x:Key="AccentInk"   Color="#5ED6C7"/>
-
     <!-- Kept for the places that used to take a gradient; there are no gradients any more. -->
     <SolidColorBrush x:Key="AccentWash"  Color="#2BB3A3"/>
 
-    <!-- ============================== Semantic ============================== -->
-
-    <!-- Recording. Nothing else in the app is this colour. -->
-    <SolidColorBrush x:Key="Record"        Color="#E5484D"/>
-    <SolidColorBrush x:Key="Danger"        Color="#F06A6A"/>
-    <SolidColorBrush x:Key="AssistantGood" Color="#3ECF8E"/>
-    <SolidColorBrush x:Key="Info"          Color="#7FB2FF"/>
-
-    <!-- Caution: a notice on the raised surface with a bar of the warning hue down its left.
-         Only the bar is coloured; the text stays ordinary, as in Fivebar. -->
-    <SolidColorBrush x:Key="CautionBg"     Color="#363B42"/>
-    <SolidColorBrush x:Key="CautionBorder" Color="#E8B04A"/>
-    <SolidColorBrush x:Key="CautionInk"    Color="#C5CAD1"/>
-
-    <!-- The streak heatmap: empty, then the accent mixed over the card at 25, 45, 70 and 100%. -->
+    <!-- The streak heatmap: empty, then the accent mixed over the (dark) card at 25, 45, 70 and
+         100%. Unused today, and not worth inventing a light version of an unbuilt feature. -->
     <SolidColorBrush x:Key="Heat0" Color="#2E3238"/>
     <SolidColorBrush x:Key="Heat1" Color="#264B4A"/>
     <SolidColorBrush x:Key="Heat2" Color="#286662"/>
@@ -97,16 +57,13 @@
       Dictation and the assistant share one pane, so they read as one object in two modes.
       It is Fivebar's floating-overlay recipe — the panel colour, nearly opaque, with a
       one-pixel line and a shadow — rather than glass: nothing else in the family is glass.
+      The panel colour itself (PillGlass) and its line (PillEdge, HudText, HudMeter) are in
+      Theme.Dark.xaml / Theme.Light.xaml; PillSheen is invariant because it is transparent.
 
-      The key names are the old ones so the two windows keep compiling; PillSheen is now clear.
       PillRadius is a CornerRadius and not a Double on purpose: a resource is assigned as-is,
       and a Double here builds fine and throws the moment the window is constructed.
     -->
-    <SolidColorBrush x:Key="PillGlass" Color="#F725282D"/>
-    <SolidColorBrush x:Key="PillEdge"  Color="#3A3F46"/>
     <SolidColorBrush x:Key="PillSheen" Color="Transparent"/>
-    <SolidColorBrush x:Key="HudText"   Color="#E6E8EB"/>
-    <SolidColorBrush x:Key="HudMeter"  Color="#E6E8EB"/>
 
     <CornerRadius x:Key="PillRadius">10</CornerRadius>
     <sys:Double x:Key="PillHeight">50</sys:Double>
@@ -886,10 +843,10 @@
                             <Thumb>
                                 <Thumb.Template>
                                     <ControlTemplate TargetType="Thumb">
-                                        <Border x:Name="T" Background="#4A5058" CornerRadius="4" Margin="2,2"/>
+                                        <Border x:Name="T" Background="{StaticResource ScrollThumb}" CornerRadius="4" Margin="2,2"/>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="T" Property="Background" Value="#5E656F"/>
+                                                <Setter TargetName="T" Property="Background" Value="{StaticResource ScrollThumbHover}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>

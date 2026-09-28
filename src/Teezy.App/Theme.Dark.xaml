@@ -1,0 +1,61 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      The dark palette — TeezyFlow's only look until Settings ▸ Appearance got a Light and a
+      Match Windows option. Merged before Theme.xaml, which is where every one of these keys is
+      actually used; see Appearance.cs for how the two are chosen and combined at startup, and
+      Theme.Light.xaml for the other half of this file.
+
+      Values are exactly what Theme.xaml held before the split — nothing here changed.
+    -->
+
+    <!-- ============================== Surfaces ============================== -->
+
+    <SolidColorBrush x:Key="Chrome"   Color="#141619"/>
+    <SolidColorBrush x:Key="Rail"     Color="#141619"/>
+    <SolidColorBrush x:Key="Paper"    Color="#1B1D21"/>
+    <SolidColorBrush x:Key="Sunken"   Color="#1B1D21"/>
+    <SolidColorBrush x:Key="Card"     Color="#25282D"/>
+    <SolidColorBrush x:Key="Raised"   Color="#2E3238"/>
+    <SolidColorBrush x:Key="Hover"    Color="#2E3238"/>
+    <SolidColorBrush x:Key="Selected" Color="#363B42"/>
+    <SolidColorBrush x:Key="Hairline" Color="#3A3F46"/>
+
+    <!-- ============================== Text ============================== -->
+
+    <SolidColorBrush x:Key="Ink"   Color="#E6E8EB"/>
+    <SolidColorBrush x:Key="Body"  Color="#C5CAD1"/>
+    <SolidColorBrush x:Key="Muted" Color="#9AA1AB"/>
+    <SolidColorBrush x:Key="Faint" Color="#767D87"/>
+
+    <!-- ============================== Accent, on-surface ============================== -->
+
+    <!-- The accent as text or a link, a step lighter so it reads on every surface. -->
+    <SolidColorBrush x:Key="AccentInk" Color="#5ED6C7"/>
+
+    <!-- ============================== Semantic ============================== -->
+
+    <SolidColorBrush x:Key="Record"        Color="#E5484D"/>
+    <SolidColorBrush x:Key="Danger"        Color="#F06A6A"/>
+    <SolidColorBrush x:Key="AssistantGood" Color="#3ECF8E"/>
+    <SolidColorBrush x:Key="Info"          Color="#7FB2FF"/>
+
+    <SolidColorBrush x:Key="CautionBg"     Color="#363B42"/>
+    <SolidColorBrush x:Key="CautionBorder" Color="#E8B04A"/>
+    <SolidColorBrush x:Key="CautionInk"    Color="#C5CAD1"/>
+
+    <!-- ============================== Floating pills ============================== -->
+
+    <SolidColorBrush x:Key="PillGlass" Color="#F725282D"/>
+    <SolidColorBrush x:Key="PillEdge"  Color="#3A3F46"/>
+    <SolidColorBrush x:Key="HudText"   Color="#E6E8EB"/>
+    <SolidColorBrush x:Key="HudMeter"  Color="#E6E8EB"/>
+
+    <!-- ============================== Chrome ============================== -->
+
+    <!-- The slim scrollbar thumb, visible on the dark ground. -->
+    <SolidColorBrush x:Key="ScrollThumb"      Color="#4A5058"/>
+    <SolidColorBrush x:Key="ScrollThumbHover" Color="#5E656F"/>
+
+</ResourceDictionary>

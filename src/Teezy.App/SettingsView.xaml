@@ -659,6 +659,25 @@
                         <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
                                    Text="Shown as the TYPE picker on a quote. Renaming one renames it on every quote that has it; removing one leaves those quotes as they are."/>
 
+                        <TextBlock Text="DEFAULT CURRENCY" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <Border Style="{StaticResource FormRowFirst}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="New quotes are in" Style="{StaticResource FormLabel}"/>
+                                        <TextBlock Style="{StaticResource FormHint}"
+                                                   Text="A quote can be changed to another currency on its own page. Quotes already made keep whatever they were given."/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="DefaultCurrencyPicker" Grid.Column="1" Width="100"
+                                              VerticalAlignment="Center" SelectionChanged="OnDefaultCurrencyChanged"/>
+                                </Grid>
+                            </Border>
+                        </Border>
+
                         <TextBlock Text="MORNING BRIEFING" Style="{StaticResource SectionLabel}" Margin="0,24,0,6"/>
                         <Border Style="{StaticResource FormRows}">
                             <StackPanel>

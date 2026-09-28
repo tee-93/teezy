@@ -276,7 +276,7 @@ public partial class App : Application
 
         _assistant = new AssistantController(
             _session, new WindowsCommandRunner(), _claudeAssistant, _diary, _mail, _narrator, _tasks,
-            _quotes, () => _settings.QuoteCadence);
+            _quotes, () => _settings.QuoteCadence, () => _settings.DefaultCurrency);
 
         _voiceUsage = new VoiceUsage();
 

@@ -48,13 +48,14 @@ public partial class QuotesView
             CustomerBox.Text = quote.Customer;
             NameBox.Text = quote.Name;
             ValueBox.Text = quote.AmountCents is { } cents && cents > 0
-                ? quote.Amount.ToString("0.##", CultureInfo.CurrentCulture)
+                ? FormatValue(quote.Amount, quote.Currency)
                 : string.Empty;
             ReferenceBox.Text = quote.Reference ?? string.Empty;
             ContactBox.Text = quote.Contact ?? string.Empty;
         }
 
         ShowTypePicker(quote);
+        ShowCurrencyPicker(quote);
 
         var isDraft = quote.Status == QuoteStatus.InProgress;
         SentColumn.Visibility = isDraft ? Visibility.Collapsed : Visibility.Visible;
@@ -103,6 +104,30 @@ public partial class QuotesView
         var type = item.Tag as string;
         if (!string.Equals(type, quote.Type, StringComparison.Ordinal)) _store.Update(quote with { Type = type });
     }
+
+    private void ShowCurrencyPicker(Quote quote)
+    {
+        if (CurrencyBox.Items.Count == 0)
+        {
+            foreach (var currency in Currencies.All) CurrencyBox.Items.Add(new ComboBoxItem { Content = currency, Tag = currency });
+        }
+
+        CurrencyBox.SelectedIndex = Math.Max(0, CurrencyBox.Items.Cast<ComboBoxItem>().ToList()
+            .FindIndex(i => string.Equals(i.Tag as string, quote.Currency, StringComparison.Ordinal)));
+    }
+
+    private void OnCurrencyChosen(object sender, SelectionChangedEventArgs e)
+    {
+        if (_filling || Chosen() is not { } quote || CurrencyBox.SelectedItem is not ComboBoxItem { Tag: string currency }) return;
+        if (currency == quote.Currency) return;
+
+        _store.Update(quote with { Currency = currency });
+        ValueBox.Text = quote.AmountCents is { } cents && cents > 0 ? FormatValue(quote.Amount, currency) : string.Empty;
+    }
+
+    /// <summary>"$4,207.35" — the symbol, grouped thousands, and only the decimals actually there.</summary>
+    private static string FormatValue(decimal amount, string currency) =>
+        Currencies.Symbol(currency) + amount.ToString("#,##0.##", CultureInfo.CurrentCulture);
 
     private void ShowChaseState(Quote quote)
     {
@@ -190,7 +215,8 @@ public partial class QuotesView
 
     private void OnFieldCommit(object sender, RoutedEventArgs e) => Commit();
 
-    /// <summary>Writes the panel's boxes back to the quote, if any of them changed.</summary>
+    /// <summary>Writes the panel's boxes back to the quote, if any of them changed — and always
+    /// leaves the value looking like money, whether or not anything did.</summary>
     private void Commit()
     {
         if (_filling || Chosen() is not { } quote) return;
@@ -209,16 +235,18 @@ public partial class QuotesView
             Contact = ContactBox.Text,
         };
 
-        if (edited.Customer == quote.Customer && edited.Name == quote.Name
+        var unchanged = edited.Customer == quote.Customer && edited.Name == quote.Name
             && edited.AmountCents == quote.AmountCents
             && (edited.Reference ?? string.Empty).Trim() == (quote.Reference ?? string.Empty)
-            && (edited.Contact ?? string.Empty).Trim() == (quote.Contact ?? string.Empty))
+            && (edited.Contact ?? string.Empty).Trim() == (quote.Contact ?? string.Empty);
+
+        if (!unchanged)
         {
-            return;
+            _store.Update(edited);
+            Refresh();
         }
 
-        _store.Update(edited);
-        Refresh();
+        ValueBox.Text = cents is { } value && value > 0 ? FormatValue(value / 100m, quote.Currency) : string.Empty;
     }
 
     /// <summary>What a typed value means, in cents: "4200", "$4,200", "4.2k".</summary>
@@ -240,7 +268,7 @@ public partial class QuotesView
 
         _store.Decide(id, status, Today);
         _store.AddNote(id, status == QuoteStatus.Won
-            ? $"Won — {QuotePlan.Money(quote.Amount)}."
+            ? $"Won — {QuotePlan.Money(quote.Amount, quote.Currency)}."
             : "Lost.", TaskNote.App);
 
         _selected = id;
@@ -428,7 +456,8 @@ public partial class QuotesView
     private void OnNewQuote(object sender, RoutedEventArgs e)
     {
         SavePendingNote();
-        var quote = _store.Add(string.Empty, string.Empty, amountCents: null, sent: null, _settings().QuoteCadence);
+        var quote = _store.Add(string.Empty, string.Empty, amountCents: null, sent: null,
+            _settings().QuoteCadence, currency: _settings().DefaultCurrency);
         _selected = quote.Id;
         Refresh();
         CustomerBox.Focus();
@@ -449,7 +478,7 @@ public partial class QuotesView
         var parsed = QuoteInput.Parse(typed, Today);
         AddPreview.Visibility = Visibility.Visible;
         AddPreview.Text = parsed.IsUsable
-            ? $"{parsed.Customer} · {QuotePlan.Money(parsed.AmountCents / 100m)}"
+            ? $"{parsed.Customer} · {QuotePlan.Money(parsed.AmountCents / 100m, _settings().DefaultCurrency)}"
               + (parsed.Name.Length > 0 ? $" · {parsed.Name}" : string.Empty)
               + $" · sent {TasksView.Day(parsed.Sent ?? Today)}  —  Enter to add"
             : parsed.Customer.Length == 0
@@ -481,7 +510,8 @@ public partial class QuotesView
             parsed.AmountCents,
             parsed.Sent ?? Today,
             _settings().QuoteCadence,
-            parsed.Reference);
+            parsed.Reference,
+            currency: _settings().DefaultCurrency);
 
         if (_pendingEmail is { } email)
         {
@@ -602,7 +632,7 @@ public partial class QuotesView
 
         if (confirm != MessageBoxResult.OK) return;
 
-        var (added, updated) = QuoteImport.Apply(_store, plan, Today);
+        var (added, updated) = QuoteImport.Apply(_store, plan, Today, _settings().DefaultCurrency);
         Notice($"Imported {added} new {(added == 1 ? "quote" : "quotes")}"
                + (updated > 0 ? $" and updated {updated}." : "."), null, null);
         Refresh();

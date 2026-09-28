@@ -81,12 +81,17 @@ public partial class QuotesView : UserControl
         var totals = QuotePlan.Totals(quotes, Today);
 
         OpenValue.Text = QuotePlan.Money(totals.Open.Value);
-        OpenCount.Text = totals.Open.Count switch
+        OpenCount.Text = (totals.Open.Count switch
         {
             0 => "Nothing out at the moment",
             1 => "1 quote open",
             _ => $"{totals.Open.Count} quotes open",
-        };
+        }) + (totals.OtherCurrencyOpen switch
+        {
+            0 => string.Empty,
+            1 => " (+1 in another currency)",
+            _ => $" (+{totals.OtherCurrencyOpen} in other currencies)",
+        });
 
         WonValue.Text = QuotePlan.Money(totals.Won.Value);
         WonCount.Text = totals.Won.Count == 1 ? "1 quote" : $"{totals.Won.Count} quotes";
@@ -152,9 +157,11 @@ public partial class QuotesView : UserControl
 
             if (bucket != QuoteBucket.Drafting)
             {
+                // Only the default currency is summed — a subtotal mixing AUD and USD would be
+                // neither, so a quote in another currency counts in its own row, not up here.
                 var value = new TextBlock
                 {
-                    Text = QuotePlan.Money(rows.Sum(q => q.Amount)),
+                    Text = QuotePlan.Money(rows.Where(q => q.Currency == Currencies.Default).Sum(q => q.Amount)),
                     FontSize = 12,
                     Foreground = Brand.Muted,
                     VerticalAlignment = VerticalAlignment.Center,
@@ -217,7 +224,7 @@ public partial class QuotesView : UserControl
 
         var money = new TextBlock
         {
-            Text = quote.AmountCents is { } cents && cents > 0 ? QuotePlan.Money(quote.Amount) : "—",
+            Text = quote.AmountCents is { } cents && cents > 0 ? QuotePlan.Money(quote.Amount, quote.Currency) : "—",
             Foreground = quote.Status == QuoteStatus.Won ? Brand.Brush("AccentInk") : Brand.Ink,
             FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,

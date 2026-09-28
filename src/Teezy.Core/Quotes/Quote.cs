@@ -2,6 +2,39 @@ using Teezy.Core.Tasks;
 
 namespace Teezy.Core.Quotes;
 
+/// <summary>The currencies a quote can be in, and how each is written.</summary>
+/// <remarks>
+/// A short, fixed list rather than something typed freely or added to in Settings, the way a
+/// quote type is: there is no meaningful "new currency" the way there is a new type of job, and
+/// a typo here would silently mean the wrong money. AUD, USD and NZD all use the same symbol, so
+/// anything not the default currency is written with its code too, or the amount would read as
+/// the wrong money at a glance.
+/// </remarks>
+public static class Currencies
+{
+    public const string Default = "AUD";
+
+    public static readonly IReadOnlyList<string> All = ["AUD", "USD", "EUR", "NZD"];
+
+    /// <summary>The symbol for a currency, or its own code if it has none worth using.</summary>
+    public static string Symbol(string currency) => currency switch
+    {
+        "EUR" => "€",
+        "AUD" or "USD" or "NZD" => "$",
+        _ => currency,
+    };
+
+    /// <summary>
+    /// One of <see cref="All"/>, however it was cased or spaced — <c>null</c> and anything not
+    /// recognised become <see cref="Default"/> rather than an invalid currency travelling on.
+    /// </summary>
+    public static string Clean(string? currency)
+    {
+        var typed = (currency ?? string.Empty).Trim().ToUpperInvariant();
+        return All.FirstOrDefault(c => c == typed) ?? Default;
+    }
+}
+
 /// <summary>Where a quote stands.</summary>
 /// <remarks>
 /// The numbers matter: they are what gets written to disk, and quotes.json already has real
@@ -68,6 +101,11 @@ public enum QuoteBucket
 /// <param name="ChaseTaskId">The task doing the chasing now, so the two stay in step.</param>
 /// <param name="Modified">When it last changed, anywhere. The newer copy wins when computers disagree.</param>
 /// <param name="Deleted">Deleted, kept as a marker so the deletion reaches the other computers.</param>
+/// <param name="Currency">
+/// One of <see cref="Currencies.All"/>. Stamped from Settings ▸ Tasks when the quote is made, like
+/// <see cref="Cadence"/>, so changing the default later leaves quotes already made in whatever
+/// they were quoted in.
+/// </param>
 public sealed record Quote(
     string Id,
     string Name,
@@ -84,6 +122,7 @@ public sealed record Quote(
     IReadOnlyList<TaskNote> Notes,
     DateTimeOffset Modified,
     string? Type = null,
+    string Currency = Currencies.Default,
     IReadOnlyList<TaskEmail>? Emails = null,
     string? ChaseTaskId = null,
     bool Deleted = false)
@@ -114,7 +153,8 @@ public sealed record Quote(
         IReadOnlyList<int>? cadence = null,
         string? reference = null,
         string? contact = null,
-        string? type = null) =>
+        string? type = null,
+        string? currency = null) =>
         new(Guid.NewGuid().ToString("N"),
             name.Trim(),
             customer.Trim(),
@@ -129,7 +169,8 @@ public sealed record Quote(
             Clean(contact),
             Notes: [],
             Modified: now,
-            Type: Clean(type));
+            Type: Clean(type),
+            Currency: Currencies.Clean(currency));
 
     internal static string? Clean(string? text) =>
         string.IsNullOrWhiteSpace(text) ? null : text.Trim();
@@ -137,16 +178,22 @@ public sealed record Quote(
 
 /// <summary>How much is out, what is due a chase, and what was won.</summary>
 /// <param name="Drafting">How many quotes are still being put together, not sent yet.</param>
-/// <param name="Open">How many quotes are out and awaiting an answer, and what they are worth.</param>
-/// <param name="Won">Won this month, and for how much.</param>
-/// <param name="Lost">Lost this month.</param>
+/// <param name="Open">
+/// Open quotes in the default currency, and what they are worth. A quote in another currency is
+/// still on the page in its own right money — it is left out here rather than added to a total
+/// that would then be no single real currency.
+/// </param>
+/// <param name="Won">Won this month, and for how much — default currency, for the same reason.</param>
+/// <param name="Lost">Lost this month, default currency.</param>
 /// <param name="WinRate">Won over decided this month, 0 to 1; null when nothing was decided.</param>
+/// <param name="OtherCurrencyOpen">Open quotes in another currency, not counted in <see cref="Open"/>.</param>
 public sealed record QuoteTotals(
     int Drafting,
     (int Count, decimal Value) Open,
     (int Count, decimal Value) Won,
     (int Count, decimal Value) Lost,
-    double? WinRate);
+    double? WinRate,
+    int OtherCurrencyOpen = 0);
 
 /// <summary>When to chase, what has gone quiet, and how the month is going.</summary>
 /// <remarks>
@@ -231,20 +278,24 @@ public static class QuotePlan
         var all = quotes.Where(q => !q.Deleted).ToList();
         var drafting = all.Count(q => q.Status == QuoteStatus.InProgress);
         var open = all.Where(q => q.Status == QuoteStatus.Quoted).ToList();
+        var openHome = open.Where(q => q.Currency == Currencies.Default).ToList();
 
         bool ThisMonth(Quote q) =>
             q.Decided is { } decided && decided.Year == today.Year && decided.Month == today.Month;
 
-        var won = all.Where(q => q.Status == QuoteStatus.Won && ThisMonth(q)).ToList();
-        var lost = all.Where(q => q.Status == QuoteStatus.Lost && ThisMonth(q)).ToList();
+        // Count and value stay in step here — a "3 quotes, $2,000" tile whose $2,000 only
+        // covered two of the three would read as one figure describing all of them.
+        var won = all.Where(q => q.Status == QuoteStatus.Won && ThisMonth(q) && q.Currency == Currencies.Default).ToList();
+        var lost = all.Where(q => q.Status == QuoteStatus.Lost && ThisMonth(q) && q.Currency == Currencies.Default).ToList();
         var decided = won.Count + lost.Count;
 
         return new QuoteTotals(
             drafting,
-            (open.Count, open.Sum(q => q.Amount)),
+            (openHome.Count, openHome.Sum(q => q.Amount)),
             (won.Count, won.Sum(q => q.Amount)),
             (lost.Count, lost.Sum(q => q.Amount)),
-            decided == 0 ? null : (double)won.Count / decided);
+            decided == 0 ? null : (double)won.Count / decided,
+            OtherCurrencyOpen: open.Count - openHome.Count);
     }
 
     /// <summary>What the chase task for a quote is called.</summary>
@@ -253,7 +304,13 @@ public static class QuotePlan
             ? $"Chase {quote.Customer} — {quote.Name}"
             : $"Chase {quote.Customer} again — {quote.Name}";
 
-    /// <summary>"$4,207" — whole dollars, which is how a quote is spoken about.</summary>
-    public static string Money(decimal amount) =>
-        amount.ToString("C0", System.Globalization.CultureInfo.CurrentCulture);
+    /// <summary>
+    /// "$4,207" for the default currency, "$4,207 USD" for any other — AUD, USD and NZD share a
+    /// symbol, so anything not the default is named as well or it would read as the wrong money.
+    /// </summary>
+    public static string Money(decimal amount, string currency = Currencies.Default)
+    {
+        var formatted = Currencies.Symbol(currency) + amount.ToString("N0", System.Globalization.CultureInfo.CurrentCulture);
+        return currency == Currencies.Default ? formatted : $"{formatted} {currency}";
+    }
 }

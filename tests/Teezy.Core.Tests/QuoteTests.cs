@@ -140,4 +140,44 @@ public class QuotePlanTests
         totals.Drafting.ShouldBe(1);
         totals.Open.ShouldBe((1, 4200m));
     }
+
+    // ---- currency ----
+
+    [Fact]
+    public void MoneyNamesAnyCurrencyThatIsNotTheDefault()
+    {
+        QuotePlan.Money(4200m, "AUD").ShouldBe("$4,200");
+        QuotePlan.Money(4200m, "USD").ShouldBe("$4,200 USD");
+        QuotePlan.Money(4200m, "EUR").ShouldBe("€4,200 EUR");
+        QuotePlan.Money(4200m).ShouldBe("$4,200");
+    }
+
+    [Fact]
+    public void AQuoteInAnotherCurrencyIsCountedApartFromTheDefaultCurrencyTotal()
+    {
+        var home = Sent(daysAgo: 4, cents: 420_000);
+        var foreign = Sent(daysAgo: 4, cents: 900_000) with { Currency = "USD" };
+
+        var totals = QuotePlan.Totals([home, foreign], Today);
+
+        totals.Open.ShouldBe((1, 4200m));
+        totals.OtherCurrencyOpen.ShouldBe(1);
+    }
+
+    [Fact]
+    public void WonAndLostStayInTheDefaultCurrencySoACountAndItsDollarFigureAlwaysAgree()
+    {
+        var wonHome = Sent(daysAgo: 30, cents: 420_000) with { Status = QuoteStatus.Won, Decided = Today };
+        var wonForeign = Sent(daysAgo: 30, cents: 900_000) with { Status = QuoteStatus.Won, Decided = Today, Currency = "USD" };
+        var lostHome = Sent(daysAgo: 30, cents: 250_000) with { Status = QuoteStatus.Lost, Decided = Today };
+
+        var totals = QuotePlan.Totals([wonHome, wonForeign, lostHome], Today);
+
+        // The foreign win is left out of both the count and the total, never just one of them —
+        // a "2 won, $2,000" tile whose figure only covered one of the two would be worse than
+        // reporting fewer, but matching, numbers.
+        totals.Won.ShouldBe((1, 4200m));
+        totals.Lost.ShouldBe((1, 2500m));
+        totals.WinRate.ShouldBe(0.5);
+    }
 }

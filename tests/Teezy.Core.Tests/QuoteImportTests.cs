@@ -198,4 +198,23 @@ public sealed class QuoteImportTests : IDisposable
         plan.Quotes.ShouldHaveSingleItem();
         plan.Skipped.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void ACurrencyColumnIsReadAndAppliedWithTheStatedDefaultOtherwise()
+    {
+        var store = Store();
+        const string file = """
+            Client,Description,Value,Currency
+            Hunter Builders,Door hardware,4200,USD
+            Orikan,Readers,900,
+            """;
+
+        var plan = QuoteImport.Read(file, Today);
+        plan.Columns["Currency"].ShouldBe("Currency");
+
+        QuoteImport.Apply(store, plan, Today, defaultCurrency: "NZD");
+
+        store.Visible.Single(q => q.Customer == "Hunter Builders").Currency.ShouldBe("USD");
+        store.Visible.Single(q => q.Customer == "Orikan").Currency.ShouldBe("NZD");
+    }
 }

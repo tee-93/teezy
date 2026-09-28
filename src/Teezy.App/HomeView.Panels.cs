@@ -300,7 +300,7 @@ public partial class HomeView
 
         var money = new TextBlock
         {
-            Text = Teezy.Core.Quotes.QuotePlan.Money(quote.Amount),
+            Text = Teezy.Core.Quotes.QuotePlan.Money(quote.Amount, quote.Currency),
             FontSize = 12,
             Foreground = late ? Brand.Brush("CautionBorder") : Brand.Muted,
             Margin = new Thickness(12, 0, 0, 0),

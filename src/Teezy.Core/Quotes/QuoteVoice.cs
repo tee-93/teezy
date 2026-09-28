@@ -59,8 +59,8 @@ public static partial class QuoteVoice
     /// <summary>What TeezyFlow says back when one has been recorded.</summary>
     public static string Spoken(Quote quote, DateOnly today) =>
         QuotePlan.NextChase(quote) is { } next
-            ? $"{QuotePlan.Money(quote.Amount)} to {quote.Customer}, {Chase(next, today)}."
-            : $"{QuotePlan.Money(quote.Amount)} to {quote.Customer}.";
+            ? $"{QuotePlan.Money(quote.Amount, quote.Currency)} to {quote.Customer}, {Chase(next, today)}."
+            : $"{QuotePlan.Money(quote.Amount, quote.Currency)} to {quote.Customer}.";
 
     private static string Chase(DateOnly next, DateOnly today) => (next.DayNumber - today.DayNumber) switch
     {

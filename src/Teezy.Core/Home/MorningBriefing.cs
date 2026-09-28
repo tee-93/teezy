@@ -102,9 +102,9 @@ public static class MorningBriefing
         {
             sections.Add(new BriefingSection("Quotes", [
                 .. chase.Select(q => new BriefingItem(
-                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · chase", Late: true)),
+                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount, q.Currency)} · chase", Late: true)),
                 .. quiet.Select(q => new BriefingItem(
-                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount)} · quiet {today.DayNumber - q.LastMoved!.Value.DayNumber} days")),
+                    Quote(q), $"{Quotes.QuotePlan.Money(q.Amount, q.Currency)} · quiet {today.DayNumber - q.LastMoved!.Value.DayNumber} days")),
             ]));
         }
 
@@ -188,13 +188,13 @@ public static class MorningBriefing
         if (s.AllQuotes.Any(q => q.Status == Quotes.QuoteStatus.Quoted))
         {
             text.AppendLine();
-            text.AppendLine("Open quotes (the user's own words, values in dollars):");
+            text.AppendLine("Open quotes (the user's own words, values in their own currency):");
             foreach (var quote in s.AllQuotes.Where(q => q.Status == Quotes.QuoteStatus.Quoted)
                          .OrderBy(q => Quotes.QuotePlan.NextChase(q) ?? q.Sent).Take(20))
             {
                 text.Append("- ").Append(quote.Customer);
                 if (quote.Name.Length > 0) text.Append(" | ").Append(quote.Name);
-                text.Append(" | ").Append(Quotes.QuotePlan.Money(quote.Amount));
+                text.Append(" | ").Append(Quotes.QuotePlan.Money(quote.Amount, quote.Currency));
                 text.Append(" | sent ").Append(quote.Sent!.Value.ToString("d MMMM", Display));
                 if (Quotes.QuotePlan.NextChase(quote) is { } next)
                 {

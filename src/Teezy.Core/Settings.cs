@@ -316,6 +316,12 @@ public sealed record TeezySettings
     /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
     public IReadOnlyList<string> QuoteTypes { get; init; } = [];
 
+    /// <summary>
+    /// The currency a new quote is stamped with, e.g. "AUD". Changing it does not touch quotes
+    /// already made, exactly like <see cref="QuoteCadence"/> — each one keeps what it was given.
+    /// </summary>
+    public string DefaultCurrency { get; init; } = Quotes.Currencies.Default;
+
     /// <summary>The name on notes written here. Null uses the first part of the Windows account name.</summary>
     public string? TaskAuthor { get; init; }
 

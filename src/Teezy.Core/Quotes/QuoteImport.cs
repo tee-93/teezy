@@ -12,7 +12,8 @@ public sealed record ImportedQuote(
     string? Contact,
     string? Type,
     QuoteStatus Status,
-    DateOnly? Decided);
+    DateOnly? Decided,
+    string? Currency = null);
 
 /// <summary>What a file turned out to contain, before anything is changed.</summary>
 /// <param name="Quotes">The lines that read as quotes.</param>
@@ -60,6 +61,8 @@ public static class QuoteImport
 
     private static readonly string[] TypeNames = ["type", "quote type", "category"];
 
+    private static readonly string[] CurrencyNames = ["currency", "curr", "ccy"];
+
     private static readonly string[] StatusNames = ["status", "outcome", "stage", "result", "state"];
 
     private static readonly string[] DecidedNames = ["decided", "closed", "won date", "outcome date"];
@@ -92,6 +95,7 @@ public static class QuoteImport
         var reference = Column(headings, ReferenceNames, except: amount);
         var contact = Column(headings, ContactNames);
         var type = Column(headings, TypeNames);
+        var currency = Column(headings, CurrencyNames);
         var status = Column(headings, StatusNames);
         var decided = Column(headings, DecidedNames);
 
@@ -108,6 +112,7 @@ public static class QuoteImport
         Note("Reference", reference);
         Note("Contact", contact);
         Note("Type", type);
+        Note("Currency", currency);
         Note("Status", status);
 
         var quotes = new List<ImportedQuote>();
@@ -140,7 +145,8 @@ public static class QuoteImport
                 Text(row, contact),
                 Text(row, type),
                 Outcome(Value(row, status)),
-                Day(Value(row, decided), today)));
+                Day(Value(row, decided), today),
+                Text(row, currency)));
         }
 
         return new ImportPlan(quotes, skipped, columns);
@@ -149,8 +155,13 @@ public static class QuoteImport
     /// <summary>
     /// Puts a read file into the store: new quotes added, ones already there brought up to date.
     /// </summary>
+    /// <param name="defaultCurrency">
+    /// Stamped on a new quote whose row named none — usually Settings' own default, not
+    /// <see cref="Currencies.Default"/>, since that is only a fallback for when even that is unknown.
+    /// </param>
     /// <returns>How many were added and how many updated.</returns>
-    public static (int Added, int Updated) Apply(QuoteStore store, ImportPlan plan, DateOnly today)
+    public static (int Added, int Updated) Apply(
+        QuoteStore store, ImportPlan plan, DateOnly today, string? defaultCurrency = null)
     {
         var existing = store.Visible;
         int added = 0, updated = 0;
@@ -163,7 +174,8 @@ public static class QuoteImport
             {
                 // A line in a CRM export is always a quote that has already gone out.
                 var quote = store.Add(row.Customer, row.Name, row.AmountCents, row.Sent,
-                    reference: row.Reference, contact: row.Contact, type: row.Type);
+                    reference: row.Reference, contact: row.Contact, type: row.Type,
+                    currency: row.Currency ?? defaultCurrency);
 
                 if (row.Status != QuoteStatus.Quoted)
                 {
@@ -183,6 +195,7 @@ public static class QuoteImport
                 Reference = row.Reference ?? match.Reference,
                 Contact = row.Contact ?? match.Contact,
                 Type = row.Type ?? match.Type,
+                Currency = row.Currency ?? match.Currency,
                 Status = row.Status,
                 Decided = row.Status == QuoteStatus.Quoted ? null : row.Decided ?? match.Decided ?? today,
             };
@@ -211,7 +224,7 @@ public static class QuoteImport
         edited.Customer == was.Customer && edited.Name == was.Name
         && edited.AmountCents == was.AmountCents && edited.Sent == was.Sent
         && edited.Reference == was.Reference && edited.Contact == was.Contact
-        && edited.Type == was.Type
+        && edited.Type == was.Type && edited.Currency == was.Currency
         && edited.Status == was.Status && edited.Decided == was.Decided;
 
     /// <summary>The column whose heading means this, or -1.</summary>
@@ -289,8 +302,8 @@ public static class QuoteImport
 
     /// <summary>A blank CSV a CRM export can be shaped to fit, with one worked example.</summary>
     public static string Template() =>
-        "Customer,Name,Type,Value,Sent,Reference,Contact,Status\r\n"
-        + "Hunter Builders,Door hardware,Supply & Install,4200,15/08/2026,Q-1042,Priya Nair,Open\r\n";
+        "Customer,Name,Type,Value,Currency,Sent,Reference,Contact,Status\r\n"
+        + "Hunter Builders,Door hardware,Supply & Install,4200,AUD,15/08/2026,Q-1042,Priya Nair,Open\r\n";
 }
 
 /// <summary>A comma-separated file, read the way the standard says.</summary>

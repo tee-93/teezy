@@ -75,9 +75,10 @@ public sealed class QuoteStore
         IReadOnlyList<int>? cadence = null,
         string? reference = null,
         string? contact = null,
-        string? type = null)
+        string? type = null,
+        string? currency = null)
     {
-        var quote = Quote.New(customer, name, amountCents, sent, _now(), cadence, reference, contact, type);
+        var quote = Quote.New(customer, name, amountCents, sent, _now(), cadence, reference, contact, type, currency);
         Change(list => list.Add(quote));
         return quote;
     }
@@ -92,6 +93,7 @@ public sealed class QuoteStore
             Reference = Quote.Clean(edited.Reference),
             Contact = Quote.Clean(edited.Contact),
             Type = Quote.Clean(edited.Type),
+            Currency = Currencies.Clean(edited.Currency),
             Modified = _now(),
         };
 

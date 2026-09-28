@@ -54,6 +54,7 @@ public sealed class AssistantController
     private readonly Tasks.TaskStore? _tasks;
     private readonly Quotes.QuoteStore? _quotes;
     private readonly Func<IReadOnlyList<int>>? _cadence;
+    private readonly Func<string?>? _currency;
     private readonly Func<DateTimeOffset> _now;
 
     /// <summary>Raised when a command has been dealt with, however it turned out.</summary>
@@ -73,6 +74,7 @@ public sealed class AssistantController
     /// <param name="tasks">Null means task questions and commands are not claimed.</param>
     /// <param name="quotes">Null means a quote said out loud is not claimed.</param>
     /// <param name="cadence">The chasing days a spoken quote is given; null uses the default.</param>
+    /// <param name="currency">The currency a spoken quote is given; null uses the default.</param>
     /// <param name="now">Overridable so the phrasing can be tested at a fixed hour.</param>
     public AssistantController(
         VoiceSession session,
@@ -84,6 +86,7 @@ public sealed class AssistantController
         Tasks.TaskStore? tasks = null,
         Quotes.QuoteStore? quotes = null,
         Func<IReadOnlyList<int>>? cadence = null,
+        Func<string?>? currency = null,
         Func<DateTimeOffset>? now = null)
     {
         _runner = runner;
@@ -94,6 +97,7 @@ public sealed class AssistantController
         _tasks = tasks;
         _quotes = quotes;
         _cadence = cadence;
+        _currency = currency;
         _now = now ?? (() => DateTimeOffset.Now);
         session.Handle(HotkeyAction.Assistant, OnSpoken);
     }
@@ -318,7 +322,7 @@ public sealed class AssistantController
     {
         var today = DateOnly.FromDateTime(_now().LocalDateTime);
         var quote = _quotes!.Add(said.Customer, said.Name, said.AmountCents, said.Sent ?? today,
-            _cadence?.Invoke(), said.Reference);
+            _cadence?.Invoke(), said.Reference, currency: _currency?.Invoke());
 
         Finished?.Invoke(new AssistantOutcome(
             heard, command, $"Quoted {Quotes.QuoteVoice.Spoken(quote, today)}", AssistantResult.Did));

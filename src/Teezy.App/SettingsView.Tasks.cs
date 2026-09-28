@@ -77,6 +77,7 @@ public partial class SettingsView
         for (var i = 0; i < types.Count; i++) QuoteTypeRows.Children.Add(QuoteTypeRow(types, i));
         QuoteTypeAddRow.Style = (Style)FindResource(types.Count == 0 ? "FormRowFirst" : "FormRow");
 
+        ShowDefaultCurrency(settings);
         ShowBriefingSettings(settings);
 
         if (!AuthorBox.IsKeyboardFocused) AuthorBox.Text = settings.TaskAuthor ?? string.Empty;
@@ -387,6 +388,30 @@ public partial class SettingsView
     {
         if (_cadenceFilling || CadencePicker.SelectedItem is not ComboBoxItem { Tag: int[] days }) return;
         _write(_read() with { QuoteCadence = days });
+    }
+
+    private bool _currencyFilling;
+
+    private void ShowDefaultCurrency(TeezySettings settings)
+    {
+        _currencyFilling = true;
+
+        if (DefaultCurrencyPicker.Items.Count == 0)
+        {
+            foreach (var currency in Currencies.All) DefaultCurrencyPicker.Items.Add(new ComboBoxItem { Content = currency, Tag = currency });
+        }
+
+        DefaultCurrencyPicker.SelectedItem = DefaultCurrencyPicker.Items.Cast<ComboBoxItem>()
+            .FirstOrDefault(i => string.Equals(i.Tag as string, settings.DefaultCurrency, StringComparison.Ordinal))
+            ?? DefaultCurrencyPicker.Items.Cast<ComboBoxItem>().First(i => string.Equals(i.Tag as string, Currencies.Default, StringComparison.Ordinal));
+
+        _currencyFilling = false;
+    }
+
+    private void OnDefaultCurrencyChanged(object sender, RoutedEventArgs e)
+    {
+        if (_currencyFilling || DefaultCurrencyPicker.SelectedItem is not ComboBoxItem { Tag: string currency }) return;
+        _write(_read() with { DefaultCurrency = currency });
     }
 
     private void ShowBriefingSettings(TeezySettings settings)

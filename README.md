@@ -248,6 +248,14 @@ whatever fits your business), a customer and a contact — nothing is chased unt
 a TASKS section on the quote lists proposal work, meetings to book, or reminders you add there
 directly, alongside the chase task once one is booked, each with a tick to close it.
 
+**Currency** defaults to Settings ▸ Tasks ▸ Default currency (AUD, USD, EUR or NZD), changeable
+per quote next to its Value — AUD, USD and NZD all use a $ sign, so anything not the default is
+named as well, both in the picker and wherever the amount is shown. A total made up of quotes in
+more than one currency would not be real money in any of them, so the figures at the top of the
+page and Home's tiles count only the default currency; a quote in another one still shows its
+own correct amount in the list, just not folded into those totals — the hint under OUT THERE
+says how many are left out.
+
 **A quote is the job; a chase is a task.** Once sent, it books its first chase in your ordinary
 task list, in the Quotes category, due on the day with a reminder. Tick that task off and the
 quote counts one more chase and books the next. Mark the quote won or lost and the chasing

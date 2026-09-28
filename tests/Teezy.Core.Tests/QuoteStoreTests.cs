@@ -322,6 +322,29 @@ public sealed class QuoteStoreTests : IDisposable
         quotes.DeleteAll().ShouldBe(0);
     }
 
+    // ---- currency ----
+
+    [Fact]
+    public void AQuoteWithNoCurrencyStatedDefaultsToAud()
+    {
+        var quote = Quotes().Add("Hunter Builders", "door hardware", 420_000, Today);
+        quote.Currency.ShouldBe("AUD");
+    }
+
+    [Fact]
+    public void AStatedCurrencyIsKeptHoweverItWasCased()
+    {
+        var quote = Quotes().Add("Orikan", "readers", 900_000, Today, currency: "usd");
+        quote.Currency.ShouldBe("USD");
+    }
+
+    [Fact]
+    public void AnUnrecognisedCurrencyFallsBackToTheDefaultRatherThanTravellingOnBroken()
+    {
+        var quote = Quotes().Add("Orikan", "readers", 900_000, Today, currency: "made up");
+        quote.Currency.ShouldBe("AUD");
+    }
+
     // ---- reading what is already on disk ----
 
     [Fact]

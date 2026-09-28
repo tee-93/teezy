@@ -157,7 +157,15 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="VALUE" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="VALUE" Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="CurrencyBox" Grid.Column="1" Width="62" FontSize="11"
+                                          SelectionChanged="OnCurrencyChosen" ToolTip="AUD, USD, EUR and NZD share a $ sign, so anything not the default is named too."/>
+                            </Grid>
                             <TextBox x:Name="ValueBox" Style="{StaticResource Field}"
                                      LostKeyboardFocus="OnFieldCommit" KeyDown="OnFieldKey"/>
                         </StackPanel>

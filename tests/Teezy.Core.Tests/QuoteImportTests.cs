@@ -147,6 +147,34 @@ public sealed class QuoteImportTests : IDisposable
     }
 
     [Fact]
+    public void AColumnLiterallyCalledNameIsReadAsTheQuotesNameNotSwallowedByCustomer()
+    {
+        // The exact shape the CSV template downloads: Customer and Name are two different
+        // columns, and "name" being one of the words a customer column can be called too must
+        // not stop it also being found for the quote's own name here.
+        const string file = """
+            Customer,Name,Type,Value,Sent,Reference,Contact,Status
+            Hunter Builders,Door hardware,Supply & Install,4200,15/08/2026,Q-1042,Priya Nair,Open
+            """;
+
+        var quote = QuoteImport.Read(file, Today).Quotes.ShouldHaveSingleItem();
+
+        quote.Customer.ShouldBe("Hunter Builders");
+        quote.Name.ShouldBe("Door hardware");
+    }
+
+    [Fact]
+    public void AFileWithOnlyOneNameColumnReadsItAsTheCustomer()
+    {
+        // No separate customer column: "Name" must still mean the customer, as it always has,
+        // rather than the quote ending up with an empty customer.
+        var quote = QuoteImport.Read("Name,Value\nHunter Builders,4200", Today).Quotes.ShouldHaveSingleItem();
+
+        quote.Customer.ShouldBe("Hunter Builders");
+        quote.Name.ShouldBe(string.Empty);
+    }
+
+    [Fact]
     public void AQuoteTypeColumnIsReadAndCarriedIn()
     {
         var store = Store();

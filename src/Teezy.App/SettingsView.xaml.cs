@@ -1718,6 +1718,31 @@ public partial class SettingsView : UserControl
         }
     }
 
+    /// <summary>
+    /// Armed on the first click, like a quote's own Delete button — this one deletes far more
+    /// at once, so it asks the same way twice rather than once with more words.
+    /// </summary>
+    private void OnDeleteAllQuotes(object sender, RoutedEventArgs e)
+    {
+        if (DeleteAllQuotesButton.Tag as string != "armed")
+        {
+            DeleteAllQuotesButton.Tag = "armed";
+            DeleteAllQuotesButton.Content = "Delete them — press again";
+            return;
+        }
+
+        DeleteAllQuotesButton.Tag = null;
+        DeleteAllQuotesButton.Content = "Delete all quotes";
+
+        var deleted = _quoteStore?.DeleteAll() ?? 0;
+        DeleteAllQuotesHint.Text = deleted switch
+        {
+            0 => "There was nothing to delete.",
+            1 => "Deleted 1 quote.",
+            _ => $"Deleted {deleted} quotes.",
+        };
+    }
+
     private static string Describe(MachineCheckResult result)
     {
         var timings = string.Join("  ·  ",

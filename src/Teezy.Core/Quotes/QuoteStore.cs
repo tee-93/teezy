@@ -176,6 +176,31 @@ public sealed class QuoteStore
         if (Find(id) is { } quote) Update(quote with { Deleted = true });
     }
 
+    /// <summary>
+    /// Deletes every quote, in one write — for starting over while working out an import rather
+    /// than for ordinary use. Tombstoned exactly like a single delete, so the deletions reach
+    /// every other computer too, and the chase tasks they leave behind close themselves the next
+    /// time <see cref="QuoteChasing.Follow"/> runs.
+    /// </summary>
+    /// <returns>How many were deleted.</returns>
+    public int DeleteAll()
+    {
+        var now = _now();
+        var deleted = 0;
+
+        Change(list =>
+        {
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i].Deleted) continue;
+                list[i] = list[i] with { Deleted = true, Modified = now };
+                deleted++;
+            }
+        });
+
+        return deleted;
+    }
+
     /// <summary>Folds another computer's quotes into this one: the newer copy of each wins.</summary>
     /// <returns>Whether anything here changed.</returns>
     public bool Merge(IEnumerable<Quote> incoming)

@@ -1465,6 +1465,24 @@
                                 </Border>
                             </StackPanel>
                         </Border>
+
+                        <!-- Not for ordinary use: starting over while an import is being worked out. -->
+                        <TextBlock Text="DATA" Style="{StaticResource SectionLabel}" Margin="0,24,0,6"/>
+                        <Border Style="{StaticResource CautionPanel}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Text="Delete all quotes" Foreground="{StaticResource CautionInk}" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="DeleteAllQuotesHint" Style="{StaticResource FormHint}"
+                                               Text="For starting over while an import is being worked out. Every quote is deleted, on every computer this syncs to; their chase tasks close on their own. Nothing about ordinary tasks is touched."/>
+                                </StackPanel>
+                                <Button x:Name="DeleteAllQuotesButton" Grid.Column="1" Content="Delete all quotes"
+                                        Style="{StaticResource Quiet}" VerticalAlignment="Center" Click="OnDeleteAllQuotes"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
                     <!-- ============================== Appearance ============================== -->

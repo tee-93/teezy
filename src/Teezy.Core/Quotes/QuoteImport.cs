@@ -45,7 +45,7 @@ public static class QuoteImport
         ["customer", "client", "company", "account", "organisation", "organization", "name", "to"];
 
     private static readonly string[] WhatNames =
-        ["description", "what", "job", "subject", "title", "details", "work", "project", "for"];
+        ["description", "what", "name", "job", "subject", "title", "details", "work", "project", "for"];
 
     private static readonly string[] AmountNames =
         ["amount", "value", "total", "price", "quoted", "quote value", "ex gst", "excl gst", "net"];
@@ -84,7 +84,10 @@ public static class QuoteImport
                 new Dictionary<string, string>());
         }
 
-        var name = Column(headings, WhatNames);
+        // "Name" means the quote's own name, e.g. the CSV template's own heading — except when
+        // the file has no separate customer column and only "Name" answers both, which the
+        // customer check above already claimed it for.
+        var name = Column(headings, WhatNames, except: customer);
         var sent = Column(headings, SentNames);
         var reference = Column(headings, ReferenceNames, except: amount);
         var contact = Column(headings, ContactNames);

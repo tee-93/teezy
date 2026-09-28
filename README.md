@@ -269,7 +269,9 @@ Four ways to add one already sent, because quotes are sent from four different s
   downloads a blank one shaped the way TeezyFlow reads it, ready to fill in. Columns are matched
   by what they mean, and it says which column it read each field from before importing anything.
   Re-importing the same file updates rather than duplicates, matching on your quote reference, so
-  a fresh export brings the outcomes with it.
+  a fresh export brings the outcomes with it. **Settings ▸ Advanced ▸ Delete all quotes** clears
+  every quote in one go — not for ordinary use, but useful while working out what shape a real
+  export needs to be re-imported in.
 
 **Chasing** is 3 days, a week, then a fortnight by default, then monthly — changeable in
 Settings ▸ Tasks. A quote entered late is chased today rather than on a day already gone.

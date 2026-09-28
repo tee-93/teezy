@@ -291,6 +291,37 @@ public sealed class QuoteStoreTests : IDisposable
         quotes.Find(c.Id)!.Type.ShouldBe("Service");
     }
 
+    [Fact]
+    public void DeletingAllQuotesTombstonesEveryOneAndClosesTheirChases()
+    {
+        var quotes = Quotes();
+        var tasks = Tasks();
+        var chasing = new QuoteChasing(quotes, tasks, () => _now);
+
+        quotes.Add("Hunter Builders", "door hardware", 420_000, Today);
+        quotes.Add("Orikan", "readers", 900_000, Today);
+        chasing.Follow();
+
+        quotes.DeleteAll().ShouldBe(2);
+
+        quotes.Visible.ShouldBeEmpty();
+        quotes.All.Count.ShouldBe(2);
+        quotes.All.ShouldAllBe(q => q.Deleted);
+
+        chasing.Follow();
+        tasks.Visible.ShouldAllBe(t => !t.IsOpen);
+    }
+
+    [Fact]
+    public void DeletingAllQuotesTwiceLeavesTheSecondCallWithNothingToDo()
+    {
+        var quotes = Quotes();
+        quotes.Add("Hunter Builders", "door hardware", 420_000, Today);
+
+        quotes.DeleteAll().ShouldBe(1);
+        quotes.DeleteAll().ShouldBe(0);
+    }
+
     // ---- reading what is already on disk ----
 
     [Fact]

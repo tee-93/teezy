@@ -88,10 +88,11 @@ public sealed class TaskStore
     }
 
     /// <param name="by">Who wrote it; see <see cref="TaskNote.By"/>.</param>
-    public void AddNote(string id, string text, string? by = null)
+    /// <param name="at">When it happened, if not now — for something logged after the fact.</param>
+    public void AddNote(string id, string text, string? by = null, DateTimeOffset? at = null)
     {
         if (string.IsNullOrWhiteSpace(text) || Find(id) is not { } task) return;
-        Update(task with { Notes = [.. task.Notes, new TaskNote(_now(), text.Trim(), by)] });
+        Update(task with { Notes = TaskNote.Insert(task.Notes, new TaskNote(at ?? _now(), text.Trim(), by)) });
     }
 
     /// <summary>Puts a task on the focus list, or takes it off.</summary>

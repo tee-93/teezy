@@ -128,6 +128,7 @@ public partial class TasksView
         if (changed)
         {
             NoteBox.Clear();
+            ResetBackdate();
             SteerBox.Clear();
             PasteEmailBox.Clear();
             PasteEmailPanel.Visibility = Visibility.Collapsed;
@@ -300,8 +301,9 @@ public partial class TasksView
         OnAdviceEdited(this, null!);
         if (NoteBox.Text.Trim().Length == 0) return;
 
-        _store.AddNote(id, NoteBox.Text, _settings().NoteAuthor);
+        _store.AddNote(id, NoteBox.Text, _settings().NoteAuthor, PendingNoteAt());
         NoteBox.Clear();
+        ResetBackdate();
         Refresh();
     }
 
@@ -313,8 +315,36 @@ public partial class TasksView
     {
         if (Detail.Tag is not string id || NoteBox.Text.Trim().Length == 0) return;
         if (_store.Find(id) is null) return;
-        _store.AddNote(id, NoteBox.Text, _settings().NoteAuthor);
+        _store.AddNote(id, NoteBox.Text, _settings().NoteAuthor, PendingNoteAt());
         NoteBox.Clear();
+    }
+
+    // ---- notes: backdating one ----
+
+    /// <summary>
+    /// Whether the note being typed has been given an earlier moment; null uses now. The picker
+    /// has no "future" limit of its own, but a backdated note that turned out to be postdated
+    /// would sit after whatever TeezyFlow writes there itself right now — so a chosen moment
+    /// that is not actually in the past is treated as not chosen at all.
+    /// </summary>
+    private DateTimeOffset? PendingNoteAt() =>
+        NoteDateField.Moment is { } chosen && chosen < DateTimeOffset.Now ? chosen : null;
+
+    private void OnBackdateClick(object sender, RoutedEventArgs e)
+    {
+        if (NoteDateField.Visibility == Visibility.Visible) { ResetBackdate(); return; }
+
+        NoteDateField.Visibility = Visibility.Visible;
+        NoteDateField.Set(DateTimeOffset.Now);
+        BackdateButton.Content = "Backdated to";
+    }
+
+    /// <summary>Back to "no date chosen" — every note defaults to right now unless asked.</summary>
+    private void ResetBackdate()
+    {
+        NoteDateField.Visibility = Visibility.Collapsed;
+        NoteDateField.Set(null, null);
+        BackdateButton.Content = "Backdate this note…";
     }
 
     private void BuildNotes(TaskItem task)

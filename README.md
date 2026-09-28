@@ -207,6 +207,10 @@ email out of Outlook, every route ran into the employer's lockdown, and all of i
 - **Notes are a timeline**, newest first, each with who wrote it and when — the record to read
   back in a review. The name is set in Settings ▸ Tasks; notes TeezyFlow writes itself (closed,
   followed up, email attached) are shown quieter.
+- **Backdate this note…**, next to the note box (on a task and on a quote), gives a note an
+  earlier date and time instead of right now — for something that happened before you got to
+  writing it down, so the timeline it sits in stays in the order it actually happened rather than
+  the order it was typed.
 - **Reminders:** a card pops up above the tray when one comes due, with *Done*, *In 1 hour*,
   *Tomorrow* and *Open*. It never takes the keyboard from what you are typing, and it stays
   until dealt with.

@@ -16,6 +16,21 @@ public sealed record TaskNote(DateTimeOffset At, string Text, string? By = null)
         || (By is null && (Text.StartsWith("Closed, and followed up", StringComparison.Ordinal)
                            || Text.StartsWith("Email attached:", StringComparison.Ordinal)
                            || Text.StartsWith("Created from an email", StringComparison.Ordinal)));
+
+    /// <summary>
+    /// A note list with one more note in it, kept oldest-first by <see cref="At"/> rather than
+    /// simply appended — a note can be backdated, so "just added" and "most recent" are not
+    /// always the same note. Everywhere else that reads notes (the timeline, "the latest note",
+    /// the last few for a card) trusts list order for that, so the order has to actually be true
+    /// rather than merely usually true.
+    /// </summary>
+    public static IReadOnlyList<TaskNote> Insert(IReadOnlyList<TaskNote> notes, TaskNote note)
+    {
+        var at = notes.ToList();
+        var index = at.FindIndex(n => n.At > note.At);
+        if (index < 0) at.Add(note); else at.Insert(index, note);
+        return at;
+    }
 }
 
 /// <summary>An email attached to a task — dropped or pasted in — kept apart from the notes.</summary>

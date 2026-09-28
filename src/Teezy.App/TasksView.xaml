@@ -184,13 +184,20 @@
                         <Button x:Name="AddNoteButton" Grid.Column="1" Content="Save" Style="{StaticResource Primary}"
                                 IsEnabled="False" Click="OnAddNote" ToolTip="Save the note (Ctrl+Enter)"/>
                     </Grid>
-                    <Grid Margin="0,0,0,12">
+                    <Grid Margin="0,0,0,8">
                         <TextBox x:Name="NoteBox" Style="{StaticResource Field}" Height="Auto" MinHeight="54"
                                  TextWrapping="Wrap" AcceptsReturn="True" Padding="8,6" VerticalContentAlignment="Top"
                                  KeyDown="OnNoteKey" TextChanged="OnNoteTyped"/>
                         <TextBlock x:Name="NotePlaceholder" Style="{StaticResource Hint}" Margin="10,7,0,0"
                                    IsHitTestVisible="False" Text="Add a note — Save or Ctrl+Enter"/>
                     </Grid>
+                    <!-- Hidden until asked for: almost every note is about right now. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Button x:Name="BackdateButton" Content="Backdate this note…" Style="{StaticResource Quiet}"
+                                Click="OnBackdateClick" ToolTip="Give the note an earlier date and time, for something logged after the fact"/>
+                        <local:DateTimeField x:Name="NoteDateField" Margin="10,0,0,0" Width="220"
+                                              Visibility="Collapsed" Placeholder="No date"/>
+                    </StackPanel>
                     <StackPanel x:Name="NotesList"/>
 
                     <!-- The email: folded away; opened in its own window to read. -->

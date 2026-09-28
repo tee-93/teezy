@@ -22,6 +22,28 @@ public sealed class TaskStoreTests : IDisposable
     }
 
     [Fact]
+    public void ABackdatedNoteLandsInItsChronologicalPlaceNotAtTheEnd()
+    {
+        var store = Store();
+        var added = store.Add("Chase Cessnock quote", "Quotes");
+
+        store.AddNote(added.Id, "Rang Priya, no answer");                          // "now": 22 Sep, 9am
+        store.AddNote(added.Id, "Left a voicemail Thursday", at: _now.AddDays(-5)); // backdated to 17 Sep
+        store.AddNote(added.Id, "She called back");                                 // "now" again
+
+        var notes = store.Find(added.Id)!.Notes;
+
+        // Chronological, not insertion order — the backdated one (17 Sep) ends up first even
+        // though it was the second one added, so "the last note" and "newest first" both stay
+        // true everywhere else that reads a note list by its position rather than sorting it.
+        notes.Select(n => n.Text).ShouldBe([
+            "Left a voicemail Thursday",
+            "Rang Priya, no answer",
+            "She called back",
+        ]);
+    }
+
+    [Fact]
     public void KeepsTasksAcrossRestarts()
     {
         var store = Store();

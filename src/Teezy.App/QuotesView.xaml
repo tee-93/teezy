@@ -249,6 +249,13 @@
                                      TextChanged="OnNoteTyped" PreviewKeyDown="OnNoteKey"/>
                         </Grid>
                     </Border>
+                    <!-- Hidden until asked for: almost every note is about right now. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button x:Name="BackdateButton" Content="Backdate this note…" Style="{StaticResource Quiet}"
+                                Click="OnBackdateClick" ToolTip="Give the note an earlier date and time, for something logged after the fact"/>
+                        <local:DateTimeField x:Name="NoteDateField" Margin="10,0,0,0" Width="220"
+                                              Visibility="Collapsed" Placeholder="No date"/>
+                    </StackPanel>
                     <StackPanel x:Name="NoteList" Margin="0,10,0,0"/>
 
                     <!-- The emails dragged onto it, folded away. -->

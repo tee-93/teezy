@@ -68,6 +68,7 @@ public partial class QuotesView
             QuoteStatus.InProgress => "DRAFT",
             QuoteStatus.Won => "WON",
             QuoteStatus.Lost => "LOST",
+            QuoteStatus.Stopped => "STOPPED",
             _ => QuotePlan.BucketOf(quote, Today) switch
             {
                 QuoteBucket.ToChase => "CHASE TODAY",
@@ -83,7 +84,10 @@ public partial class QuotesView
 
         WonButton.Visibility = quote.Status == QuoteStatus.Quoted ? Visibility.Visible : Visibility.Collapsed;
         LostButton.Visibility = quote.Status == QuoteStatus.Quoted ? Visibility.Visible : Visibility.Collapsed;
-        ReopenButton.Visibility = quote.Status is QuoteStatus.Won or QuoteStatus.Lost ? Visibility.Visible : Visibility.Collapsed;
+        StoppedButton.Visibility = quote.Status == QuoteStatus.Quoted ? Visibility.Visible : Visibility.Collapsed;
+        ReopenButton.Visibility = quote.Status is QuoteStatus.Won or QuoteStatus.Lost or QuoteStatus.Stopped
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         _filling = false;
     }
@@ -139,8 +143,10 @@ public partial class QuotesView
             { Status: QuoteStatus.InProgress } => "Not sent yet — nothing is being chased.",
             { Status: QuoteStatus.Won } => "Won — nothing is chasing it now.",
             { Status: QuoteStatus.Lost } => "Lost — nothing is chasing it now.",
+            { Status: QuoteStatus.Stopped } => "Stopped — nothing is chasing it now.",
             _ when chase is { IsOpen: true } => $"{Chases(quote)} The next one is booked in your tasks for {TasksView.Day(chase.Due ?? Today)}.",
-            _ => $"{Chases(quote)} The next chase is booked as soon as this page is open.",
+            _ when quote.Chased == 0 => $"{Chases(quote)} The first follow-up is booked as soon as this page is open.",
+            _ => $"{Chases(quote)} Nothing is currently booked — add one below.",
         };
 
         OpenChaseButton.Visibility = chase is { IsOpen: true } && _openTask is not null
@@ -263,14 +269,19 @@ public partial class QuotesView
 
     private void OnLost(object sender, RoutedEventArgs e) => Decide(_selected, QuoteStatus.Lost);
 
+    private void OnStopped(object sender, RoutedEventArgs e) => Decide(_selected, QuoteStatus.Stopped);
+
     private void Decide(string? id, QuoteStatus status)
     {
         if (id is null || _store.Find(id) is not { } quote) return;
 
         _store.Decide(id, status, Today);
-        _store.AddNote(id, status == QuoteStatus.Won
-            ? $"Won — {QuotePlan.Money(quote.Amount, quote.Currency)}."
-            : "Lost.", TaskNote.App);
+        _store.AddNote(id, status switch
+        {
+            QuoteStatus.Won => $"Won — {QuotePlan.Money(quote.Amount, quote.Currency)}.",
+            QuoteStatus.Lost => "Lost.",
+            _ => "Stopped.",
+        }, TaskNote.App);
 
         _selected = id;
         Refresh();
@@ -388,11 +399,11 @@ public partial class QuotesView
             .ToList();
 
         QuoteTaskList.Children.Clear();
-        foreach (var task in tasks) QuoteTaskList.Children.Add(QuoteTaskRow(task));
+        foreach (var task in tasks) QuoteTaskList.Children.Add(QuoteTaskRow(task, quote.Customer));
         QuoteTaskEmpty.Visibility = tasks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private FrameworkElement QuoteTaskRow(TaskItem task)
+    private FrameworkElement QuoteTaskRow(TaskItem task, string customer)
     {
         var tick = new CheckBox
         {
@@ -402,7 +413,12 @@ public partial class QuotesView
             ToolTip = "Close",
             IsChecked = !task.IsOpen,
         };
-        tick.Checked += (_, _) => { if (task.IsOpen) _tasks.Close(task.Id); };
+        tick.Checked += (_, _) =>
+        {
+            if (!task.IsOpen) return;
+            FollowUpDialog.CloseWithPrompt(Window.GetWindow(this)!, _tasks, _settings(), task, customer);
+            ShowDetail();
+        };
         tick.Unchecked += (_, _) => { if (!task.IsOpen) _tasks.Reopen(task.Id); };
 
         var title = new TextBlock
@@ -415,6 +431,7 @@ public partial class QuotesView
         };
 
         var metaParts = new List<string>();
+        if (task.Kind is { Length: > 0 } kind) metaParts.Add(kind);
         if (task.Category is { Length: > 0 } category) metaParts.Add(category);
         if (task.Due is { } due) metaParts.Add(task.IsOpen && due < Today ? $"was due {TasksView.Day(due)}" : $"due {TasksView.Day(due)}");
 

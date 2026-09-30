@@ -187,7 +187,7 @@ public partial class App : Application
         // A chase is an ordinary task, and this is what keeps one booked for every quote still
         // out: after any change to either list, and once at the start for whatever came in
         // from another computer overnight.
-        _chasing = new QuoteChasing(_quotes, _tasks);
+        _chasing = new QuoteChasing(_quotes, _tasks, settings: () => _settings);
         _tasks.Changed += () => Dispatch(FollowQuotes);
         _quotes.Changed += () => Dispatch(FollowQuotes);
         FollowQuotes();

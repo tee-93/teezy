@@ -11,10 +11,10 @@ namespace Teezy.Core.Quotes;
 /// learn about quotes.
 /// </para>
 /// <para>
-/// <b>Closing the chase is what moves the quote on.</b> Tick the task off, and the quote counts
-/// one more chase and books the next one for the day the cadence says. Win or lose the quote and
-/// the chasing stops. That means the ordinary thing — working through today's tasks — is the
-/// whole of the pipeline's upkeep.
+/// <b>Sending is what starts the chase.</b> One follow-up is booked the day a quote goes out, so
+/// nothing sent is silently forgotten. Closing it is a deliberate moment, not this reconciler's:
+/// what happens next — another follow-up, what kind, and when — is asked in the app, not booked
+/// straight from a fixed cadence. Win, lose or stop the quote and the chasing stops here too.
 /// </para>
 /// <para>
 /// <see cref="Follow"/> is idempotent and safe to call whenever either list changes: it looks at
@@ -23,7 +23,8 @@ namespace Teezy.Core.Quotes;
 /// and this simply agrees.
 /// </para>
 /// </remarks>
-public sealed class QuoteChasing(QuoteStore quotes, TaskStore tasks, Func<DateTimeOffset>? now = null)
+public sealed class QuoteChasing(
+    QuoteStore quotes, TaskStore tasks, Func<DateTimeOffset>? now = null, Func<TeezySettings>? settings = null)
 {
     /// <summary>The category chase tasks are filed under, so they can be filtered like any other.</summary>
     public const string Category = "Quotes";
@@ -54,21 +55,25 @@ public sealed class QuoteChasing(QuoteStore quotes, TaskStore tasks, Func<DateTi
 
             if (chase is null)
             {
-                // Either never booked, or the task was deleted; either way it needs one.
+                // Booked once, right after sending, in case that task was deleted before ever
+                // being closed. Once a follow-up has actually been closed (Chased > 0), someone
+                // is deciding what comes next for this quote, and it is not second-guessed here.
+                if (quote.Chased > 0) continue;
                 if (Book(quote, today)) booked++;
                 continue;
             }
 
             if (!chase.IsOpen)
             {
-                // Ticked off: that is a chase done, and the next one follows from it.
+                // Ticked off: counted, and the pointer cleared. What comes next, if anything, is
+                // asked for at the moment it is closed (see FollowUpDialog) — not rebooked here
+                // from a fixed cadence, which is the very thing this rework replaces.
                 var on = chase.Closed is { } closed
                     ? DateOnly.FromDateTime(closed.LocalDateTime)
                     : today;
 
-                if (quotes.Chased(quote.Id, on) is not { } moved) continue;
-                if (Book(moved, today)) booked++;
-                else quotes.Chasing(quote.Id, null);
+                quotes.Chased(quote.Id, on);
+                quotes.Chasing(quote.Id, null);
                 continue;
             }
 
@@ -104,10 +109,12 @@ public sealed class QuoteChasing(QuoteStore quotes, TaskStore tasks, Func<DateTi
     private static DateOnly? Day(Quote quote, DateOnly today) =>
         QuotePlan.NextChase(quote) is { } due ? (due < today ? today : due) : null;
 
-    /// <summary>Books the next chase as a task, and points the quote at it.</summary>
+    /// <summary>Books the first chase as a task, and points the quote at it.</summary>
     private bool Book(Quote quote, DateOnly today)
     {
         if (Day(quote, today) is not { } day) return false;
+
+        var kind = settings?.Invoke().FollowUpKinds.FirstOrDefault() ?? "Follow-up";
 
         var task = tasks.Add(
             QuotePlan.ChaseTitle(quote),
@@ -115,7 +122,7 @@ public sealed class QuoteChasing(QuoteStore quotes, TaskStore tasks, Func<DateTi
             due: day,
             remind: TaskPlan.At(day, RemindAt));
 
-        tasks.Update(task with { QuoteId = quote.Id });
+        tasks.Update(task with { QuoteId = quote.Id, Kind = kind });
         quotes.Chasing(quote.Id, task.Id);
         return true;
     }

@@ -112,8 +112,12 @@ public sealed class QuoteStoreTests : IDisposable
     }
 
     [Fact]
-    public void TickingOffTheChaseCountsItAndBooksTheNextOne()
+    public void TickingOffTheChaseCountsItButDoesNotBookAnotherOne()
     {
+        // The old behaviour was to silently book the next chase straight from the cadence.
+        // Since the follow-up rework, that is a person's call — made in the app, with a
+        // FollowUpDialog — not this reconciler's. Closing the chase still counts it, so the
+        // cadence position is right if it is ever reopened, but nothing new is booked here.
         var quotes = Quotes();
         var tasks = Tasks();
         var chasing = new QuoteChasing(quotes, tasks, () => _now);
@@ -123,16 +127,17 @@ public sealed class QuoteStoreTests : IDisposable
 
         _now = _now.AddDays(3);
         tasks.Close(quotes.Find(quote.Id)!.ChaseTaskId!);
-        chasing.Follow().ShouldBe(1);
+        chasing.Follow().ShouldBe(0);
 
         var moved = quotes.Find(quote.Id)!;
         moved.Chased.ShouldBe(1);
         moved.LastChased.ShouldBe(Today.AddDays(3));
+        moved.ChaseTaskId.ShouldBeNull();
+        tasks.Visible.ShouldAllBe(t => !t.IsOpen);
 
-        var next = tasks.Visible.Single(t => t.IsOpen);
-        next.Title.ShouldBe("Chase Hunter Builders again — door hardware");
-        next.Due.ShouldBe(TaskPlan.Workday(Today.AddDays(7)));
-        moved.ChaseTaskId.ShouldBe(next.Id);
+        // Following again and again still stays quiet.
+        chasing.Follow().ShouldBe(0);
+        tasks.Visible.ShouldAllBe(t => !t.IsOpen);
     }
 
     [Fact]

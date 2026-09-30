@@ -659,6 +659,34 @@
                         <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
                                    Text="Shown as the TYPE picker on a quote. Renaming one renames it on every quote that has it; removing one leaves those quotes as they are."/>
 
+                        <TextBlock Text="FOLLOW-UP KINDS" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
+                        <Border Style="{StaticResource FormRows}">
+                            <StackPanel>
+                                <StackPanel x:Name="FollowUpKindRows"/>
+                                <Border x:Name="FollowUpKindAddRow" Style="{StaticResource FormRow}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource FieldBox}">
+                                            <Grid>
+                                                <TextBlock x:Name="NewFollowUpKindPlaceholder" Style="{StaticResource Hint}" Margin="0"
+                                                           VerticalAlignment="Center" IsHitTestVisible="False"
+                                                           Text="A new kind, e.g. Meeting, Site visit, Quote due date"/>
+                                                <TextBox x:Name="NewFollowUpKindBox" Style="{StaticResource BareText}"
+                                                         TextChanged="OnNewFollowUpKindTyped" KeyDown="OnNewFollowUpKindKey"/>
+                                            </Grid>
+                                        </Border>
+                                        <Button x:Name="AddFollowUpKindButton" Grid.Column="1" Content="Add" Style="{StaticResource Primary}"
+                                                Margin="8,0,0,0" IsEnabled="False" Click="OnAddFollowUpKind"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Style="{StaticResource FormHint}" Margin="2,8,0,0"
+                                   Text="Offered when a quote follow-up is closed and asks what comes next. Renaming one renames it on every task that has it; removing one leaves those tasks as they are."/>
+
                         <TextBlock Text="DEFAULT CURRENCY" Style="{StaticResource SectionLabel}" Margin="0,20,0,6"/>
                         <Border Style="{StaticResource FormRows}">
                             <Border Style="{StaticResource FormRowFirst}">

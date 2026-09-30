@@ -317,6 +317,14 @@ public sealed record TeezySettings
     public IReadOnlyList<string> QuoteTypes { get; init; } = [];
 
     /// <summary>
+    /// The kinds a quote follow-up can have, in the order the picker shows them. Seeded rather
+    /// than starting empty like <see cref="TaskCategories"/>/<see cref="QuoteTypes"/>, so closing
+    /// a follow-up has something to offer before anyone has been near this settings page.
+    /// </summary>
+    /// <remarks>Managed in Settings ▸ Tasks. Travels with sync, so every computer offers the same list.</remarks>
+    public IReadOnlyList<string> FollowUpKinds { get; init; } = ["Follow-up", "Meeting", "Site visit", "Quote due date"];
+
+    /// <summary>
     /// The currency a new quote is stamped with, e.g. "AUD". Changing it does not touch quotes
     /// already made, exactly like <see cref="QuoteCadence"/> — each one keeps what it was given.
     /// </summary>

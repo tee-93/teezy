@@ -119,12 +119,18 @@ public sealed class TaskStore
     /// lets a quote be read as one story — sent, chased, chased again — rather than three
     /// unrelated lines. A note on the closed task records that it was followed up, and when for.
     /// </remarks>
-    public TaskItem CloseAndFollowUp(string id, DateOnly due, string? title = null, TimeOnly? dueTime = null)
+    /// <param name="kind">
+    /// The new follow-up's own kind (Settings ▸ Tasks ▸ Follow-up kinds) — not carried over from
+    /// the task being closed, since each follow-up's kind is its own deliberate choice.
+    /// </param>
+    public TaskItem CloseAndFollowUp(
+        string id, DateOnly due, string? title = null, TimeOnly? dueTime = null, string? kind = null)
     {
         var task = Find(id) ?? throw new InvalidOperationException("That task no longer exists.");
 
         // A reminder moves with the follow-up, at the same time of day; so do the emails, since
-        // the follow-up is about the same thread. A pinned task's follow-up stays on the focus list.
+        // the follow-up is about the same thread. A pinned task's follow-up stays on the focus list,
+        // and it keeps chasing the same quote, if it was chasing one.
         DateTimeOffset? remind = task.Remind is { } was
             ? TaskPlan.At(due, TimeOnly.FromDateTime(was.LocalDateTime))
             : null;
@@ -132,7 +138,7 @@ public sealed class TaskStore
         var followUp = TaskItem.New(
             string.IsNullOrWhiteSpace(title) ? FollowUpTitle(task.Title) : title,
             _now(), task.Category, due: due, dueTime: dueTime, followUpOf: task.Id, remind: remind)
-            with { Emails = task.Emails, Pinned = task.Pinned };
+            with { Emails = task.Emails, Pinned = task.Pinned, QuoteId = task.QuoteId, Kind = kind };
 
         var closed = task with
         {
@@ -161,6 +167,16 @@ public sealed class TaskStore
             ? task.Notes.Take(task.Notes.Count - 1).ToList()
             : task.Notes;
         Update(task with { Closed = null, Reminded = null, Notes = notes });
+    }
+
+    /// <summary>Renames a follow-up kind across every task that carries it — Settings ▸ Tasks
+    /// ▸ Follow-up kinds renaming one, the same way <c>QuoteStore.Retype</c> renames a quote type.</summary>
+    public void Rekind(string from, string to)
+    {
+        foreach (var task in Visible.Where(t => string.Equals(t.Kind, from, StringComparison.OrdinalIgnoreCase)))
+        {
+            Update(task with { Kind = to });
+        }
     }
 
     /// <summary>"Follow up: …" once, not "Follow up: Follow up: …" down a long chain.</summary>

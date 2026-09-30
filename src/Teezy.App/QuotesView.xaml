@@ -211,6 +211,8 @@
                         <Button x:Name="WonButton" Content="Won" Style="{StaticResource Primary}" Click="OnWon"/>
                         <Button x:Name="LostButton" Content="Lost" Style="{StaticResource Secondary}"
                                 Margin="8,0,0,0" Click="OnLost"/>
+                        <Button x:Name="StoppedButton" Content="Stopped" Style="{StaticResource Secondary}"
+                                Margin="8,0,0,0" Click="OnStopped" ToolTip="Stopped chasing it — not won, not lost"/>
                         <Button x:Name="ReopenButton" Content="Reopen" Style="{StaticResource Secondary}"
                                 Margin="8,0,0,0" Click="OnReopen" Visibility="Collapsed"/>
                     </StackPanel>

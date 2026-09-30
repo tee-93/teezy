@@ -33,6 +33,7 @@ public partial class TasksView : UserControl
     private readonly IMailAdvisor? _advisor;
     private readonly Func<Teezy.Core.TeezySettings> _settings;
     private readonly Action<Teezy.Core.TeezySettings> _saveSettings;
+    private readonly Teezy.Core.Quotes.QuoteStore? _quotes;
     private string? _selected;
     private string? _category;
     private bool _showClosed;
@@ -41,13 +42,15 @@ public partial class TasksView : UserControl
     private (string Closed, string? FollowUp)? _undo;
 
     internal TasksView(TaskStore store, IMailAdvisor? advisor,
-        Func<Teezy.Core.TeezySettings> settings, Action<Teezy.Core.TeezySettings> saveSettings)
+        Func<Teezy.Core.TeezySettings> settings, Action<Teezy.Core.TeezySettings> saveSettings,
+        Teezy.Core.Quotes.QuoteStore? quotes = null)
     {
         InitializeComponent();
         _store = store;
         _advisor = advisor;
         _settings = settings;
         _saveSettings = saveSettings;
+        _quotes = quotes;
         InitPanel();
 
         // Changes arrive from sync and reminders on other threads.
@@ -260,6 +263,17 @@ public partial class TasksView : UserControl
             });
         }
 
+        if (task.Kind is { } kind)
+        {
+            meta.Children.Add(new Border
+            {
+                Style = Styled("Tag"),
+                Margin = new Thickness(0, 0, 8, 0),
+                ToolTip = CustomerFor(task) is { } customer ? $"Following up with {customer}" : "A follow-up",
+                Child = new TextBlock { Text = kind, Style = Styled("TagText") },
+            });
+        }
+
         var words = MetaWords(task, all, today, out var late);
         if (words.Length > 0)
         {
@@ -388,9 +402,28 @@ public partial class TasksView : UserControl
     private void CloseTask(string id)
     {
         if (_store.Find(id) is not { } task) return;
-        _store.Close(id);
-        OfferUndo($"Closed: {task.Title}", id, null);
+
+        var result = FollowUpDialog.CloseWithPrompt(
+            Window.GetWindow(this)!, _store, _settings(), task, CustomerFor(task));
+
+        if (!result.Closed)
+        {
+            // Dismissed without deciding: nothing changed, so nothing raises Changed to
+            // resync the tick that is already showing checked — do that by hand.
+            Refresh();
+            return;
+        }
+
+        _selected = result.FollowUpId ?? _selected;
+        OfferUndo(
+            result.FollowUpId is not null ? $"Closed, and following up: {task.Title}" : $"Closed: {task.Title}",
+            id, result.FollowUpId);
+        Refresh();
     }
+
+    /// <summary>The customer a follow-up task is chasing, when it is one and the quote is known.</summary>
+    private string? CustomerFor(TaskItem task) =>
+        task.QuoteId is { Length: > 0 } id ? _quotes?.Find(id)?.Customer : null;
 
     private void FollowUp(DateOnly due)
     {

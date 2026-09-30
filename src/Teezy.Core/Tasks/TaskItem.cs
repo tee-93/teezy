@@ -60,6 +60,11 @@ public sealed record TaskEmail(DateTimeOffset Added, string Subject, string? Fro
 /// <param name="Reminded">When its reminder was shown, so it is shown once.</param>
 /// <param name="Pinned">On the focus list — the small always-on-top card for calls. Travels with sync.</param>
 /// <param name="QuoteId">The quote this task is chasing, when it is one. Null for ordinary tasks.</param>
+/// <param name="Kind">
+/// One of Settings ▸ Tasks ▸ Follow-up kinds, e.g. "Meeting" or "Site visit" — set only on a
+/// quote follow-up, which is what marks it as one: closing a task with a kind is what offers to
+/// book the next follow-up, where closing an ordinary task does not.
+/// </param>
 public sealed record TaskItem(
     string Id,
     string Title,
@@ -78,7 +83,8 @@ public sealed record TaskItem(
     IReadOnlyList<TaskEmail>? Emails = null,
     string? Advice = null,
     bool Pinned = false,
-    string? QuoteId = null)
+    string? QuoteId = null,
+    string? Kind = null)
 {
     public bool IsOpen => Closed is null && !Deleted;
 

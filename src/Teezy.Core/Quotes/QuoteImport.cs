@@ -297,6 +297,12 @@ public static class QuoteImport
             return QuoteStatus.Lost;
         }
 
+        string[] stopped = ["stopped", "paused", "dropped", "withdrawn", "on hold", "hold"];
+        if (stopped.Any(s => word == s || word.Contains(s, StringComparison.Ordinal) && s.Length > 2))
+        {
+            return QuoteStatus.Stopped;
+        }
+
         return QuoteStatus.Quoted;
     }
 

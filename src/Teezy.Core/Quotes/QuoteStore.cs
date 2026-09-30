@@ -132,10 +132,11 @@ public sealed class QuoteStore
         return Update(quote with { Chased = quote.Chased + 1, LastChased = on });
     }
 
-    /// <summary>Won or lost, on a day. <see cref="QuoteChasing"/> then closes what was chasing it.</summary>
+    /// <summary>Won, lost or stopped, on a day. <see cref="QuoteChasing"/> then closes what was chasing it.</summary>
     public Quote? Decide(string id, QuoteStatus status, DateOnly on)
     {
-        if (Find(id) is not { } quote || status is not (QuoteStatus.Won or QuoteStatus.Lost)) return null;
+        if (Find(id) is not { } quote
+            || status is not (QuoteStatus.Won or QuoteStatus.Lost or QuoteStatus.Stopped)) return null;
         return Update(quote with { Status = status, Decided = on });
     }
 

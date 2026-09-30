@@ -77,6 +77,11 @@ public partial class SettingsView
         for (var i = 0; i < types.Count; i++) QuoteTypeRows.Children.Add(QuoteTypeRow(types, i));
         QuoteTypeAddRow.Style = (Style)FindResource(types.Count == 0 ? "FormRowFirst" : "FormRow");
 
+        FollowUpKindRows.Children.Clear();
+        var kinds = settings.FollowUpKinds;
+        for (var i = 0; i < kinds.Count; i++) FollowUpKindRows.Children.Add(FollowUpKindRow(kinds, i));
+        FollowUpKindAddRow.Style = (Style)FindResource(kinds.Count == 0 ? "FormRowFirst" : "FormRow");
+
         ShowDefaultCurrency(settings);
         ShowBriefingSettings(settings);
 
@@ -342,6 +347,134 @@ public partial class SettingsView
 
         _write(settings with { QuoteTypes = [.. settings.QuoteTypes, name] });
         NewQuoteTypeBox.Clear();
+        ShowTaskSettings();
+    }
+
+    // ---- follow-up kinds ----
+
+    private Border FollowUpKindRow(IReadOnlyList<string> list, int index)
+    {
+        var name = list[index];
+        var count = _taskStore?.Visible.Count(t => t.IsOpen && string.Equals(t.Kind, name, StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+        var label = new TextBlock { Text = name, Style = (Style)FindResource("FormLabel"), VerticalAlignment = VerticalAlignment.Center };
+        var detail = new TextBlock
+        {
+            Text = count == 0 ? "No open follow-ups" : count == 1 ? "1 open follow-up" : $"{count} open follow-ups",
+            Style = (Style)FindResource("FormHint"),
+        };
+        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(label);
+        text.Children.Add(detail);
+
+        // Renaming happens in place: the name becomes a box.
+        var edit = new TextBox { Style = (Style)FindResource("BareText"), Text = name };
+        var editBox = new Border { Style = (Style)FindResource("FieldBox"), Child = edit, Visibility = Visibility.Collapsed };
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        Button Small(string content, string tip, Action run, bool enabled = true)
+        {
+            var button = new Button { Content = content, Style = (Style)FindResource("Quiet"), ToolTip = tip, IsEnabled = enabled, Margin = new Thickness(2, 0, 0, 0) };
+            button.Click += (_, _) => run();
+            buttons.Children.Add(button);
+            return button;
+        }
+
+        Small("↑", "Move up", () => MoveKind(index, -1), index > 0);
+        Small("↓", "Move down", () => MoveKind(index, 1), index < list.Count - 1);
+        Small("Rename", "Rename", () =>
+        {
+            text.Visibility = Visibility.Collapsed;
+            editBox.Visibility = Visibility.Visible;
+            edit.Focus();
+            edit.SelectAll();
+        });
+        Button? remove = null;
+        remove = Small("Remove", "Remove from the list", () =>
+        {
+            if (remove!.Tag is not "armed") { remove.Tag = "armed"; remove.Content = "Remove?"; return; }
+            var settings = _read();
+            _write(settings with { FollowUpKinds = [.. settings.FollowUpKinds.Where((_, i) => i != index)] });
+            ShowTaskSettings();
+        });
+
+        void Commit()
+        {
+            var renamed = edit.Text.Trim();
+            if (renamed.Length > 0 && renamed != name) RenameKind(name, renamed);
+            else ShowTaskSettings();
+        }
+
+        edit.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { e.Handled = true; Commit(); }
+            else if (e.Key == Key.Escape) { e.Handled = true; ShowTaskSettings(); }
+        };
+        edit.LostKeyboardFocus += (_, _) => { if (editBox.Visibility == Visibility.Visible) Commit(); };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(buttons, 1);
+        grid.Children.Add(text);
+        grid.Children.Add(editBox);
+        grid.Children.Add(buttons);
+
+        return new Border { Style = (Style)FindResource(index == 0 ? "FormRowFirst" : "FormRow"), Padding = new Thickness(12, 8, 8, 8), Child = grid };
+    }
+
+    private void MoveKind(int index, int by)
+    {
+        var list = _read().FollowUpKinds.ToList();
+        var to = index + by;
+        if (to < 0 || to >= list.Count) return;
+        (list[index], list[to]) = (list[to], list[index]);
+        _write(_read() with { FollowUpKinds = list });
+        ShowTaskSettings();
+    }
+
+    /// <summary>Renames a follow-up kind in the list and on every task that has it.</summary>
+    private void RenameKind(string from, string to)
+    {
+        var settings = _read();
+        if (settings.FollowUpKinds.Any(k => k.Equals(to, StringComparison.OrdinalIgnoreCase) && !k.Equals(from, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Already there under that name: renaming merges the two.
+            _write(settings with { FollowUpKinds = [.. settings.FollowUpKinds.Where(k => k != from)] });
+        }
+        else
+        {
+            _write(settings with { FollowUpKinds = [.. settings.FollowUpKinds.Select(k => k == from ? to : k)] });
+        }
+
+        _taskStore?.Rekind(from, to);
+        ShowTaskSettings();
+    }
+
+    private void OnNewFollowUpKindTyped(object sender, TextChangedEventArgs e)
+    {
+        NewFollowUpKindPlaceholder.Visibility = NewFollowUpKindBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        var name = NewFollowUpKindBox.Text.Trim();
+        AddFollowUpKindButton.IsEnabled = name.Length > 0
+            && !_read().FollowUpKinds.Any(k => k.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnNewFollowUpKindKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        e.Handled = true;
+        if (AddFollowUpKindButton.IsEnabled) OnAddFollowUpKind(sender, e);
+    }
+
+    private void OnAddFollowUpKind(object sender, RoutedEventArgs e)
+    {
+        var name = NewFollowUpKindBox.Text.Trim();
+        if (name.Length == 0) return;
+        var settings = _read();
+        if (settings.FollowUpKinds.Any(k => k.Equals(name, StringComparison.OrdinalIgnoreCase))) return;
+
+        _write(settings with { FollowUpKinds = [.. settings.FollowUpKinds, name] });
+        NewFollowUpKindBox.Clear();
         ShowTaskSettings();
     }
 

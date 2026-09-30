@@ -49,6 +49,9 @@ public enum QuoteStatus
     Won = 1,
     Lost = 2,
     InProgress = 3,
+
+    /// <summary>Stopped chasing it — neither won nor lost, just no longer pursued.</summary>
+    Stopped = 4,
 }
 
 /// <summary>Which pile a quote belongs in on the page.</summary>

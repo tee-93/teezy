@@ -239,8 +239,11 @@ public partial class QuotesView : UserControl
             won.Click += (_, _) => Decide(quote.Id, QuoteStatus.Won);
             var lost = new Button { Content = "Lost", Style = (Style)FindResource("Quiet"), Tag = quote.Id, ToolTip = "Lost today" };
             lost.Click += (_, _) => Decide(quote.Id, QuoteStatus.Lost);
+            var stopped = new Button { Content = "Stopped", Style = (Style)FindResource("Quiet"), Tag = quote.Id, ToolTip = "Stopped chasing it" };
+            stopped.Click += (_, _) => Decide(quote.Id, QuoteStatus.Stopped);
             buttons.Children.Add(won);
             buttons.Children.Add(lost);
+            buttons.Children.Add(stopped);
         }
 
         Grid.SetColumn(money, 1);
@@ -290,7 +293,7 @@ public partial class QuotesView : UserControl
 
         if (quote.Status != QuoteStatus.Quoted)
         {
-            parts.Add(quote.Status == QuoteStatus.Won ? "won" : "lost");
+            parts.Add(quote.Status switch { QuoteStatus.Won => "won", QuoteStatus.Lost => "lost", _ => "stopped" });
             if (quote.Decided is { } decided) parts[^1] += $" {TasksView.Day(decided)}";
             return string.Join(" · ", parts);
         }
@@ -302,7 +305,13 @@ public partial class QuotesView : UserControl
             _ => $"chased {quote.Chased}×",
         });
 
-        if (QuotePlan.NextChase(quote) is { } next)
+        var chase = quote.ChaseTaskId is { Length: > 0 } id ? _tasks.Find(id) : null;
+        if (chase is { IsOpen: true })
+        {
+            var due = chase.Due ?? Today;
+            parts.Add(due <= Today ? "chase due" : $"next chase {TasksView.Day(due)}");
+        }
+        else if (quote.Chased == 0 && QuotePlan.NextChase(quote) is { } next)
         {
             parts.Add(next <= Today ? "chase due" : $"next chase {TasksView.Day(next)}");
         }

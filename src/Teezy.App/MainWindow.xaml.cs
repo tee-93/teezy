@@ -244,7 +244,7 @@ public partial class MainWindow : Window
     {
         if (_tasks is null) return;
 
-        _tasksView ??= new TasksView(_tasks, _advisor, _settings, _saveSettings) { OpenTaskSettings = () => ShowSettingsTab("TabTasks"), ShowFocus = _showFocus };
+        _tasksView ??= new TasksView(_tasks, _advisor, _settings, _saveSettings, _quotes) { OpenTaskSettings = () => ShowSettingsTab("TabTasks"), ShowFocus = _showFocus };
         _tasksView.Refresh();
         PageHost.Content = _tasksView;
     }

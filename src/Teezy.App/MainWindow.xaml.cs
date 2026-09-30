@@ -118,6 +118,8 @@ public partial class MainWindow : Window
         _showBriefing = showBriefing;
         _showFocus = showFocus;
 
+        AssistantPanelControl.Init(_tasks, _quotes, _meetingStore, _settings, _saveSettings, RefreshCurrentPage);
+
         // Icon deliberately not set: WPF falls back to the executable icon resource, which
         // carries every size, so Windows can pick the right one per context. Assigning a
         // single rendered bitmap here would give the taskbar one size to scale from.
@@ -185,15 +187,28 @@ public partial class MainWindow : Window
         StatusModel.Text = loaded ? "Ready" : "Loading the speech model…";
 
         var settings = _settings();
-        StatusHotkeys.Text = settings.AssistantHotkey.IsEmpty
+        var hotkeyHint = settings.AssistantHotkey.IsEmpty
             ? $"Hold {settings.Hotkey.Display} to dictate"
             : $"Hold {settings.Hotkey.Display} to dictate, {settings.AssistantHotkey.Display} for the assistant";
+        StatusHotkeys.Text = hotkeyHint;
+
+        AssistantPanelControl?.SetModelStatus(loaded, hotkeyHint);
+    }
+
+    /// <summary>Opens or closes the Assistant panel, and repaints the switch to match.</summary>
+    private void OnToggleAssistant(object sender, RoutedEventArgs e)
+    {
+        AssistantPanelControl.Toggle();
+        var open = AssistantPanelControl.IsOpen;
+        AssistantToggleButton.Background = open ? Brand.Brush("Selected") : System.Windows.Media.Brushes.Transparent;
+        AssistantToggleButton.Foreground = open ? Brand.Brush("AccentInk") : Brand.Muted;
     }
 
     /// <summary>Re-reads everything the current page shows. Used when the window is opened.</summary>
     public void RefreshCurrentPage()
     {
         UpdateStatus();
+        AssistantPanelControl.Refresh();
 
         switch (PageHost.Content)
         {
@@ -214,6 +229,8 @@ public partial class MainWindow : Window
     /// </remarks>
     public void RefreshAfterDictation()
     {
+        AssistantPanelControl.Refresh();
+
         switch (PageHost.Content)
         {
             case HomeView home: home.Refresh(); break;
@@ -238,12 +255,17 @@ public partial class MainWindow : Window
         else if (sender == NavInsights) ShowInsights();
         else if (sender == NavDictionary) ShowDictionary();
         else if (sender == NavSettings) ShowSettings();
+
+        // Whatever changed on the page just left — a task closed, a quote won — the Assistant
+        // panel would otherwise only notice next time the window is shown or something is dictated.
+        AssistantPanelControl.Refresh();
     }
 
     private void ShowTasks()
     {
         if (_tasks is null) return;
 
+        PageTitle.Text = "Tasks";
         _tasksView ??= new TasksView(_tasks, _advisor, _settings, _saveSettings) { OpenTaskSettings = () => ShowSettingsTab("TabTasks"), ShowFocus = _showFocus };
         _tasksView.Refresh();
         PageHost.Content = _tasksView;
@@ -260,6 +282,7 @@ public partial class MainWindow : Window
     private void ShowQuotes()
     {
         if (_tasks is null) return;
+        PageTitle.Text = "Quotes";
         _quotesView ??= new QuotesView(_quotes!, _tasks, _settings, _saveSettings, ShowTask);
         _quotesView.Refresh();
         PageHost.Content = _quotesView;
@@ -269,6 +292,7 @@ public partial class MainWindow : Window
     {
         if (_meetingStore is null || _meetingRecorder is null) return;
 
+        PageTitle.Text = "Meetings";
         _meetingsView ??= new MeetingsView(
             _meetingStore, _meetingRecorder, _transcriber, _meetingSummariser, _settings, _diariser);
         _meetingsView.Refresh();
@@ -276,6 +300,7 @@ public partial class MainWindow : Window
     }
     private void ShowTranscripts()
     {
+        PageTitle.Text = "Transcripts";
         _transcripts ??= new TranscriptsView(_history);
         _transcripts.Refresh();
         PageHost.Content = _transcripts;
@@ -283,6 +308,7 @@ public partial class MainWindow : Window
 
     private void ShowHome()
     {
+        PageTitle.Text = "Home";
         _home ??= new HomeView(
             _history,
             _tasks ?? new TaskStore(),
@@ -300,6 +326,7 @@ public partial class MainWindow : Window
 
     private void ShowInsights()
     {
+        PageTitle.Text = "Insights";
         _insights ??= new InsightsView(_history);
         _insights.Refresh();
         PageHost.Content = _insights;
@@ -307,6 +334,7 @@ public partial class MainWindow : Window
 
     private void ShowDictionary()
     {
+        PageTitle.Text = "Dictionary";
         _dictionaryView ??= new DictionaryView(_dictionary);
         _dictionaryView.Refresh();
         PageHost.Content = _dictionaryView;
@@ -349,6 +377,7 @@ public partial class MainWindow : Window
 
     private void ShowSettings()
     {
+        PageTitle.Text = "Settings";
         _settingsView ??= new SettingsView(
             _settings, _saveSettings, _transcriber, _autostart, _capture, _secrets, _claude,
 

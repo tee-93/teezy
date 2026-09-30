@@ -12,11 +12,18 @@
       why nobody in the meeting can tell it is running — so the page says so, every time.
     -->
     <!--
-      The whole page scrolls, not just the list. With the recorder and the progress card fixed
-      above a scrolling list, a short window squeezed the meetings into a sliver.
+      A meeting picked from the list opens on the right, the same shape Quotes and Tasks use.
+      The list side scrolls on its own — with the recorder and the progress card fixed above a
+      scrolling list, a short window squeezed the meetings into a sliver.
     -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <Grid Margin="28,24,28,24">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="420"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -136,8 +143,9 @@
                     <ItemsControl x:Name="MeetingList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border x:Name="Row" Padding="12,8" Background="Transparent"
-                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
+                                <Border x:Name="Row" Padding="12,8" Background="Transparent" Cursor="Hand"
+                                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0"
+                                        MouseLeftButtonUp="OnRowSelect">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -188,6 +196,62 @@
                            Text="Nothing recorded yet. Start recording when a meeting begins and stop when it ends."/>
             </StackPanel>
         </Border>
+        </Grid>
+        </ScrollViewer>
+
+        <!-- ============================== The chosen meeting ============================== -->
+        <Border x:Name="Detail" Grid.Column="1" Width="420" Margin="20,0,0,0" Style="{StaticResource CardPanel}"
+                Padding="0" Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18,16,18,18">
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="MEETING" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Close panel" Style="{StaticResource Quiet}" Click="OnDeselect"/>
+                    </Grid>
+
+                    <TextBlock x:Name="DetailTitle" Style="{StaticResource H2}"/>
+                    <TextBlock x:Name="DetailMeta" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Content="Transcribe" Style="{StaticResource Secondary}" Tag="{Binding}"
+                                Visibility="{Binding TranscribeVisibility}" Click="OnTranscribe"/>
+                        <Button Content="Transcribe again" Style="{StaticResource Quiet}" Tag="{Binding}" Margin="8,0,0,0"
+                                Visibility="{Binding RedoVisibility}" Click="OnTranscribeAgain"/>
+                        <Button Content="Summarise" Style="{StaticResource Secondary}" Tag="{Binding}" Margin="8,0,0,0"
+                                Visibility="{Binding SummariseVisibility}" Click="OnSummarise"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Name the voices" Style="{StaticResource Quiet}" Tag="{Binding}"
+                                Visibility="{Binding RenameVisibility}" Click="OnNameVoices"/>
+                        <Button Content="Notes PDF" Style="{StaticResource Quiet}" Tag="{Binding}" Margin="8,0,0,0"
+                                Visibility="{Binding NotesVisibility}" Click="OnNotes"/>
+                        <Button Content="Transcript" Style="{StaticResource Quiet}" Tag="{Binding}" Margin="8,0,0,0"
+                                Visibility="{Binding TranscriptVisibility}" Click="OnOpen"/>
+                        <Button Content="Copy" Style="{StaticResource Quiet}" Tag="{Binding}" Margin="8,0,0,0"
+                                Visibility="{Binding TranscriptVisibility}" Click="OnCopy"/>
+                    </StackPanel>
+
+                    <!-- A taste of what was said, not the whole transcript — that is what the
+                         Transcript button is for. -->
+                    <Border x:Name="ExcerptCard" Style="{StaticResource CardPanel}" Margin="0,18,0,0"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="FROM THE TRANSCRIPT" Style="{StaticResource SectionLabel}"/>
+                            <TextBlock x:Name="DetailExcerpt" TextWrapping="Wrap" FontSize="12.5"
+                                       Foreground="{StaticResource Body}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="Delete meeting" Style="{StaticResource Quiet}" Tag="{Binding}"
+                            HorizontalAlignment="Left" Margin="0,20,0,0"
+                            Visibility="{Binding DeleteVisibility}" Click="OnDelete"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
     </Grid>
-    </ScrollViewer>
 </UserControl>

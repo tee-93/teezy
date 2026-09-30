@@ -1,18 +1,19 @@
 <Window x:Class="Teezy.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="TeezyFlow" Width="1120" Height="760" MinWidth="900" MinHeight="580"
+        xmlns:local="clr-namespace:Teezy.App"
+        Title="TeezyFlow" Width="1440" Height="900" MinWidth="1080" MinHeight="640"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Paper}"
         FontFamily="{StaticResource UiFont}" FontSize="13">
 
     <Window.Resources>
-        <!-- A tab's 16 px line icon, drawn in whatever colour the tab's text is. -->
-        <Style x:Key="TabIcon" TargetType="Path">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
+        <!-- A rail icon, drawn in whatever colour the tab's text is — same trick as the old
+             top-strip tabs, just bigger, since there is no label beside it any more. -->
+        <Style x:Key="RailIcon" TargetType="Path">
+            <Setter Property="Width" Value="19"/>
+            <Setter Property="Height" Value="19"/>
             <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="Margin" Value="0,0,7,0"/>
             <Setter Property="StrokeThickness" Value="1.6"/>
             <Setter Property="StrokeLineJoin" Value="Round"/>
             <Setter Property="StrokeStartLineCap" Value="Round"/>
@@ -23,9 +24,9 @@
     </Window.Resources>
 
     <!--
-      Fivebar's shell: a dark strip across the top holding the mark and the pages as tabs, the
-      page below, and a status bar along the bottom. The active tab takes the page's colour and
-      sits over the strip's bottom line, so it reads as the top of the page it opens.
+      A dark strip across the top holding the mark, the current page's name, and the Assistant
+      switch; a slim icon rail down the left holding the pages, the page itself filling the
+      middle, and the collapsible Assistant panel on the right; a status bar along the bottom.
     -->
     <Grid>
         <Grid.RowDefinitions>
@@ -36,92 +37,21 @@
         </Grid.RowDefinitions>
 
         <!-- ============================== Top strip ============================== -->
-        <Grid Grid.Row="0" Background="{StaticResource Chrome}" Height="40">
+        <Grid Grid.Row="0" Background="{StaticResource Chrome}" Height="48">
             <Border Height="1" VerticalAlignment="Bottom" Background="{StaticResource Hairline}"/>
 
             <DockPanel LastChildFill="False">
                 <Path DockPanel.Dock="Left" Data="{StaticResource MarkGeometry}" Fill="{StaticResource Accent}"
-                      Stretch="Uniform" Width="18" Height="18" Margin="14,0,12,0" VerticalAlignment="Center"
+                      Stretch="Uniform" Width="18" Height="18" Margin="14,0,10,0" VerticalAlignment="Center"
                       ToolTip="TeezyFlow"/>
 
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Bottom">
-                    <RadioButton x:Name="NavHome" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 IsChecked="True" Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M4,10 L12,3 L20,10 L20,20 L14,20 L14,14 L10,14 L10,20 L4,20 Z"/>
-                            <TextBlock Text="Home" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
+                <TextBlock x:Name="PageTitle" DockPanel.Dock="Left" Text="Home" VerticalAlignment="Center"
+                           FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
 
-                    <RadioButton x:Name="NavTasks" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M4,5 L20,5 L20,20 L4,20 Z M8,12 L11,15 L16,9"/>
-                            <TextBlock Text="Tasks" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
-
-                    <RadioButton x:Name="NavTranscripts" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M6,3 L15,3 L19,7 L19,21 L6,21 Z M15,3 L15,7 L19,7 M9,11 L16,11 M9,14.5 L16,14.5 M9,18 L13,18"/>
-                            <TextBlock Text="Transcripts" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
-
-                    <RadioButton x:Name="NavMeetings" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M9,7.5 A3.5,3.5 0 1 1 9,7.51 Z M2.5,20 C2.5,15.8 5.4,13.5 9,13.5 C12.6,13.5 15.5,15.8 15.5,20 M15.5,4.2 A3.3,3.3 0 0 1 15.5,10.8 M17.6,13.9 C20.1,14.6 21.5,16.8 21.5,20"/>
-                            <TextBlock Text="Meetings" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
-
-                    <RadioButton x:Name="NavQuotes" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <!-- A document with a line of figures on it. -->
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M6,3 L15,3 L19,7 L19,21 L6,21 Z M15,3 L15,7 L19,7 M9,12 L16,12 M9,16 L13,16"/>
-                            <TextBlock Text="Quotes" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
-
-                    <RadioButton x:Name="NavInsights" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M4,20 L4,12 M10,20 L10,5 M16,20 L16,9 M22,20 L22,14"/>
-                            <TextBlock Text="Insights" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
-
-                    <RadioButton x:Name="NavDictionary" Style="{StaticResource TopTab}" GroupName="Nav"
-                                 Checked="OnNavChanged">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource TabIcon}"
-                                  Data="M5,4 L14,4 A5,5 0 0 1 19,9 L19,20 L9,20 A4,4 0 0 1 5,16 Z M5,16 L19,16"/>
-                            <TextBlock Text="Dictionary" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
-                </StackPanel>
-
-                <!-- Settings sits apart on the right, as in Fivebar. Still a page in the group. -->
-                <RadioButton x:Name="NavSettings" DockPanel.Dock="Right" Style="{StaticResource IconTab}"
-                             GroupName="Nav" Margin="0,0,10,0" VerticalAlignment="Center"
-                             ToolTip="Settings" Checked="OnNavChanged">
-                    <!-- A ring, a hub and eight short teeth: the ring is what makes it a gear. -->
-                    <Path Data="M18.3,12 A6.3,6.3 0 1 1 18.29,11.9 Z M14.6,12 A2.6,2.6 0 1 1 14.59,11.9 Z
-                                M18.3,12 L20.9,12 M5.7,12 L3.1,12 M12,5.7 L12,3.1 M12,18.3 L12,20.9
-                                M16.45,7.55 L18.29,5.71 M7.55,16.45 L5.71,18.29 M16.45,16.45 L18.29,18.29 M7.55,7.55 L5.71,5.71"
-                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
-                          StrokeThickness="1.6" Fill="Transparent" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                          Width="17" Height="17" Stretch="Uniform"/>
-                </RadioButton>
+                <!-- Opens or closes the Assistant panel on the right; its own look is painted
+                     in code (OnToggleAssistant), not by a style trigger. -->
+                <Button x:Name="AssistantToggleButton" DockPanel.Dock="Right" Style="{StaticResource AssistantToggle}"
+                        Content="Assistant" Margin="0,0,14,0" VerticalAlignment="Center" Click="OnToggleAssistant"/>
             </DockPanel>
         </Grid>
 
@@ -144,7 +74,81 @@
             </DockPanel>
         </Border>
 
-        <ContentControl x:Name="PageHost" Grid.Row="2"/>
+        <!-- ============================== Rail, page, Assistant ============================== -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Width="64" Background="{StaticResource Rail}"
+                    BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,14,0,0">
+                        <RadioButton x:Name="NavHome" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     IsChecked="True" ToolTip="Home" Checked="OnNavChanged">
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M4,10 L12,3 L20,10 L20,20 L14,20 L14,14 L10,14 L10,20 L4,20 Z"/>
+                        </RadioButton>
+
+                        <RadioButton x:Name="NavTasks" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Tasks" Checked="OnNavChanged">
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M4,5 L20,5 L20,20 L4,20 Z M8,12 L11,15 L16,9"/>
+                        </RadioButton>
+
+                        <RadioButton x:Name="NavTranscripts" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Transcripts" Checked="OnNavChanged">
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M6,3 L15,3 L19,7 L19,21 L6,21 Z M15,3 L15,7 L19,7 M9,11 L16,11 M9,14.5 L16,14.5 M9,18 L13,18"/>
+                        </RadioButton>
+
+                        <RadioButton x:Name="NavMeetings" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Meetings" Checked="OnNavChanged">
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M9,7.5 A3.5,3.5 0 1 1 9,7.51 Z M2.5,20 C2.5,15.8 5.4,13.5 9,13.5 C12.6,13.5 15.5,15.8 15.5,20 M15.5,4.2 A3.3,3.3 0 0 1 15.5,10.8 M17.6,13.9 C20.1,14.6 21.5,16.8 21.5,20"/>
+                        </RadioButton>
+
+                        <RadioButton x:Name="NavQuotes" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Quotes" Checked="OnNavChanged">
+                            <!-- A document with a line of figures on it. -->
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M6,3 L15,3 L19,7 L19,21 L6,21 Z M15,3 L15,7 L19,7 M9,12 L16,12 M9,16 L13,16"/>
+                        </RadioButton>
+
+                        <RadioButton x:Name="NavInsights" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Insights" Checked="OnNavChanged">
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M4,20 L4,12 M10,20 L10,5 M16,20 L16,9 M22,20 L22,14"/>
+                        </RadioButton>
+
+                        <RadioButton x:Name="NavDictionary" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Dictionary" Checked="OnNavChanged">
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M5,4 L14,4 A5,5 0 0 1 19,9 L19,20 L9,20 A4,4 0 0 1 5,16 Z M5,16 L19,16"/>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <!-- Settings sits apart at the foot of the rail, as it did apart on the right
+                         of the old top strip. Still a page in the same group. -->
+                    <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,14">
+                        <RadioButton x:Name="NavSettings" Style="{StaticResource RailTab}" GroupName="Nav"
+                                     ToolTip="Settings" Checked="OnNavChanged">
+                            <!-- A ring, a hub and eight short teeth: the ring is what makes it a gear. -->
+                            <Path Style="{StaticResource RailIcon}"
+                                  Data="M18.3,12 A6.3,6.3 0 1 1 18.29,11.9 Z M14.6,12 A2.6,2.6 0 1 1 14.59,11.9 Z
+                                        M18.3,12 L20.9,12 M5.7,12 L3.1,12 M12,5.7 L12,3.1 M12,18.3 L12,20.9
+                                        M16.45,7.55 L18.29,5.71 M7.55,16.45 L5.71,18.29 M16.45,16.45 L18.29,18.29 M7.55,7.55 L5.71,5.71"/>
+                        </RadioButton>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ContentControl x:Name="PageHost" Grid.Column="1"/>
+
+            <local:AssistantPanel x:Name="AssistantPanelControl" Grid.Column="2"/>
+        </Grid>
 
         <!-- ============================== Status bar ============================== -->
         <Border Grid.Row="3" Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}"

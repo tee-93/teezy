@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Teezy.Core.Abstractions;
 using Teezy.Core;
@@ -81,6 +82,7 @@ public partial class MeetingsView : UserControl
     private CancellationTokenSource? _transcribing;
     private MeetingRecord? _working;
     private string? _startProblem;
+    private string? _selectedFolder;
 
     // Written from capture threads, read on the timer. A torn float costs one frame of meter.
     private float _meLevel;
@@ -448,6 +450,57 @@ public partial class MeetingsView : UserControl
         MeetingList.ItemsSource = rows;
         ListCard.Visibility = rows.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         EmptyText.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        ShowDetail(rows.FirstOrDefault(r => r.Record.Folder == _selectedFolder));
+    }
+
+    // ---- the chosen meeting ----
+
+    private void OnRowSelect(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not MeetingRow row) return;
+        _selectedFolder = row.Record.Folder;
+        ShowDetail(row);
+    }
+
+    private void OnDeselect(object sender, RoutedEventArgs e)
+    {
+        _selectedFolder = null;
+        ShowDetail(null);
+    }
+
+    private void ShowDetail(MeetingRow? row)
+    {
+        if (row is null)
+        {
+            Detail.Visibility = Visibility.Collapsed;
+            Detail.DataContext = null;
+            return;
+        }
+
+        Detail.DataContext = row;
+        DetailTitle.Text = row.Title;
+        DetailMeta.Text = row.Meta;
+
+        var excerpt = row.HasTranscript ? TranscriptExcerpt(row.Record) : null;
+        DetailExcerpt.Text = excerpt ?? "";
+        ExcerptCard.Visibility = excerpt is null ? Visibility.Collapsed : Visibility.Visible;
+
+        Detail.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>The first few lines, as a taste of what was said — not the whole transcript.</summary>
+    private static string? TranscriptExcerpt(MeetingRecord record)
+    {
+        try
+        {
+            var lines = MeetingTranscript.ParseLines(File.ReadAllText(record.TranscriptPath));
+            return lines.Count == 0 ? null : string.Join(" ", lines.Take(3).Select(l => l.Text));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private MeetingRow Row(MeetingRecord record)

@@ -476,6 +476,74 @@
     </Style>
 
     <!--
+      A page icon in the left rail: no label, so the accent bar down the left edge is what
+      shows which page is open (as in SettingsTab), sized and centred as a square icon button
+      (as in IconTab). Content is a Path whose Stroke binds to the button's Foreground.
+    -->
+    <Style x:Key="RailTab" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid>
+                        <Border x:Name="Bg" Background="Transparent" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <Border x:Name="Bar" Width="2" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                                Margin="0,6,0,6" CornerRadius="2"
+                                Background="{StaticResource Accent}" Visibility="Collapsed"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Raised}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Selected}"/>
+                            <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+                            <Setter Property="Foreground" Value="{StaticResource AccentInk}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+      The Assistant panel's open/close switch, in the top strip. A plain Button — not part of
+      the nav RadioButton group — so its open/closed look is painted in code the same way a
+      chosen list row's highlight already is elsewhere in the app (see MainWindow.xaml.cs).
+    -->
+    <Style x:Key="AssistantToggle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          TextBlock.Foreground="{TemplateBinding Foreground}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Raised}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
       A list that looks like nothing: no chrome, no scrollbar, no selection wash. For short
       lists inside a card, where a ListBox's own border would draw a box inside a box.
     -->

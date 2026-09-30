@@ -18,7 +18,8 @@ public sealed record UpdateState(
     Version? Version = null,
     bool Downloading = false,
     bool Ready = false,
-    string? Error = null)
+    string? Error = null,
+    string? Notes = null)
 {
     /// <summary>One line for Settings ▸ About, in Fivebar's words.</summary>
     public string Describe() =>
@@ -26,6 +27,22 @@ public sealed record UpdateState(
             : Downloading ? $"Getting version {Version}…"
             : Checking ? "Looking for a new version…"
             : "TeezyFlow is up to date.");
+
+    /// <summary>
+    /// What the release itself says, for Settings ▸ About — the GitHub release's own
+    /// description, with the boilerplate install footer (everything from the "---" divider
+    /// on) and the heaviest markdown marks trimmed, since this is shown as plain text.
+    /// </summary>
+    public string? WhatsNew()
+    {
+        if (Notes is not { Length: > 0 } notes) return null;
+
+        var cut = notes.IndexOf("\n---", StringComparison.Ordinal);
+        var body = cut >= 0 ? notes[..cut] : notes;
+        return body.Replace("**", "").Replace("### ", "").Replace("## ", "").Trim() is { Length: > 0 } cleaned
+            ? cleaned
+            : null;
+    }
 }
 
 /// <summary>Keeps TeezyFlow up to date from its GitHub releases, the way Fivebar does.</summary>
@@ -123,9 +140,9 @@ public sealed class Updater : IDisposable
                 return;
             }
 
-            Set(new UpdateState(Version: release.Version, Downloading: true));
+            Set(new UpdateState(Version: release.Version, Downloading: true, Notes: release.Notes));
             _installer = await DownloadAsync(release).ConfigureAwait(false);
-            Set(new UpdateState(Version: release.Version, Ready: true));
+            Set(new UpdateState(Version: release.Version, Ready: true, Notes: release.Notes));
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or IOException
                                       or InvalidDataException or System.Text.Json.JsonException)

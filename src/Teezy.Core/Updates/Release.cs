@@ -11,7 +11,8 @@ namespace Teezy.Core.Updates;
 /// predates GitHub publishing digests. When present, a download that does not match it is
 /// never run.
 /// </param>
-public sealed record Release(Version Version, Uri Download, long Size, string? Sha256)
+/// <param name="Notes">The release's own description — what's new, in its own words.</param>
+public sealed record Release(Version Version, Uri Download, long Size, string? Sha256, string? Notes = null)
 {
     /// <summary>The one file every release carries.</summary>
     public const string InstallerName = "TeezyFlow-Setup.exe";
@@ -34,6 +35,8 @@ public sealed record Release(Version Version, Uri Download, long Size, string? S
         if (!TryVersion(tagName, out var version)) return null;
         if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array) return null;
 
+        var notes = root.TryGetProperty("body", out var b) ? b.GetString() : null;
+
         foreach (var asset in assets.EnumerateArray())
         {
             if (asset.TryGetProperty("name", out var name) && name.GetString() == InstallerName
@@ -47,7 +50,7 @@ public sealed record Release(Version Version, Uri Download, long Size, string? S
                     ? value["sha256:".Length..].ToLowerInvariant()
                     : null;
 
-                return new Release(version, download, size, sha);
+                return new Release(version, download, size, sha, notes);
             }
         }
 

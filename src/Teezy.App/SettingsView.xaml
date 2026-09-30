@@ -1575,6 +1575,16 @@
                             </Grid>
                         </Border>
 
+                        <!-- The waiting release's own words — collapsed until there is one. -->
+                        <Border x:Name="UpdateNotesCard" Style="{StaticResource CardPanel}" Margin="0,4,0,0"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="WHAT'S NEW" Style="{StaticResource SectionLabel}"/>
+                                <TextBlock x:Name="UpdateNotes" TextWrapping="Wrap" FontSize="12.5"
+                                           Foreground="{StaticResource Body}"/>
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
                                    Text="Speech by NVIDIA Parakeet TDT 0.6B, converted to ONNX and quantised to int8 by csukuangfj, run through sherpa-onnx. Model weights are CC-BY-4.0; sherpa-onnx is Apache-2.0; ONNX Runtime and NAudio are MIT."/>
 

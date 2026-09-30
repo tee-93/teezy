@@ -1840,6 +1840,10 @@ public partial class SettingsView : UserControl
         }
 
         UpdateButton.IsEnabled = !(s.Checking || s.Downloading);
+
+        var notes = s.WhatsNew();
+        UpdateNotes.Text = notes ?? "";
+        UpdateNotesCard.Visibility = notes is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void OnUpdateButton(object sender, RoutedEventArgs e)
